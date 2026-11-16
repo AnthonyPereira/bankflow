@@ -59,7 +59,7 @@
   └── docs/ (adr/, architecture/, runbooks/)
   ```
 - [ ] BF-001-05 — Générer les 6 projets Spring Boot indépendants (chacun avec son propre `pom.xml` et sans module Java métier partagé)
-- [x] BF-001-06 — Rédiger les conventions : nommage des branches, Conventional Commits, structure des packages (`api`, `application`, `domain`, `infrastructure`), style de code
+- [x] BF-001-06 — Rédiger les conventions (Gitflow, voir `CONTRIBUTING.md`) : nommage des branches, Conventional Commits, structure des packages (`api`, `application`, `domain`, `infrastructure`), style de code
 - [ ] BF-001-07 — Configurer le formatage et l'analyse statique (Spotless ou Checkstyle, ESLint ou Prettier)
 - [x] BF-001-08 — Rédiger le `README.md` racine (présentation, prérequis, démarrage)
 - [x] BF-001-09 — Créer un modèle de `.env.example` et la règle « aucun secret commité »
