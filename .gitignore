@@ -1,0 +1,55 @@
+# ===== Secrets & environnement =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+secrets/
+
+# ===== Java / Maven =====
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+hs_err_pid*
+replay_pid*
+
+# ===== Node / Angular =====
+node_modules/
+dist/
+.angular/
+coverage/
+out-tsc/
+npm-debug.log*
+.npm/
+
+# ===== Playwright =====
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# ===== IDE =====
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.project
+.classpath
+.settings/
+.factorypath
+*.swp
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Office (fichiers de verrouillage) =====
+~$*
+
+# ===== Docker (données locales) =====
+infra/**/data/

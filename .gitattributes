@@ -1,0 +1,24 @@
+# Normalisation des fins de ligne : LF dans le dépôt et sur le disque
+* text=auto eol=lf
+
+# Scripts Windows : CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Scripts Unix (doivent rester en LF, y compris pour Docker)
+mvnw text eol=lf
+*.sh text eol=lf
+
+# Binaires
+*.docx binary
+*.xlsx binary
+*.pdf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.jar  binary
+*.woff binary
+*.woff2 binary
