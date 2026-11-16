@@ -49,7 +49,7 @@
 - [~] BF-001-01 — Vérifier la compatibilité officielle Java 27 ↔ Spring Boot ↔ Spring Cloud et figer les versions → voir [ADR-001](docs/adr/ADR-001-stack-backend.md) (versions exactes à figer après les GA)
 - [~] BF-001-02 — Vérifier la disponibilité d'Angular 22, d'Angular Material et de Vitest, puis figer les versions → voir [ADR-002](docs/adr/ADR-002-stack-frontend.md)
 - [x] BF-001-03 — Initialiser le dépôt Git (`.gitignore` Java/Maven/Node/IDE, `.editorconfig`, `.gitattributes`)
-- [ ] BF-001-04 — Définir l'arborescence :
+- [x] BF-001-04 — Définir l'arborescence :
   ```
   bankflow/
   ├── services/ (api-gateway, auth-service, customer-service, banking-service, notification-service, analytics-fraud-service)
@@ -58,7 +58,7 @@
   ├── contracts/ (events/ — contrats JSON versionnés)
   └── docs/ (adr/, architecture/, runbooks/)
   ```
-- [ ] BF-001-05 — Générer les 6 projets Spring Boot indépendants (chacun avec son propre `pom.xml` et sans module Java métier partagé)
+- [x] BF-001-05 — Générer les 6 projets Spring Boot indépendants (chacun avec son propre `pom.xml` et sans module Java métier partagé)
 - [x] BF-001-06 — Rédiger les conventions (Gitflow, voir `CONTRIBUTING.md`) : nommage des branches, Conventional Commits, structure des packages (`api`, `application`, `domain`, `infrastructure`), style de code
 - [ ] BF-001-07 — Configurer le formatage et l'analyse statique (Spotless ou Checkstyle, ESLint ou Prettier)
 - [x] BF-001-08 — Rédiger le `README.md` racine (présentation, prérequis, démarrage)
