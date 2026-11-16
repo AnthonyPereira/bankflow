@@ -139,7 +139,7 @@ Il tient compte de quatre contraintes :
 
 | Outil | Utilisation |
 |---|---|
-| **Spotless** (format google-java-format ou palantir) | Formatage vérifié en CI. Il faut vérifier sa compatibilité avec le JDK 27 dès l'installation, puisqu'il dépend des API de javac. |
+| **Spotless** (format google-java-format, style AOSP) | Formatage vérifié en CI. Il faut vérifier sa compatibilité avec le JDK 27 dès l'installation, puisqu'il dépend des API de javac. **Précision (BF-001-07)** : palantir-java-format 2.103.0 est incompatible avec le JDK 27 (`NoSuchFieldError` sur `JCCompilationUnit.endPositions`, voir palantir/palantir-java-format#1785). On retient donc google-java-format 2.0.0 en style AOSP (indentation de 4 espaces, 100 colonnes). |
 | **Dependabot** (GitHub) | Mises à jour et alertes de sécurité sur les dépendances. |
 | **GitHub Actions** | CI/CD (voir BF-023). |
 
