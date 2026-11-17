@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directories:
+      - /services/api-gateway
+      - /services/auth-service
+      - /services/customer-service
+      - /services/banking-service
+      - /services/notification-service
+      - /services/analytics-fraud-service
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      spring:
+        patterns: ["org.springframework*"]
+    commit-message:
+      prefix: build
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

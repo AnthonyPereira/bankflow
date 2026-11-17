@@ -39,6 +39,18 @@ bankflow/
 - Docker Desktop (Docker Compose v2)
 - Git
 
+## Construire et tester un service
+
+Chaque service se construit seul, avec son wrapper Maven (JDK 27 et Docker requis : les tests utilisent Testcontainers).
+
+```bash
+cd services/auth-service
+./mvnw verify          # compilation, formatage (Spotless) et tests
+./mvnw spotless:apply  # reformate le code
+```
+
+La CI GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) lance `./mvnw verify` sur les six services à chaque push et Pull Request vers `develop` ou `main`.
+
 ## Démarrage
 
 > Disponible à partir du lot BF-002.
