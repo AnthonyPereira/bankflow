@@ -9,5 +9,4 @@ public class AnalyticsFraudServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(AnalyticsFraudServiceApplication.class, args);
     }
-
 }
