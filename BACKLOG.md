@@ -34,9 +34,20 @@
 | BF-020 | Monitoring | Prometheus et Grafana | P2 | BF-013 |
 | BF-021 | Architecture | Saga Pattern | P3 | BF-011 |
 | BF-022 | Optimisation | Kafka Streams | P3 | BF-015 |
-| BF-023 | Finalisation | Documentation et CI/CD | P2 | tous |
+| BF-023 | Finalisation | Documentation, CI/CD et déploiement (déploiement avancé au jalon MVP 1) | P2 | tous |
 
 > **Note :** la CI de base (build et tests) peut démarrer dès BF-001 et s'enrichir au fil des lots. BF-023 la finalise.
+
+### Mise en ligne sur le serveur maison
+
+L'application sera mise en ligne sur le serveur maison (portable Ubuntu avec Docker, Traefik et tunnel Cloudflare, déploiement par runner GitHub auto-hébergé) dès qu'une MVP existe. Procédure de référence : document « Serveur maison : connexion et hébergement d'applis web Docker ».
+
+| Jalon | Lots nécessaires | Ce qui est visible en ligne |
+|---|---|---|
+| **MVP 1 : socle** (cible de la première mise en ligne) | BF-002, BF-003, BF-004, BF-005, BF-016 | Inscription, connexion et dashboard Angular |
+| **MVP 2 : bancaire** | MVP 1 + BF-006 à BF-009, BF-017 | Clients, comptes, dépôts, retraits et virements |
+
+Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images Docker, publication GHCR et déploiement). Ensuite, chaque lot fusionné dans `main` est déployé automatiquement.
 
 ---
 
@@ -63,12 +74,12 @@
 - [x] BF-001-07 — Configurer le formatage et l'analyse statique : Spotless (google-java-format AOSP) dans chaque service. ESLint et Prettier sont reportés à BF-016-01, à la création du frontend
 - [x] BF-001-08 — Rédiger le `README.md` racine (présentation, prérequis, démarrage)
 - [x] BF-001-09 — Créer un modèle de `.env.example` et la règle « aucun secret commité »
-- [ ] BF-001-10 — Mettre en place une première CI GitHub Actions (compilation Maven de chaque service)
+- [x] BF-001-10 — Mettre en place une première CI GitHub Actions (compilation Maven de chaque service) → `.github/workflows/ci.yml` : `./mvnw verify` par service (matrice, JDK 27 Temurin, Spotless et Testcontainers), plus Dependabot (`.github/dependabot.yml`)
 
 ### Critères de validation
-- [ ] Chaque service compile seul avec `mvn verify`
-- [ ] Les versions retenues sont documentées et leur compatibilité est vérifiée
-- [ ] Aucune classe métier n'est partagée entre services
+- [x] Chaque service compile seul avec `mvn verify` (vérifié le 2026-11-17 sur JDK 27.0.1, Spring Boot 4.2.0-RC2, Spring Cloud 2026.0.0-RC2)
+- [~] Les versions retenues sont documentées et leur compatibilité est vérifiée (compatibilité JDK 27 vérifiée sur les RC ; versions GA à figer après la sortie de Spring Boot 4.2, annoncée le 2026-11-19)
+- [x] Aucune classe métier n'est partagée entre services
 
 ---
 
@@ -136,7 +147,7 @@
   - `/api/analytics/**` → Analytics & Fraud Service
 - [ ] BF-004-03 — Valider le JWT (clé publique ou JWKS de l'Auth Service) et laisser passer les routes publiques (`/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`)
 - [ ] BF-004-04 — Propager les informations utiles (en-têtes `X-User-Id`, `X-User-Role`, `X-Correlation-Id`) et supprimer les en-têtes usurpables venant du client
-- [ ] BF-004-05 — Configurer CORS pour le frontend Angular
+- [ ] BF-004-05 — Configurer CORS pour le frontend Angular (utile en développement ; en ligne, le front et `/api` partagent la même adresse, donc pas de CORS)
 - [ ] BF-004-06 — Uniformiser les erreurs HTTP (format `ProblemDetail`, RFC 9457)
 - [ ] BF-004-07 — Limiter le débit (rate limiting) sur les routes sensibles (login, register, transfers)
 - [ ] BF-004-08 — Générer un `correlationId` quand il est absent
@@ -588,8 +599,8 @@
 - [ ] BF-023-02 — Exécution des tests backend (unitaires et Testcontainers)
 - [ ] BF-023-03 — Compilation Angular
 - [ ] BF-023-04 — Exécution des tests frontend (Vitest)
-- [ ] BF-023-05 — Construction des images Docker
-- [ ] BF-023-06 — Publication des images (GHCR) sur la branche principale ou sur les tags
+- [ ] BF-023-05 — Construction des images Docker (à avancer au jalon MVP 1)
+- [ ] BF-023-06 — Publication des images (GHCR) sur la branche principale ou sur les tags (à avancer au jalon MVP 1)
 - [ ] BF-023-07 — Rapports de couverture et cache Maven/npm
 
 ### Tâches — Documentation
@@ -601,6 +612,20 @@
 - [ ] BF-023-13 — Environnement « production simulée » : secrets externalisés, Kafka multi-broker et répliqué (étude), sauvegardes PostgreSQL
 - [ ] BF-023-14 — (Étude) Sécurité Kafka renforcée : TLS, SASL, ACL, comptes techniques distincts
 - [ ] BF-023-15 — (Étude) Avro et Schema Registry
+
+### Tâches — Déploiement sur le serveur maison (à avancer au jalon MVP 1)
+- [ ] BF-023-16 — Déployer `main` sur le serveur maison (`https://bankflow.anthonypereira.dpdns.org`) :
+  - vérifier que le dépôt GitHub est **privé** (obligatoire avant de brancher un runner auto-hébergé) ;
+  - écrire un `docker-compose.yml` de déploiement : seuls le front (port 80) et l'api-gateway (`/api`) sont routés par Traefik (réseau `web`) ; services, PostgreSQL et Kafka restent sur un réseau interne ; Kafka UI, Mailpit, Prometheus et Grafana ne sont jamais exposés ;
+  - limiter la mémoire de chaque JVM (ex. `-Xmx256m`) et ne déployer que les services développés (le serveur a 8 Go de RAM) ;
+  - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), puis `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
+  - configurer le profil `prod-sim` (BF-002-08) ; les secrets vivent dans `~/apps/bankflow/.env` sur le serveur, jamais dans Git ;
+  - sur le serveur : retirer le sudo temporaire (`/etc/sudoers.d/claude-temp`), puis `ajouter-runner AnthonyPereira/bankflow <jeton>` ;
+  - documenter le déploiement et le retour arrière dans `docs/runbooks/`.
+
+### Critères de validation — Déploiement
+- [ ] Un `git push` sur `main` met l'application à jour en ligne en moins de 5 minutes
+- [ ] Seuls le front et `/api` répondent depuis Internet
 
 ---
 
