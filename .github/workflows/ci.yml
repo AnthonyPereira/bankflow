@@ -33,7 +33,7 @@ jobs:
       run:
         working-directory: services/${{ matrix.service }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: JDK 27 (Temurin)
         uses: actions/setup-java@v4
