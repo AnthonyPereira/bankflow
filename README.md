@@ -49,7 +49,7 @@ cd services/auth-service
 ./mvnw spotless:apply  # reformate le code
 ```
 
-La CI GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) lance `./mvnw verify` sur les six services à chaque push et Pull Request vers `develop` ou `main`.
+La CI GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) lance `./mvnw verify` sur les six services, puis le lint, les tests et le build du frontend, à chaque push et Pull Request vers `develop` ou `main`.
 
 ## Démarrage
 

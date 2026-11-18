@@ -54,3 +54,35 @@ jobs:
           name: surefire-${{ matrix.service }}
           path: services/${{ matrix.service }}/target/surefire-reports/
           retention-days: 7
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend/bankflow-web
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/bankflow-web/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/bankflow-web/package-lock.json
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Formatage
+        run: npm run format:check
+
+      - name: Tests
+        run: npm run test:ci
+
+      - name: Build de production
+        run: npm run build
