@@ -58,7 +58,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 
 ### Tâches
 - [~] BF-001-01 — Vérifier la compatibilité officielle Java 27 ↔ Spring Boot ↔ Spring Cloud et figer les versions → voir [ADR-001](docs/adr/ADR-001-stack-backend.md) (versions exactes à figer après les GA). Compatibilité JDK 27 vérifiée le 2026-11-17 sur Spring Boot 4.2.0-RC2 et Spring Cloud 2026.0.0-RC2. Reste à faire : passer les six `pom.xml` en version GA après la sortie de Spring Boot 4.2 (annoncée le 2026-11-19), relancer la CI et mettre à jour ADR-001 §5
-- [~] BF-001-02 — Vérifier la disponibilité d'Angular 22, d'Angular Material et de Vitest, puis figer les versions → voir [ADR-002](docs/adr/ADR-002-stack-frontend.md)
+- [x] BF-001-02 — Vérifier la disponibilité d'Angular 22, d'Angular Material et de Vitest, puis figer les versions → voir [ADR-002](docs/adr/ADR-002-stack-frontend.md)
 - [x] BF-001-03 — Initialiser le dépôt Git (`.gitignore` Java/Maven/Node/IDE, `.editorconfig`, `.gitattributes`)
 - [x] BF-001-04 — Définir l'arborescence :
   ```
@@ -451,7 +451,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** architecture Angular, Signals, guards et intercepteurs.
 
 ### Tâches
-- [ ] BF-016-01 — Initialiser le projet Angular 22 (standalone, zoneless), Angular Material et CDK (thème M3), Vitest, angular-eslint et Prettier (ADR-002)
+- [x] BF-016-01 — Initialiser le projet Angular 22 (standalone, zoneless), Angular Material et CDK (thème M3), Vitest, angular-eslint et Prettier (ADR-002)
 - [ ] BF-016-02 — Créer l'arborescence `core/`, `shared/`, `features/` et `app.routes.ts` conformément au cahier des charges
 - [ ] BF-016-03 — `core/auth` : `AuthService` (login, register, logout, refresh) avec un état basé sur les Signals
 - [ ] BF-016-04 — Stocker le token de façon sécurisée (choix documenté) et gérer l'expiration
@@ -463,7 +463,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-016-10 — Dashboard : synthèse des comptes, dernières opérations et notifications récentes
 - [ ] BF-016-11 — Écran de profil (`/customers/me`)
 - [ ] BF-016-12 — `shared/models` (interfaces TypeScript) et `shared/pipes` (montant ou devise, date)
-- [ ] BF-016-13 — Configurer les environnements (URL de la Gateway)
+- [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
 - [ ] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
 
 ### Tests
