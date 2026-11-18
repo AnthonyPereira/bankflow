@@ -149,12 +149,12 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-004-04 — Propager les informations utiles (en-têtes `X-User-Id`, `X-User-Role`, `X-Correlation-Id`) et supprimer les en-têtes usurpables venant du client
 - [x] BF-004-05 — Configurer CORS pour le frontend Angular (utile en développement ; en ligne, le front et `/api` partagent la même adresse, donc pas de CORS)
 - [x] BF-004-06 — Uniformiser les erreurs HTTP (format `ProblemDetail`, RFC 9457)
-- [ ] BF-004-07 — Limiter le débit (rate limiting) sur les routes sensibles (login, register, transfers)
+- [x] BF-004-07 — Limiter le débit (rate limiting) sur les routes sensibles (login, register, transfers)
 - [x] BF-004-08 — Générer un `correlationId` quand il est absent
 - [ ] BF-004-09 — Ajouter le service au Docker Compose
 
 ### Tests
-- [ ] Tests de routage, de rejet sans JWT ou avec un JWT invalide ou expiré, de CORS et de rate limiting
+- [x] Tests de routage, de rejet sans JWT ou avec un JWT invalide ou expiré, de CORS et de rate limiting
 
 ### Critères de validation
 - [ ] Toutes les routes répondent via la Gateway
