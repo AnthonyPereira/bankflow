@@ -112,10 +112,10 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** comprendre les notions de producer, consumer, topic, partition, offset, consumer group et clé.
 
 ### Tâches
-- [ ] BF-003-01 — Ajouter Kafka en mode KRaft (broker unique) dans Docker Compose
-- [ ] BF-003-02 — Ajouter Kafka UI
-- [ ] BF-003-03 — Créer les topics initiaux de façon déclarative (script d'initialisation ou `NewTopic`) : `bank.users`, `bank.customers`, `bank.accounts`, `bank.transfers`, `bank.transactions`, `bank.fraud-alerts`
-- [ ] BF-003-04 — Documenter la configuration de chaque topic (partitions, réplication, rétention, `cleanup.policy`) dans `docs/kafka/topics.md`
+- [x] BF-003-01 — Ajouter Kafka en mode KRaft (broker unique) dans Docker Compose
+- [x] BF-003-02 — Ajouter Kafka UI
+- [x] BF-003-03 — Créer les topics initiaux de façon déclarative (script d'initialisation ou `NewTopic`) : `bank.users`, `bank.customers`, `bank.accounts`, `bank.transfers`, `bank.transactions`, `bank.fraud-alerts`
+- [x] BF-003-04 — Documenter la configuration de chaque topic (partitions, réplication, rétention, `cleanup.policy`) dans `docs/kafka/topics.md`
 - [ ] BF-003-05 — Définir l'enveloppe d'événement commune (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `payload`) dans `contracts/events/envelope.md` et son JSON Schema
 - [ ] BF-003-06 — Implémenter un Producer et un Consumer de démonstration (Spring Kafka, sérialisation JSON)
 - [ ] BF-003-07 — Faire des expériences guidées : clé et partition, deux consommateurs dans un même groupe, deux groupes distincts, reset d'offsets
@@ -127,7 +127,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] Test d'intégration Testcontainers Kafka : un message produit est bien consommé
 
 ### Critères de validation
-- [ ] Les topics sont visibles dans Kafka UI avec la configuration documentée
+- [x] Les topics sont visibles dans Kafka UI avec la configuration documentée
 - [ ] La répartition des partitions dans un consumer group est démontrée
 
 ---

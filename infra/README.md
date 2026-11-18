@@ -32,6 +32,8 @@ Le script `postgres/init/01-create-databases.sh` ne s'exécute qu'à la créatio
 | PostgreSQL | 5432 | `POSTGRES_HOST_PORT` | `jdbc:postgresql://localhost:5432/<base>` |
 | Mailpit SMTP | 1025 | `MAILPIT_SMTP_HOST_PORT` | Serveur SMTP de développement |
 | Mailpit interface | 8025 | `MAILPIT_UI_HOST_PORT` | <http://localhost:8025> |
+| Kafka | 9092 | `KAFKA_HOST_PORT` | `localhost:9092` depuis le poste, `kafka:29092` entre conteneurs |
+| Kafka UI | 8090 | `KAFKA_UI_HOST_PORT` | <http://localhost:8090> |
 
 ## Bases de données
 
@@ -44,3 +46,7 @@ Chaque service possède sa base et son utilisateur, qui ne peut pas se connecter
 | banking-service | `banking_db` | `banking_user` | `BANKING_DB_PASSWORD` |
 | notification-service | `notification_db` | `notification_user` | `NOTIFICATION_DB_PASSWORD` |
 | analytics-fraud-service | `analytics_db` | `analytics_user` | `ANALYTICS_DB_PASSWORD` |
+
+## Kafka
+
+Les topics sont créés au démarrage par le conteneur `kafka-init`. Leur configuration est décrite dans [docs/kafka/topics.md](../docs/kafka/topics.md).
