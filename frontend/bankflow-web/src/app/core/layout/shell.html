@@ -1,16 +1,16 @@
 <mat-toolbar class="toolbar">
   @if (compact()) {
     <button matIconButton type="button" aria-label="Ouvrir le menu" (click)="menuOpen.set(true)">
-      <mat-icon aria-hidden="true">menu</mat-icon>
+      <mat-icon aria-hidden="true" svgIcon="menu" />
     </button>
   }
   <a class="brand" routerLink="/tableau-de-bord">
-    <mat-icon aria-hidden="true">account_balance</mat-icon>
+    <mat-icon aria-hidden="true" svgIcon="account_balance" />
     BankFlow
   </a>
   <span class="spacer"></span>
   <button matButton type="button" (click)="logout()">
-    <mat-icon aria-hidden="true">logout</mat-icon>
+    <mat-icon aria-hidden="true" svgIcon="logout" />
     Se déconnecter
   </button>
 </mat-toolbar>
@@ -32,7 +32,7 @@
         [activated]="dashboardLink.isActive"
         (click)="closeMenu()"
       >
-        <mat-icon matListItemIcon aria-hidden="true">dashboard</mat-icon>
+        <mat-icon matListItemIcon aria-hidden="true" svgIcon="dashboard" />
         <span matListItemTitle>Tableau de bord</span>
       </a>
       @if (isAdmin()) {
@@ -44,7 +44,7 @@
           [activated]="adminLink.isActive"
           (click)="closeMenu()"
         >
-          <mat-icon matListItemIcon aria-hidden="true">admin_panel_settings</mat-icon>
+          <mat-icon matListItemIcon aria-hidden="true" svgIcon="admin_panel_settings" />
           <span matListItemTitle>Administration</span>
         </a>
       }

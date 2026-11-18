@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
     <main class="page">
       <section class="card">
         <p class="brand">
-          <mat-icon aria-hidden="true">account_balance</mat-icon>
+          <mat-icon aria-hidden="true" svgIcon="account_balance" />
           BankFlow
         </p>
         <h1>{{ heading() }}</h1>

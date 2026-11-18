@@ -34,9 +34,10 @@
         [attr.aria-pressed]="passwordVisible()"
         (click)="passwordVisible.set(!passwordVisible())"
       >
-        <mat-icon aria-hidden="true">{{
-          passwordVisible() ? 'visibility_off' : 'visibility'
-        }}</mat-icon>
+        <mat-icon
+          aria-hidden="true"
+          [svgIcon]="passwordVisible() ? 'visibility_off' : 'visibility'"
+        />
       </button>
       <mat-hint>12 caractères minimum</mat-hint>
       @if (form.controls.password.hasError('required')) {

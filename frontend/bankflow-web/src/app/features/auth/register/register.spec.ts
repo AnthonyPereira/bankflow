@@ -1,3 +1,5 @@
+import { importProvidersFrom } from '@angular/core';
+import { MatIconTestingModule } from '@angular/material/icon/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
@@ -17,7 +19,11 @@ describe('Register', () => {
     auth.register.mockReset();
     auth.login.mockReset();
     await render(Register, {
-      providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
+      providers: [
+        importProvidersFrom(MatIconTestingModule),
+        provideRouter([]),
+        { provide: AuthService, useValue: auth },
+      ],
     });
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     return { navigate, user: userEvent.setup() };

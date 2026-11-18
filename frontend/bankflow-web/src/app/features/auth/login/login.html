@@ -32,9 +32,10 @@
         [attr.aria-pressed]="passwordVisible()"
         (click)="passwordVisible.set(!passwordVisible())"
       >
-        <mat-icon aria-hidden="true">{{
-          passwordVisible() ? 'visibility_off' : 'visibility'
-        }}</mat-icon>
+        <mat-icon
+          aria-hidden="true"
+          [svgIcon]="passwordVisible() ? 'visibility_off' : 'visibility'"
+        />
       </button>
       @if (form.controls.password.hasError('required')) {
         <mat-error>Le mot de passe est obligatoire.</mat-error>

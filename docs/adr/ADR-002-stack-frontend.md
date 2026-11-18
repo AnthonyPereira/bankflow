@@ -47,7 +47,7 @@ Plusieurs besoins de l'interface restent sans réponse dans le cahier des charge
 | Bibliothèque UI | **Angular Material** (thème Material 3) |
 | Primitives et comportements | **Angular CDK** : overlay, a11y, layout (`BreakpointObserver`), drag & drop si besoin, et harnesses de test |
 | Thème | Thème M3 personnalisé en **SCSS** (palette BankFlow, mode clair et sombre via les design tokens Material) |
-| Icônes | **Material Symbols**, auto-hébergées (paquet npm, pas d'appel à Google Fonts au runtime) |
+| Icônes | **Material Symbols**, auto-hébergées en **fichiers SVG** dans `public/icons` (la police complète pèse 4 Mo, pas d'appel à Google Fonts au runtime) |
 | Notifications UI | `MatSnackBar` encapsulé dans un `NotificationUiService` |
 | Tableaux | `MatTable`, `MatPaginator` et `MatSort`, avec pagination et tri **côté serveur** |
 

@@ -1,3 +1,5 @@
+import { importProvidersFrom } from '@angular/core';
+import { MatIconTestingModule } from '@angular/material/icon/testing';
 import { render, screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -14,7 +16,10 @@ const USER: User = {
 describe('Dashboard', () => {
   function setup(currentUser: AuthService['currentUser']) {
     return render(Dashboard, {
-      providers: [{ provide: AuthService, useValue: { currentUser } }],
+      providers: [
+        importProvidersFrom(MatIconTestingModule),
+        { provide: AuthService, useValue: { currentUser } },
+      ],
     });
   }
 
