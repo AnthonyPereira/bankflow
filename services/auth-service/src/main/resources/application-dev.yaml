@@ -1,4 +1,9 @@
 # Profil de développement local
+bankflow:
+  refresh:
+    # L'environnement local fonctionne en HTTP
+    cookie-secure: false
+
 logging:
   level:
     com.bankflow: DEBUG

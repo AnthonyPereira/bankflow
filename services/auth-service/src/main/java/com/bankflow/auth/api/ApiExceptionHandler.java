@@ -2,6 +2,7 @@ package com.bankflow.auth.api;
 
 import com.bankflow.auth.application.EmailAlreadyUsedException;
 import com.bankflow.auth.application.InvalidCredentialsException;
+import com.bankflow.auth.application.InvalidRefreshTokenException;
 import java.util.LinkedHashMap;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,23 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 /** Traduit les erreurs de l'API au format {@code ProblemDetail} (RFC 9457). */
 @RestControllerAdvice
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+
+    private final RefreshCookies refreshCookies;
+
+    ApiExceptionHandler(RefreshCookies refreshCookies) {
+        this.refreshCookies = refreshCookies;
+    }
+
+    /** Le cookie devenu inutile est effacé pour que le navigateur ne le renvoie plus. */
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    ResponseEntity<ProblemDetail> handleInvalidRefreshToken(
+            InvalidRefreshTokenException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.SET_COOKIE, refreshCookies.clear())
+                .body(
+                        ProblemDetail.forStatusAndDetail(
+                                HttpStatus.UNAUTHORIZED, exception.getMessage()));
+    }
 
     @ExceptionHandler(EmailAlreadyUsedException.class)
     ProblemDetail handleEmailAlreadyUsed(EmailAlreadyUsedException exception) {

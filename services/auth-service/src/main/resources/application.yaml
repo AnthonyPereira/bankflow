@@ -49,6 +49,11 @@ bankflow:
   login:
     max-attempts: 5
     lock-duration: PT15M
+  refresh:
+    ttl: P7D
+    reuse-grace: PT10S
+    cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+    purge-cron: "0 30 3 * * *"
 
 server:
   port: 8081
