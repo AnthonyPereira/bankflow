@@ -1,3 +1,5 @@
+import { importProvidersFrom } from '@angular/core';
+import { MatIconTestingModule } from '@angular/material/icon/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
@@ -17,7 +19,11 @@ describe('Login', () => {
     auth.login.mockReset();
     await render(Login, {
       inputs: returnUrl ? { returnUrl } : {},
-      providers: [provideRouter([]), { provide: AuthService, useValue: auth }],
+      providers: [
+        importProvidersFrom(MatIconTestingModule),
+        provideRouter([]),
+        { provide: AuthService, useValue: auth },
+      ],
     });
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     return { navigate, user: userEvent.setup() };

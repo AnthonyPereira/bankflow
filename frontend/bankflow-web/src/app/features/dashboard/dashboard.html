@@ -30,7 +30,7 @@
 <ul class="upcoming">
   @for (section of upcomingSections; track section.title) {
     <li class="panel">
-      <mat-icon aria-hidden="true">{{ section.icon }}</mat-icon>
+      <mat-icon aria-hidden="true" [svgIcon]="section.icon" />
       <h2>{{ section.title }}</h2>
       <p>{{ section.text }}</p>
       <span class="badge">Bientôt disponible</span>

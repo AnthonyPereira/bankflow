@@ -2,6 +2,10 @@
 
 Application Angular 22 de BankFlow. Les choix techniques sont décrits dans l'[ADR-002](../../docs/adr/ADR-002-stack-frontend.md).
 
+## Icônes
+
+Les icônes sont des fichiers SVG [Material Symbols](https://github.com/google/material-design-icons) (licence Apache 2.0) copiés dans `public/icons`. Pour en ajouter une, copiez son fichier depuis le paquet `@material-symbols/svg-400`, puis utilisez `<mat-icon svgIcon="nom" />`.
+
 ## Commandes
 
 ```bash
