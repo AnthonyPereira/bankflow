@@ -52,8 +52,10 @@ class RefreshTokenIntegrationTests extends AuthApiTestSupport {
         var login = registerAndLogin();
         var rotated = refresh(cookieValue(login));
 
-        assertThat(refresh(cookieValue(login)).statusCode()).isEqualTo(401);
+        var concurrent = refresh(cookieValue(login));
 
+        assertThat(concurrent.statusCode()).isEqualTo(401);
+        assertThat(concurrent.headers().firstValue("Set-Cookie")).isEmpty();
         assertThat(refresh(cookieValue(rotated)).statusCode()).isEqualTo(200);
     }
 
@@ -65,8 +67,10 @@ class RefreshTokenIntegrationTests extends AuthApiTestSupport {
                 "UPDATE refresh_tokens SET revoked_at = now() - interval '1 minute'"
                         + " WHERE revoked_at IS NOT NULL");
 
-        assertThat(refresh(cookieValue(login)).statusCode()).isEqualTo(401);
+        var reused = refresh(cookieValue(login));
 
+        assertThat(reused.statusCode()).isEqualTo(401);
+        assertThat(setCookie(reused)).contains("Max-Age=0");
         assertThat(refresh(cookieValue(rotated)).statusCode()).isEqualTo(401);
     }
 

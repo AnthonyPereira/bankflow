@@ -25,15 +25,16 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         this.refreshCookies = refreshCookies;
     }
 
-    /** Le cookie devenu inutile est effacé pour que le navigateur ne le renvoie plus. */
+    /** Une session terminée efface son cookie pour que le navigateur ne le renvoie plus. */
     @ExceptionHandler(InvalidRefreshTokenException.class)
     ResponseEntity<ProblemDetail> handleInvalidRefreshToken(
             InvalidRefreshTokenException exception) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .header(HttpHeaders.SET_COOKIE, refreshCookies.clear())
-                .body(
-                        ProblemDetail.forStatusAndDetail(
-                                HttpStatus.UNAUTHORIZED, exception.getMessage()));
+        var response = ResponseEntity.status(HttpStatus.UNAUTHORIZED);
+        if (exception.isSessionEnded()) {
+            response.header(HttpHeaders.SET_COOKIE, refreshCookies.clear());
+        }
+        return response.body(
+                ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage()));
     }
 
     @ExceptionHandler(EmailAlreadyUsedException.class)
