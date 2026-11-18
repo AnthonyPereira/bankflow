@@ -1,6 +1,23 @@
-# Environnement local BankFlow. Démarrage : docker compose up -d
+# Environnement local BankFlow.
+#   docker compose up -d                  démarre l'infrastructure
+#   docker compose --profile apps up -d   démarre aussi les services applicatifs
 # Les ports ne sont publiés que sur 127.0.0.1 : rien n'est exposé au réseau local.
 name: bankflow
+
+x-spring-env: &spring-env
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-dev}
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  JWK_SET_URI: http://auth-service:8081/.well-known/jwks.json
+
+x-spring-service: &spring-service
+  restart: unless-stopped
+  profiles: [apps]
+  mem_limit: 512m
+  networks:
+    - bankflow
+  depends_on:
+    postgres:
+      condition: service_healthy
 
 services:
   postgres:
@@ -52,6 +69,78 @@ services:
       timeout: 3s
       retries: 6
       start_period: 5s
+
+  auth-service:
+    <<: *spring-service
+    image: bankflow/auth-service:local
+    container_name: bankflow-auth-service
+    build:
+      context: ./services/auth-service
+      dockerfile: ../../infra/docker/spring-boot.Dockerfile
+    environment:
+      <<: *spring-env
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/auth_db
+      DB_USERNAME: auth_user
+      DB_PASSWORD: ${AUTH_DB_PASSWORD:?à définir dans .env}
+
+  customer-service:
+    <<: *spring-service
+    image: bankflow/customer-service:local
+    container_name: bankflow-customer-service
+    build:
+      context: ./services/customer-service
+      dockerfile: ../../infra/docker/spring-boot.Dockerfile
+    environment:
+      <<: *spring-env
+      SERVER_PORT: 8082
+      DB_URL: jdbc:postgresql://postgres:5432/customer_db
+      DB_USERNAME: customer_user
+      DB_PASSWORD: ${CUSTOMER_DB_PASSWORD:?à définir dans .env}
+
+  banking-service:
+    <<: *spring-service
+    image: bankflow/banking-service:local
+    container_name: bankflow-banking-service
+    build:
+      context: ./services/banking-service
+      dockerfile: ../../infra/docker/spring-boot.Dockerfile
+    environment:
+      <<: *spring-env
+      SERVER_PORT: 8083
+      DB_URL: jdbc:postgresql://postgres:5432/banking_db
+      DB_USERNAME: banking_user
+      DB_PASSWORD: ${BANKING_DB_PASSWORD:?à définir dans .env}
+
+  notification-service:
+    <<: *spring-service
+    image: bankflow/notification-service:local
+    container_name: bankflow-notification-service
+    build:
+      context: ./services/notification-service
+      dockerfile: ../../infra/docker/spring-boot.Dockerfile
+    environment:
+      <<: *spring-env
+      SERVER_PORT: 8084
+      DB_URL: jdbc:postgresql://postgres:5432/notification_db
+      DB_USERNAME: notification_user
+      DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?à définir dans .env}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+
+  analytics-fraud-service:
+    <<: *spring-service
+    image: bankflow/analytics-fraud-service:local
+    container_name: bankflow-analytics-fraud-service
+    build:
+      context: ./services/analytics-fraud-service
+      dockerfile: ../../infra/docker/spring-boot.Dockerfile
+    environment:
+      <<: *spring-env
+      SERVER_PORT: 8085
+      DB_URL: jdbc:postgresql://postgres:5432/analytics_db
+      DB_USERNAME: analytics_user
+      DB_PASSWORD: ${ANALYTICS_DB_PASSWORD:?à définir dans .env}
 
 networks:
   bankflow:

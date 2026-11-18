@@ -94,15 +94,15 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-002-03 — Créer un utilisateur PostgreSQL dédié par base, avec des droits limités à sa propre base
 - [x] BF-002-04 — Ajouter Mailpit (SMTP et interface web)
 - [x] BF-002-05 — Ajouter des volumes persistants et des healthchecks
-- [ ] BF-002-06 — Configurer Flyway dans chaque service (dossier `db/migration`, migration V1 vide ou initiale)
-- [ ] BF-002-07 — Écrire un `Dockerfile` multi-stage générique pour les services Spring Boot
-- [ ] BF-002-08 — Externaliser la configuration (variables d'environnement et profils `dev`, `test`, `prod-sim`)
-- [ ] BF-002-09 — Configurer Actuator (`/actuator/health`) dans chaque service
+- [x] BF-002-06 — Configurer Flyway dans chaque service (dossier `db/migration`, migration V1 vide ou initiale)
+- [x] BF-002-07 — Écrire un `Dockerfile` multi-stage générique pour les services Spring Boot
+- [x] BF-002-08 — Externaliser la configuration (variables d'environnement et profils `dev`, `test`, `prod-sim`)
+- [x] BF-002-09 — Configurer Actuator (`/actuator/health`) dans chaque service
 - [x] BF-002-10 — Documenter les ports, les URL et les commandes (`docker compose up -d`, `down -v`, logs) → `infra/README.md`
 
 ### Critères de validation
 - [x] `docker compose up -d` démarre PostgreSQL et Mailpit, et tous les healthchecks sont au vert
-- [ ] Chaque service se connecte uniquement à sa propre base
+- [x] Chaque service se connecte uniquement à sa propre base
 
 ---
 
