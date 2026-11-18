@@ -65,13 +65,13 @@ git push origin main develop --tags
 
 | Version | Contenu (lots) |
 |---|---|
-| `0.1.0` | Socle : BF-001 à BF-005 (dépôt, infrastructure, Kafka, Gateway, Auth) |
-| `0.2.0` | Cœur bancaire : BF-006 à BF-009 |
+| `0.1.0` | **MVP 1, socle et première mise en ligne** : BF-001 à BF-005, BF-016 et le déploiement (BF-023-05, BF-023-06, BF-023-16) |
+| `0.2.0` | **MVP 2, cœur bancaire** : BF-006 à BF-009, BF-017 |
 | `0.3.0` | Événements fiables : BF-010 à BF-013 |
 | `0.4.0` | Analytics et fraude : BF-014, BF-015 |
-| `0.5.0` | Frontend : BF-016 à BF-018 |
+| `0.5.0` | Interface complémentaire (notifications, statistiques, administration) : BF-018 |
 | `0.6.0` | Fiabilité et monitoring : BF-019, BF-020 |
-| `1.0.0` | Saga, Kafka Streams, documentation et CI/CD : BF-021 à BF-023, et validation finale |
+| `1.0.0` | Saga, Kafka Streams, documentation et CI/CD : BF-021, BF-022, reste de BF-023, et validation finale |
 
 ## 2. Messages de commit : Conventional Commits
 
