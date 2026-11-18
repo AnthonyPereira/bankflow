@@ -601,8 +601,8 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-023-02 — Exécution des tests backend (unitaires et Testcontainers) → `./mvnw verify` dans `.github/workflows/ci.yml`, mis en place avec BF-001-10
 - [x] BF-023-03 — Compilation Angular
 - [x] BF-023-04 — Exécution des tests frontend (Vitest)
-- [ ] BF-023-05 — Construction des images Docker (à avancer au jalon MVP 1)
-- [ ] BF-023-06 — Publication des images (GHCR) sur la branche principale ou sur les tags (à avancer au jalon MVP 1)
+- [x] BF-023-05 — Construction des images Docker (à avancer au jalon MVP 1)
+- [x] BF-023-06 — Publication des images (GHCR) sur la branche principale ou sur les tags (à avancer au jalon MVP 1)
 - [ ] BF-023-07 — Rapports de couverture et cache Maven/npm
 
 ### Tâches — Documentation
