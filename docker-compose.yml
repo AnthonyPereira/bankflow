@@ -179,6 +179,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/auth_db
       DB_USERNAME: auth_user
       DB_PASSWORD: ${AUTH_DB_PASSWORD:?à définir dans .env}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
 
   customer-service:
     <<: *spring-service

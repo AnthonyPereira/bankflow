@@ -37,11 +37,18 @@ spring:
         spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       ack-mode: record
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: ${JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+
+bankflow:
+  jwt:
+    issuer: ${JWT_ISSUER:https://bankflow.local/auth}
+    audience: bankflow-api
+    access-token-ttl: PT15M
+    # Clé privée RSA PKCS#8 en Base64 : obligatoire avec le profil prod-sim
+    private-key: ${JWT_PRIVATE_KEY:}
+    key-id: ${JWT_KEY_ID:bankflow-1}
+  login:
+    max-attempts: 5
+    lock-duration: PT15M
 
 server:
   port: 8081

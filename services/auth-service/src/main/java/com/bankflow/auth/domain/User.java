@@ -63,6 +63,10 @@ public class User {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
+    public boolean isLockedAt(Instant now) {
+        return lockedUntil != null && lockedUntil.isAfter(now);
+    }
+
     public UUID getId() {
         return id;
     }

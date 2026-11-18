@@ -1,0 +1,28 @@
+package com.bankflow.auth.api;
+
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import java.time.Duration;
+import java.util.Map;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/** Publie la clé publique avec laquelle la Gateway et les services vérifient les JWT. */
+@RestController
+class JwksController {
+
+    private final Map<String, Object> publicKeys;
+
+    JwksController(RSAKey jwtSigningKey) {
+        this.publicKeys = new JWKSet(jwtSigningKey.toPublicJWK()).toJSONObject();
+    }
+
+    @GetMapping("/.well-known/jwks.json")
+    ResponseEntity<Map<String, Object>> jwks() {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
+                .body(publicKeys);
+    }
+}

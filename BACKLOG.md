@@ -171,11 +171,11 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-005-01 — Migration Flyway : table `users` (`id UUID`, `email` unique, `password_hash`, `role`, `enabled`, `created_at`, `updated_at`)
 - [x] BF-005-02 — Entité `User`, repository, DTO, mappers MapStruct
 - [x] BF-005-03 — `POST /auth/register` : validation des entrées, unicité de l'email, hachage BCrypt ou Argon2, rôle `ROLE_CLIENT` par défaut
-- [ ] BF-005-04 — `POST /auth/login` : génération d'un JWT signé RSA ou EC avec une durée de vie courte
+- [x] BF-005-04 — `POST /auth/login` : génération d'un JWT signé RSA ou EC avec une durée de vie courte
 - [ ] BF-005-05 — `POST /auth/refresh` : décider s'il est retenu (ADR), puis implémenter le refresh token (stockage, rotation, révocation)
-- [ ] BF-005-06 — `GET /auth/me`
-- [ ] BF-005-07 — Exposer la clé publique (endpoint JWKS) pour la Gateway et les services
-- [ ] BF-005-08 — Protéger contre le brute force (compteur d'échecs, verrouillage temporaire ou backoff)
+- [x] BF-005-06 — `GET /auth/me`
+- [x] BF-005-07 — Exposer la clé publique (endpoint JWKS) pour la Gateway et les services
+- [x] BF-005-08 — Protéger contre le brute force (compteur d'échecs, verrouillage temporaire ou backoff)
 - [ ] BF-005-09 — Créer un compte administrateur initial (seed sécurisé via variable d'environnement)
 - [ ] BF-005-10 — Publier `UserRegistered` sur `bank.users` (clé `userId`), sans mot de passe ni token
 - [ ] BF-005-11 — Documenter le contrat `contracts/events/UserRegistered.v1.json`
