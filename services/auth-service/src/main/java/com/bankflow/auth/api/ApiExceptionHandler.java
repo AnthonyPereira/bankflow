@@ -1,6 +1,7 @@
 package com.bankflow.auth.api;
 
 import com.bankflow.auth.application.EmailAlreadyUsedException;
+import com.bankflow.auth.application.InvalidCredentialsException;
 import java.util.LinkedHashMap;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(EmailAlreadyUsedException.class)
     ProblemDetail handleEmailAlreadyUsed(EmailAlreadyUsedException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    ProblemDetail handleInvalidCredentials(InvalidCredentialsException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
     }
 
     @Override

@@ -12,10 +12,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -62,7 +63,7 @@ class SecurityConfig {
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->
-                        oauth2.jwt(Customizer.withDefaults())
+                        oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(roleConverter()))
                                 .authenticationEntryPoint(unauthorized)
                                 .accessDeniedHandler(forbidden))
                 .exceptionHandling(exceptions ->
@@ -70,6 +71,16 @@ class SecurityConfig {
                                 .authenticationEntryPoint(unauthorized)
                                 .accessDeniedHandler(forbidden))
                 .build();
+    }
+
+    /** Le claim {@code role} contient déjà le préfixe ROLE_ attendu par Spring Security. */
+    private static JwtAuthenticationConverter roleConverter() {
+        var authorities = new JwtGrantedAuthoritiesConverter();
+        authorities.setAuthoritiesClaimName("role");
+        authorities.setAuthorityPrefix("");
+        var converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authorities);
+        return converter;
     }
 
     private static void writeProblem(
