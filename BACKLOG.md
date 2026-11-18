@@ -172,7 +172,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-005-02 — Entité `User`, repository, DTO, mappers MapStruct
 - [x] BF-005-03 — `POST /auth/register` : validation des entrées, unicité de l'email, hachage BCrypt ou Argon2, rôle `ROLE_CLIENT` par défaut
 - [x] BF-005-04 — `POST /auth/login` : génération d'un JWT signé RSA ou EC avec une durée de vie courte
-- [ ] BF-005-05 — `POST /auth/refresh` : décider s'il est retenu (ADR), puis implémenter le refresh token (stockage, rotation, révocation)
+- [x] BF-005-05 — `POST /auth/refresh` : décider s'il est retenu (ADR), puis implémenter le refresh token (stockage, rotation, révocation)
 - [x] BF-005-06 — `GET /auth/me`
 - [x] BF-005-07 — Exposer la clé publique (endpoint JWKS) pour la Gateway et les services
 - [x] BF-005-08 — Protéger contre le brute force (compteur d'échecs, verrouillage temporaire ou backoff)
