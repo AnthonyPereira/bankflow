@@ -1,0 +1,57 @@
+<app-auth-card heading="Créer un compte" intro="Quelques secondes suffisent pour commencer.">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (errorMessage(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Adresse email</mat-label>
+      <input matInput type="email" formControlName="email" autocomplete="email" />
+      @if (form.controls.email.hasError('required')) {
+        <mat-error>L'adresse email est obligatoire.</mat-error>
+      } @else if (form.controls.email.hasError('maxlength')) {
+        <mat-error>L'adresse email est trop longue.</mat-error>
+      } @else if (form.controls.email.hasError('email')) {
+        <mat-error>L'adresse email est invalide.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Mot de passe</mat-label>
+      <input
+        matInput
+        [type]="passwordVisible() ? 'text' : 'password'"
+        formControlName="password"
+        autocomplete="new-password"
+      />
+      <button
+        matIconButton
+        matSuffix
+        type="button"
+        [attr.aria-label]="
+          passwordVisible() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+        "
+        [attr.aria-pressed]="passwordVisible()"
+        (click)="passwordVisible.set(!passwordVisible())"
+      >
+        <mat-icon aria-hidden="true">{{
+          passwordVisible() ? 'visibility_off' : 'visibility'
+        }}</mat-icon>
+      </button>
+      <mat-hint>12 caractères minimum</mat-hint>
+      @if (form.controls.password.hasError('required')) {
+        <mat-error>Le mot de passe est obligatoire.</mat-error>
+      } @else if (form.controls.password.hasError('minlength')) {
+        <mat-error>Le mot de passe doit contenir au moins 12 caractères.</mat-error>
+      } @else if (form.controls.password.hasError('maxBytes')) {
+        <mat-error>Le mot de passe est trop long.</mat-error>
+      }
+    </mat-form-field>
+
+    <button matButton="filled" class="submit" type="submit" [disabled]="submitting()">
+      {{ submitting() ? 'Création…' : 'Créer mon compte' }}
+    </button>
+  </form>
+
+  <p class="switch">Déjà inscrit ? <a routerLink="/connexion">Se connecter</a></p>
+</app-auth-card>

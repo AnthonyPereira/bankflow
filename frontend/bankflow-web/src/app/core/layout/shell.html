@@ -1,0 +1,59 @@
+<mat-toolbar class="toolbar">
+  @if (compact()) {
+    <button matIconButton type="button" aria-label="Ouvrir le menu" (click)="menuOpen.set(true)">
+      <mat-icon aria-hidden="true">menu</mat-icon>
+    </button>
+  }
+  <a class="brand" routerLink="/tableau-de-bord">
+    <mat-icon aria-hidden="true">account_balance</mat-icon>
+    BankFlow
+  </a>
+  <span class="spacer"></span>
+  <button matButton type="button" (click)="logout()">
+    <mat-icon aria-hidden="true">logout</mat-icon>
+    Se déconnecter
+  </button>
+</mat-toolbar>
+
+<mat-sidenav-container class="container">
+  <mat-sidenav
+    class="nav"
+    [mode]="compact() ? 'over' : 'side'"
+    [opened]="navOpened()"
+    [disableClose]="!compact()"
+    (closedStart)="closeMenu()"
+  >
+    <mat-nav-list aria-label="Navigation principale">
+      <a
+        mat-list-item
+        routerLink="/tableau-de-bord"
+        routerLinkActive
+        #dashboardLink="routerLinkActive"
+        [activated]="dashboardLink.isActive"
+        (click)="closeMenu()"
+      >
+        <mat-icon matListItemIcon aria-hidden="true">dashboard</mat-icon>
+        <span matListItemTitle>Tableau de bord</span>
+      </a>
+      @if (isAdmin()) {
+        <a
+          mat-list-item
+          routerLink="/administration"
+          routerLinkActive
+          #adminLink="routerLinkActive"
+          [activated]="adminLink.isActive"
+          (click)="closeMenu()"
+        >
+          <mat-icon matListItemIcon aria-hidden="true">admin_panel_settings</mat-icon>
+          <span matListItemTitle>Administration</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <main class="content">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
