@@ -10,7 +10,10 @@ Mis en place aux lots **BF-002** (PostgreSQL, Mailpit), **BF-003** (Kafka) et **
 cp .env.example .env   # puis renseigner les mots de passe
 docker compose up -d   # démarre l'environnement
 docker compose ps      # les services doivent être « healthy »
+docker compose --profile apps up -d --build   # construit et démarre aussi les services Spring Boot
 ```
+
+Le profil Spring se choisit avec la variable `SPRING_PROFILE` : `dev` (par défaut) ou `prod-sim`. Le profil `test` est réservé aux tests automatisés.
 
 ## Commandes utiles
 
