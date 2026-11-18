@@ -138,7 +138,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** routage, filtres et sécurité transverse avec Spring Cloud Gateway.
 
 ### Tâches
-- [ ] BF-004-01 — Créer le projet `api-gateway` (Spring Cloud Gateway)
+- [x] BF-004-01 — Créer le projet `api-gateway` (Spring Cloud Gateway) → squelette créé avec BF-001-05 (`spring-cloud-starter-gateway-server-webmvc`)
 - [ ] BF-004-02 — Configurer les routes :
   - `/api/auth/**` → Auth Service
   - `/api/customers/**` → Customer Service
@@ -595,8 +595,8 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 ## BF-023 — Finalisation : documentation et CI/CD
 
 ### Tâches — CI/CD (GitHub Actions)
-- [ ] BF-023-01 — Compilation Maven de chaque service (matrice)
-- [ ] BF-023-02 — Exécution des tests backend (unitaires et Testcontainers)
+- [x] BF-023-01 — Compilation Maven de chaque service (matrice) → `.github/workflows/ci.yml`, mis en place avec BF-001-10
+- [x] BF-023-02 — Exécution des tests backend (unitaires et Testcontainers) → `./mvnw verify` dans `.github/workflows/ci.yml`, mis en place avec BF-001-10
 - [ ] BF-023-03 — Compilation Angular
 - [ ] BF-023-04 — Exécution des tests frontend (Vitest)
 - [ ] BF-023-05 — Construction des images Docker (à avancer au jalon MVP 1)
