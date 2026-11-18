@@ -14,4 +14,6 @@ npm run format:check   # vérifie le formatage
 npm run build          # construit l'application de production
 ```
 
+L'application complète est aussi servie par Nginx sur `http://localhost:8088` avec `docker compose --profile apps up -d --build`.
+
 `npm start` relaie `/api` vers la Gateway sur `http://localhost:8080`. Il faut donc démarrer la pile avec `docker compose --profile apps up -d --build`.
