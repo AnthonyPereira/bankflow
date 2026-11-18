@@ -49,7 +49,12 @@ class SecurityConfig {
                 .authorizeHttpRequests(requests ->
                         requests.dispatcherTypeMatchers(DispatcherType.ERROR)
                                 .permitAll()
-                                .requestMatchers("/actuator/health/**", "/actuator/info")
+                                .requestMatchers(
+                                        "/actuator/health/**",
+                                        "/actuator/info",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html")
                                 .permitAll()
                                 .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json")
                                 .permitAll()
