@@ -44,7 +44,8 @@ class SecurityConfig {
                 (request, response, exception) ->
                         writeProblem(request, response, HttpStatus.FORBIDDEN, "Accès refusé.");
 
-        return http.csrf(AbstractHttpConfigurer::disable)
+        // Sûr : cette API sans cookie n'accepte que des JWT envoyés dans l'en-tête Authorization.
+        return http.csrf(AbstractHttpConfigurer::disable) // NOSONAR
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests ->

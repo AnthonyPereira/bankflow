@@ -13,7 +13,9 @@ La CI envoie à SonarQube Cloud le code Java et TypeScript, les rapports JaCoCo 
 
 ## Bloquer une fusion
 
-Dans **Settings → Branches**, protéger `develop` et `main` en exigeant le contrôle `SonarCloud Code Analysis`.
+`develop` et `main` sont protégées : toute modification passe par une PR, et les jobs de la CI doivent réussir, dont `sonarqube`. Ce job attend le résultat de la Quality Gate et échoue si elle échoue.
+
+Le contrôle `SonarCloud Code Analysis` n'est pas exigé, car il n'existe pas sur les PR de Dependabot, qui n'ont pas accès au jeton.
 
 ## Limites
 

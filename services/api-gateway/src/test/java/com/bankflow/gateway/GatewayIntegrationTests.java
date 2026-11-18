@@ -193,6 +193,27 @@ class GatewayIntegrationTests {
     }
 
     @Test
+    void uneOrigineEtrangereNePeutPasUtiliserLeCookieDeRefresh() throws Exception {
+        for (var path : List.of("/api/auth/refresh", "/api/auth/logout")) {
+            var response =
+                    send(
+                            post(path)
+                                    .header("Origin", "https://pirate.example")
+                                    .header("Cookie", "bankflow_refresh=valeur"));
+
+            assertThat(response.statusCode()).isEqualTo(403);
+            assertThat(LAST_REQUEST.get()).isNull();
+        }
+    }
+
+    @Test
+    void uneEcritureSurUneRouteInconnueRepond404() throws Exception {
+        var response = send(post("/route-inconnue").header("Authorization", bearer(validToken())));
+
+        assertThat(response.statusCode()).isEqualTo(404);
+    }
+
+    @Test
     void unServiceIndisponibleRepond503EnProblemDetail() throws Exception {
         var response = send(get("/api/customers/me").header("Authorization", bearer(validToken())));
 

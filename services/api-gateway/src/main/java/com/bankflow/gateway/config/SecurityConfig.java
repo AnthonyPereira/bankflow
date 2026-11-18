@@ -44,7 +44,9 @@ class SecurityConfig {
                         ProblemResponses.write(
                                 request, response, HttpStatus.FORBIDDEN, "Accès refusé.");
 
-        return http.csrf(AbstractHttpConfigurer::disable)
+        // Sûr : le cookie de refresh est SameSite=Strict et la Gateway refuse les origines
+        // étrangères.
+        return http.csrf(AbstractHttpConfigurer::disable) // NOSONAR
                 .cors(Customizer.withDefaults())
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
