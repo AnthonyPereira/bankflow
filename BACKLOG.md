@@ -157,7 +157,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] Tests de routage, de rejet sans JWT ou avec un JWT invalide ou expiré, de CORS et de rate limiting
 
 ### Critères de validation
-- [ ] Toutes les routes répondent via la Gateway
+- [x] Toutes les routes répondent via la Gateway
 - [x] Les services internes protègent aussi leurs propres API (la Gateway n'est pas l'unique frontière de sécurité)
 
 ---
@@ -180,15 +180,15 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-005-10 — Publier `UserRegistered` sur `bank.users` (clé `userId`), sans mot de passe ni token
 - [x] BF-005-11 — Documenter le contrat `contracts/events/UserRegistered.v1.json`
 - [x] BF-005-12 — Configurer la sécurité commune des services en Resource Server (validation JWT et extraction du rôle), en dupliquant la configuration par service sans module partagé
-- [ ] BF-005-13 — Ajouter la documentation OpenAPI/Swagger
+- [x] BF-005-13 — Ajouter la documentation OpenAPI/Swagger
 
 ### Tests
-- [ ] Tests unitaires : hachage, génération et validation du JWT, expiration, verrouillage après échecs
-- [ ] Tests d'intégration : register, login, me, email dupliqué, mot de passe invalide
+- [x] Tests unitaires : hachage, génération et validation du JWT, expiration, verrouillage après échecs
+- [x] Tests d'intégration : register, login, me, email dupliqué, mot de passe invalide
 
 ### Critères de validation
-- [ ] Inscription et authentification fonctionnelles via la Gateway
-- [ ] `UserRegistered` est visible dans Kafka UI et ne contient aucune donnée sensible
+- [x] Inscription et authentification fonctionnelles via la Gateway
+- [x] `UserRegistered` est visible dans Kafka UI et ne contient aucune donnée sensible
 
 ---
 
