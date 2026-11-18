@@ -689,7 +689,7 @@ Connexion à de vraies banques ou paiements SEPA réels · cartes bancaires et c
 
 ## Décisions à prendre (ADR)
 1. ~~Versions et stack backend et frontend (BF-001)~~ → ADR-001 et ADR-002 (acceptés le 2026-11-16)
-2. Refresh token retenu ou non, et stratégie de stockage du token côté frontend (BF-005, BF-016)
+2. ~~Refresh token retenu ou non, et stratégie de stockage du token côté frontend (BF-005, BF-016)~~ → ADR-003 (accepté le 2026-11-18)
 3. Résolution `userId` → `customerId` dans le Banking Service (BF-007)
 4. Mapping événement → topic pour `DepositCompleted` et `WithdrawalCompleted` (BF-010)
 5. Source de l'email du destinataire dans le Notification Service (BF-012)
