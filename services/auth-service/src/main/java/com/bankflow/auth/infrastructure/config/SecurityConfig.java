@@ -1,28 +1,92 @@
 package com.bankflow.auth.infrastructure.config;
 
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Le service valide lui-même les JWT : la Gateway n'est pas l'unique frontière de sécurité. */
 @Configuration(proxyBeanMethods = false)
 class SecurityConfig {
 
+    private static final JsonMapper JSON = JsonMapper.builder().build();
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        AuthenticationEntryPoint unauthorized =
+                (request, response, exception) -> {
+                    response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
+                    writeProblem(
+                            request,
+                            response,
+                            HttpStatus.UNAUTHORIZED,
+                            "Authentification requise ou jeton invalide.");
+                };
+        AccessDeniedHandler forbidden =
+                (request, response, exception) ->
+                        writeProblem(request, response, HttpStatus.FORBIDDEN, "Accès refusé.");
+
         return http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(
                         session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests ->
-                        requests.requestMatchers("/actuator/health/**", "/actuator/info")
+                        requests.dispatcherTypeMatchers(DispatcherType.ERROR)
+                                .permitAll()
+                                .requestMatchers("/actuator/health/**", "/actuator/info")
+                                .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json")
+                                .permitAll()
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/auth/register",
+                                        "/auth/login",
+                                        "/auth/refresh",
+                                        "/auth/logout")
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(oauth2 ->
+                        oauth2.jwt(Customizer.withDefaults())
+                                .authenticationEntryPoint(unauthorized)
+                                .accessDeniedHandler(forbidden))
+                .exceptionHandling(exceptions ->
+                        exceptions
+                                .authenticationEntryPoint(unauthorized)
+                                .accessDeniedHandler(forbidden))
                 .build();
+    }
+
+    private static void writeProblem(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            HttpStatus status,
+            String detail)
+            throws IOException {
+        var body = new LinkedHashMap<String, Object>();
+        body.put("type", "about:blank");
+        body.put("title", status.getReasonPhrase());
+        body.put("status", status.value());
+        body.put("detail", detail);
+        body.put("instance", request.getRequestURI());
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8);
+        response.getWriter().write(JSON.writeValueAsString(body));
     }
 }
