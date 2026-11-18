@@ -17,6 +17,17 @@ updates:
     commit-message:
       prefix: build
 
+  - package-ecosystem: npm
+    directory: /frontend/bankflow-web
+    target-branch: develop
+    schedule:
+      interval: weekly
+    groups:
+      angular:
+        patterns: ["@angular/*", "@angular-devkit/*", "angular-eslint"]
+    commit-message:
+      prefix: build
+
   - package-ecosystem: github-actions
     directory: /
     target-branch: develop
