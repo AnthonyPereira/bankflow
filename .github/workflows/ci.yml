@@ -33,10 +33,10 @@ jobs:
       run:
         working-directory: services/${{ matrix.service }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: JDK 27 (Temurin)
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: '27'
@@ -47,9 +47,20 @@ jobs:
       - name: Maven verify
         run: ./mvnw -B -ntp verify
 
+      - name: Rapports pour SonarQube
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-${{ matrix.service }}
+          path: |
+            services/${{ matrix.service }}/target/classes/
+            services/${{ matrix.service }}/target/test-classes/
+            services/${{ matrix.service }}/target/site/jacoco/jacoco.xml
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Rapports de tests
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: surefire-${{ matrix.service }}
           path: services/${{ matrix.service }}/target/surefire-reports/
@@ -63,17 +74,17 @@ jobs:
       run:
         working-directory: frontend/bankflow-web
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: frontend/bankflow-web/.nvmrc
           cache: npm
           cache-dependency-path: frontend/bankflow-web/package-lock.json
 
       - name: Dépendances
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint
         run: npm run lint
@@ -84,5 +95,61 @@ jobs:
       - name: Tests
         run: npm run test:ci
 
+      - name: Couverture pour SonarQube
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: frontend-coverage
+          path: frontend/bankflow-web/coverage/
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Build de production
         run: npm run build
+
+  sonar:
+    name: sonarqube
+    needs: [backend, frontend]
+    # Activation : docs/runbooks/sonarqube.md. Les PR de forks et de Dependabot n'ont pas accès au jeton.
+    if: >-
+      vars.SONAR_CI_ENABLED == 'true' &&
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Sonar attribue le nouveau code grâce à l'historique complet
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: JDK 27 (Temurin)
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '27'
+          cache: maven
+          cache-dependency-path: services/*/pom.xml
+
+      - name: Récupérer les rapports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: rapports
+
+      - name: Replacer les rapports
+        run: |
+          for dossier in rapports/backend-*; do
+            service="${dossier#rapports/backend-}"
+            mkdir -p "services/$service/target"
+            cp -r "$dossier/." "services/$service/target/"
+            (cd "services/$service" && ./mvnw -B -ntp -q dependency:copy-dependencies \
+              -DincludeScope=test -DoutputDirectory=target/sonar-libs)
+          done
+          mkdir -p frontend/bankflow-web/coverage
+          cp -r rapports/frontend-coverage/. frontend/bankflow-web/coverage/
+          rm -rf rapports
+
+      - name: Analyse SonarQube
+        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

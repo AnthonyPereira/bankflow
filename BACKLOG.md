@@ -603,7 +603,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-023-04 — Exécution des tests frontend (Vitest)
 - [x] BF-023-05 — Construction des images Docker (à avancer au jalon MVP 1)
 - [x] BF-023-06 — Publication des images (GHCR) sur la branche principale ou sur les tags (à avancer au jalon MVP 1)
-- [ ] BF-023-07 — Rapports de couverture et cache Maven/npm
+- [x] BF-023-07 — Rapports de couverture (JaCoCo, Vitest), cache Maven/npm et analyse SonarQube Cloud → `docs/runbooks/sonarqube.md`
 
 ### Tâches — Documentation
 - [ ] BF-023-08 — Swagger/OpenAPI de chaque service, avec agrégation éventuelle via la Gateway
