@@ -66,9 +66,10 @@ public class RefreshTokenService {
                         .orElseThrow(InvalidRefreshTokenException::new);
 
         if (token.isRevoked()) {
-            if (token.isReuseSuspectedAt(now, reuseGrace)) {
-                tokens.revokeFamily(token.getFamilyId(), now);
+            if (!token.isReuseSuspectedAt(now, reuseGrace)) {
+                throw InvalidRefreshTokenException.concurrentRotation();
             }
+            tokens.revokeFamily(token.getFamilyId(), now);
             throw new InvalidRefreshTokenException();
         }
         if (token.isExpiredAt(now)) {
