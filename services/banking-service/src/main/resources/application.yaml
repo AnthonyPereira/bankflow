@@ -8,6 +8,9 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/banking_db}
     username: ${DB_USERNAME:banking_user}
     password: ${DB_PASSWORD:change-me}
+  mvc:
+    problemdetails:
+      enabled: true
   jpa:
     open-in-view: false
     hibernate:
@@ -39,6 +42,9 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: ${JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+          issuer-uri: ${JWT_ISSUER:https://bankflow.local/auth}
+          audiences:
+            - bankflow-api
 
 server:
   port: 8083
