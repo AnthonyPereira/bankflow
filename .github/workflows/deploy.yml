@@ -1,6 +1,7 @@
 name: Déploiement
 
-# Jamais sur pull_request : le job deploy s'exécute sur le serveur maison.
+# Construit les images, puis demande leur mise en ligne au dépôt privé deploy-platform.
+# Ce dépôt est public : aucun job ne doit s'exécuter sur le serveur maison.
 on:
   push:
     branches: [main]
@@ -16,6 +17,7 @@ concurrency:
 jobs:
   build:
     name: image ${{ matrix.name }}
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -67,28 +69,17 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
             ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ github.sha }}
 
-  deploy:
-    name: mise en ligne
+  deployer:
+    name: demande de mise en ligne
     needs: build
-    runs-on: [self-hosted, serveur-maison]
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      packages: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # deploy-app lit docker-compose.yml à la racine, où se trouve le compose de développement
-      - name: Sélectionner le compose de déploiement
-        run: cp deploy/docker-compose.yml docker-compose.yml
-
-      - name: Déployer sur le serveur
+      - name: Prévenir deploy-platform
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
         run: |
-          NOM="${GITHUB_REPOSITORY#*/}"
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          trap 'docker logout ghcr.io' EXIT
-          deploy-app "${NOM,,}" "ghcr.io/${GITHUB_REPOSITORY,,}"
+          gh api "repos/${GITHUB_REPOSITORY_OWNER}/deploy-platform/dispatches" \
+            -f event_type=deployer \
+            -f "client_payload[app]=bankflow" \
+            -f "client_payload[version]=$GITHUB_SHA"
