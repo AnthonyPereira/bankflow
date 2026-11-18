@@ -466,13 +466,13 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-016-12 — `shared/models` (interfaces TypeScript)
 - [ ] BF-016-12b — `shared/pipes` (montant ou devise, date) (reporté à la MVP 2, avec les premiers montants affichés)
 - [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
-- [ ] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
+- [x] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
 
 ### Tests
 - [x] Tests Vitest : AuthService, intercepteurs, guards, formulaires de connexion et d'inscription
 
 ### Critères de validation
-- [ ] Parcours complet inscription → connexion → dashboard → déconnexion
+- [x] Parcours complet inscription → connexion → dashboard → déconnexion
 - [ ] Routes admin inaccessibles à un client (et refusées aussi côté backend)
 
 ---
