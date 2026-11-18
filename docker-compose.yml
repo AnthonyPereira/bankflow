@@ -1,0 +1,65 @@
+# Environnement local BankFlow. Démarrage : docker compose up -d
+# Les ports ne sont publiés que sur 127.0.0.1 : rien n'est exposé au réseau local.
+name: bankflow
+
+services:
+  postgres:
+    image: postgres:18.7-alpine
+    container_name: bankflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?à définir dans .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?à définir dans .env}
+      POSTGRES_DB: postgres
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:?à définir dans .env}
+      CUSTOMER_DB_PASSWORD: ${CUSTOMER_DB_PASSWORD:?à définir dans .env}
+      BANKING_DB_PASSWORD: ${BANKING_DB_PASSWORD:?à définir dans .env}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?à définir dans .env}
+      ANALYTICS_DB_PASSWORD: ${ANALYTICS_DB_PASSWORD:?à définir dans .env}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      # Depuis PostgreSQL 18, le volume se monte sur le dossier parent de PGDATA
+      - postgres-data:/var/lib/postgresql
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - bankflow
+    healthcheck:
+      # -h 127.0.0.1 : le serveur temporaire de l'initialisation n'écoute pas en TCP
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+
+  mailpit:
+    image: axllent/mailpit:v1.34.0
+    container_name: bankflow-mailpit
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_HOST_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_HOST_PORT:-8025}:8025"
+    volumes:
+      - mailpit-data:/data
+    networks:
+      - bankflow
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+
+networks:
+  bankflow:
+    name: bankflow
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: bankflow-postgres-data
+  mailpit-data:
+    name: bankflow-mailpit-data

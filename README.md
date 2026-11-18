@@ -53,12 +53,12 @@ La CI GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) la
 
 ## Démarrage
 
-> Disponible à partir du lot BF-002.
-
 ```bash
 cp .env.example .env   # puis renseigner les valeurs
 docker compose up -d
 ```
+
+Les ports, les bases et les commandes utiles sont décrits dans [infra/README.md](infra/README.md).
 
 ## Avertissement
 
