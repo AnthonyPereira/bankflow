@@ -168,9 +168,9 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** Spring Security, JWT asymétrique et hachage des mots de passe.
 
 ### Tâches
-- [ ] BF-005-01 — Migration Flyway : table `users` (`id UUID`, `email` unique, `password_hash`, `role`, `enabled`, `created_at`, `updated_at`)
-- [ ] BF-005-02 — Entité `User`, repository, DTO, mappers MapStruct
-- [ ] BF-005-03 — `POST /auth/register` : validation des entrées, unicité de l'email, hachage BCrypt ou Argon2, rôle `ROLE_CLIENT` par défaut
+- [x] BF-005-01 — Migration Flyway : table `users` (`id UUID`, `email` unique, `password_hash`, `role`, `enabled`, `created_at`, `updated_at`)
+- [x] BF-005-02 — Entité `User`, repository, DTO, mappers MapStruct
+- [x] BF-005-03 — `POST /auth/register` : validation des entrées, unicité de l'email, hachage BCrypt ou Argon2, rôle `ROLE_CLIENT` par défaut
 - [ ] BF-005-04 — `POST /auth/login` : génération d'un JWT signé RSA ou EC avec une durée de vie courte
 - [ ] BF-005-05 — `POST /auth/refresh` : décider s'il est retenu (ADR), puis implémenter le refresh token (stockage, rotation, révocation)
 - [ ] BF-005-06 — `GET /auth/me`
