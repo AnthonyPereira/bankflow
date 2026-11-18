@@ -158,7 +158,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 
 ### Critères de validation
 - [ ] Toutes les routes répondent via la Gateway
-- [ ] Les services internes protègent aussi leurs propres API (la Gateway n'est pas l'unique frontière de sécurité)
+- [x] Les services internes protègent aussi leurs propres API (la Gateway n'est pas l'unique frontière de sécurité)
 
 ---
 
@@ -179,7 +179,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-005-09 — Créer un compte administrateur initial (seed sécurisé via variable d'environnement)
 - [x] BF-005-10 — Publier `UserRegistered` sur `bank.users` (clé `userId`), sans mot de passe ni token
 - [x] BF-005-11 — Documenter le contrat `contracts/events/UserRegistered.v1.json`
-- [ ] BF-005-12 — Configurer la sécurité commune des services en Resource Server (validation JWT et extraction du rôle), en dupliquant la configuration par service sans module partagé
+- [x] BF-005-12 — Configurer la sécurité commune des services en Resource Server (validation JWT et extraction du rôle), en dupliquant la configuration par service sans module partagé
 - [ ] BF-005-13 — Ajouter la documentation OpenAPI/Swagger
 
 ### Tests
