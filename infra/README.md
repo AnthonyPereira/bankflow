@@ -34,6 +34,7 @@ Le script `postgres/init/01-create-databases.sh` ne s'exécute qu'à la créatio
 | Mailpit interface | 8025 | `MAILPIT_UI_HOST_PORT` | <http://localhost:8025> |
 | Kafka | 9092 | `KAFKA_HOST_PORT` | `localhost:9092` depuis le poste, `kafka:29092` entre conteneurs |
 | Kafka UI | 8090 | `KAFKA_UI_HOST_PORT` | <http://localhost:8090> |
+| API Gateway | 8080 | `GATEWAY_HOST_PORT` | <http://localhost:8080/api> (profil `apps`) |
 
 ## Bases de données
 

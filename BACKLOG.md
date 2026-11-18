@@ -151,7 +151,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-004-06 — Uniformiser les erreurs HTTP (format `ProblemDetail`, RFC 9457)
 - [x] BF-004-07 — Limiter le débit (rate limiting) sur les routes sensibles (login, register, transfers)
 - [x] BF-004-08 — Générer un `correlationId` quand il est absent
-- [ ] BF-004-09 — Ajouter le service au Docker Compose
+- [x] BF-004-09 — Ajouter le service au Docker Compose
 
 ### Tests
 - [x] Tests de routage, de rejet sans JWT ou avec un JWT invalide ou expiré, de CORS et de rate limiting
