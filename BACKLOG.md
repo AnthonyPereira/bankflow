@@ -139,18 +139,18 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 
 ### Tâches
 - [x] BF-004-01 — Créer le projet `api-gateway` (Spring Cloud Gateway) → squelette créé avec BF-001-05 (`spring-cloud-starter-gateway-server-webmvc`)
-- [ ] BF-004-02 — Configurer les routes :
+- [x] BF-004-02 — Configurer les routes :
   - `/api/auth/**` → Auth Service
   - `/api/customers/**` → Customer Service
   - `/api/accounts/**`, `/api/transfers/**`, `/api/transactions/**` → Banking Service
   - `/api/notifications/**` → Notification Service
   - `/api/analytics/**` → Analytics & Fraud Service
-- [ ] BF-004-03 — Valider le JWT (clé publique ou JWKS de l'Auth Service) et laisser passer les routes publiques (`/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`)
-- [ ] BF-004-04 — Propager les informations utiles (en-têtes `X-User-Id`, `X-User-Role`, `X-Correlation-Id`) et supprimer les en-têtes usurpables venant du client
-- [ ] BF-004-05 — Configurer CORS pour le frontend Angular (utile en développement ; en ligne, le front et `/api` partagent la même adresse, donc pas de CORS)
-- [ ] BF-004-06 — Uniformiser les erreurs HTTP (format `ProblemDetail`, RFC 9457)
+- [x] BF-004-03 — Valider le JWT (clé publique ou JWKS de l'Auth Service) et laisser passer les routes publiques (`/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`)
+- [x] BF-004-04 — Propager les informations utiles (en-têtes `X-User-Id`, `X-User-Role`, `X-Correlation-Id`) et supprimer les en-têtes usurpables venant du client
+- [x] BF-004-05 — Configurer CORS pour le frontend Angular (utile en développement ; en ligne, le front et `/api` partagent la même adresse, donc pas de CORS)
+- [x] BF-004-06 — Uniformiser les erreurs HTTP (format `ProblemDetail`, RFC 9457)
 - [ ] BF-004-07 — Limiter le débit (rate limiting) sur les routes sensibles (login, register, transfers)
-- [ ] BF-004-08 — Générer un `correlationId` quand il est absent
+- [x] BF-004-08 — Générer un `correlationId` quand il est absent
 - [ ] BF-004-09 — Ajouter le service au Docker Compose
 
 ### Tests
