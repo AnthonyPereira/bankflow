@@ -452,22 +452,24 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 
 ### Tâches
 - [x] BF-016-01 — Initialiser le projet Angular 22 (standalone, zoneless), Angular Material et CDK (thème M3), Vitest, angular-eslint et Prettier (ADR-002)
-- [ ] BF-016-02 — Créer l'arborescence `core/`, `shared/`, `features/` et `app.routes.ts` conformément au cahier des charges
+- [x] BF-016-02 — Créer l'arborescence `core/`, `shared/`, `features/` et `app.routes.ts` conformément au cahier des charges
 - [x] BF-016-03 — `core/auth` : `AuthService` (login, register, logout, refresh) avec un état basé sur les Signals
 - [x] BF-016-04 — Stocker le token de façon sécurisée (choix documenté) et gérer l'expiration
 - [x] BF-016-05 — Intercepteur HTTP : ajout du JWT, en-tête `X-Correlation-Id`, refresh automatique
 - [x] BF-016-06 — Intercepteur d'erreurs avec gestion centralisée (`MatSnackBar`, 401 qui redirige vers la page de connexion, 403)
 - [x] BF-016-07 — Guards : `authGuard` et `adminGuard` (rôle)
-- [ ] BF-016-08 — Écrans de connexion et d'inscription (formulaires réactifs et validations)
-- [ ] BF-016-09 — Layout (menu client et admin, en-tête, déconnexion)
-- [ ] BF-016-10 — Dashboard : synthèse des comptes, dernières opérations et notifications récentes
-- [ ] BF-016-11 — Écran de profil (`/customers/me`)
-- [ ] BF-016-12 — `shared/models` (interfaces TypeScript) et `shared/pipes` (montant ou devise, date)
+- [x] BF-016-08 — Écrans de connexion et d'inscription (formulaires réactifs et validations)
+- [x] BF-016-09 — Layout (menu client et admin, en-tête, déconnexion)
+- [x] BF-016-10 — Dashboard réduit pour la MVP 1 : informations du compte (`/auth/me`) et sections « bientôt disponible », sans donnée fictive
+- [ ] BF-016-10b — Dashboard complet (MVP 2) : synthèse des comptes, dernières opérations et notifications récentes
+- [ ] BF-016-11 — Écran de profil (`/customers/me`) (reporté à la MVP 2, avec BF-006)
+- [x] BF-016-12 — `shared/models` (interfaces TypeScript)
+- [ ] BF-016-12b — `shared/pipes` (montant ou devise, date) (reporté à la MVP 2, avec les premiers montants affichés)
 - [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
 - [ ] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
 
 ### Tests
-- [ ] Tests Vitest : AuthService, intercepteurs, guards, formulaires de connexion et d'inscription
+- [x] Tests Vitest : AuthService, intercepteurs, guards, formulaires de connexion et d'inscription
 
 ### Critères de validation
 - [ ] Parcours complet inscription → connexion → dashboard → déconnexion
