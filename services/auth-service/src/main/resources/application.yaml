@@ -26,6 +26,8 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
         enable.idempotence: true
+        # Une panne de Kafka ne doit pas bloquer longtemps une inscription
+        max.block.ms: 3000
     consumer:
       # L'offset n'est validé qu'après le traitement du message
       enable-auto-commit: false

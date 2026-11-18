@@ -177,8 +177,8 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-005-07 — Exposer la clé publique (endpoint JWKS) pour la Gateway et les services
 - [x] BF-005-08 — Protéger contre le brute force (compteur d'échecs, verrouillage temporaire ou backoff)
 - [ ] BF-005-09 — Créer un compte administrateur initial (seed sécurisé via variable d'environnement)
-- [ ] BF-005-10 — Publier `UserRegistered` sur `bank.users` (clé `userId`), sans mot de passe ni token
-- [ ] BF-005-11 — Documenter le contrat `contracts/events/UserRegistered.v1.json`
+- [x] BF-005-10 — Publier `UserRegistered` sur `bank.users` (clé `userId`), sans mot de passe ni token
+- [x] BF-005-11 — Documenter le contrat `contracts/events/UserRegistered.v1.json`
 - [ ] BF-005-12 — Configurer la sécurité commune des services en Resource Server (validation JWT et extraction du rôle), en dupliquant la configuration par service sans module partagé
 - [ ] BF-005-13 — Ajouter la documentation OpenAPI/Swagger
 
