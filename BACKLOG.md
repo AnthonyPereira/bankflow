@@ -117,18 +117,18 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-003-03 — Créer les topics initiaux de façon déclarative (script d'initialisation ou `NewTopic`) : `bank.users`, `bank.customers`, `bank.accounts`, `bank.transfers`, `bank.transactions`, `bank.fraud-alerts`
 - [x] BF-003-04 — Documenter la configuration de chaque topic (partitions, réplication, rétention, `cleanup.policy`) dans `docs/kafka/topics.md`
 - [x] BF-003-05 — Définir l'enveloppe d'événement commune (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `payload`) dans `contracts/events/envelope.md` et son JSON Schema
-- [ ] BF-003-06 — Implémenter un Producer et un Consumer de démonstration (Spring Kafka, sérialisation JSON)
-- [ ] BF-003-07 — Faire des expériences guidées : clé et partition, deux consommateurs dans un même groupe, deux groupes distincts, reset d'offsets
-- [ ] BF-003-08 — Configurer le producer pour la fiabilité (`acks=all`, `enable.idempotence=true`)
-- [ ] BF-003-09 — Configurer le consumer (`enable.auto.commit=false`, mode d'acquittement maîtrisé, `auto.offset.reset`)
-- [ ] BF-003-10 — Documenter les concepts appris (notes pédagogiques)
+- [x] BF-003-06 — Implémenter un Producer et un Consumer de démonstration (Spring Kafka, sérialisation JSON)
+- [x] BF-003-07 — Faire des expériences guidées : clé et partition, deux consommateurs dans un même groupe, deux groupes distincts, reset d'offsets
+- [x] BF-003-08 — Configurer le producer pour la fiabilité (`acks=all`, `enable.idempotence=true`)
+- [x] BF-003-09 — Configurer le consumer (`enable.auto.commit=false`, mode d'acquittement maîtrisé, `auto.offset.reset`)
+- [x] BF-003-10 — Documenter les concepts appris (notes pédagogiques)
 
 ### Tests
-- [ ] Test d'intégration Testcontainers Kafka : un message produit est bien consommé
+- [x] Test d'intégration Testcontainers Kafka : un message produit est bien consommé
 
 ### Critères de validation
 - [x] Les topics sont visibles dans Kafka UI avec la configuration documentée
-- [ ] La répartition des partitions dans un consumer group est démontrée
+- [x] La répartition des partitions dans un consumer group est démontrée
 
 ---
 
