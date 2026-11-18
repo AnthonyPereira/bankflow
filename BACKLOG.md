@@ -453,11 +453,11 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 ### Tâches
 - [x] BF-016-01 — Initialiser le projet Angular 22 (standalone, zoneless), Angular Material et CDK (thème M3), Vitest, angular-eslint et Prettier (ADR-002)
 - [ ] BF-016-02 — Créer l'arborescence `core/`, `shared/`, `features/` et `app.routes.ts` conformément au cahier des charges
-- [ ] BF-016-03 — `core/auth` : `AuthService` (login, register, logout, refresh) avec un état basé sur les Signals
-- [ ] BF-016-04 — Stocker le token de façon sécurisée (choix documenté) et gérer l'expiration
-- [ ] BF-016-05 — Intercepteur HTTP : ajout du JWT, en-tête `X-Correlation-Id`, refresh automatique
-- [ ] BF-016-06 — Intercepteur d'erreurs avec gestion centralisée (`MatSnackBar`, 401 qui redirige vers la page de connexion, 403)
-- [ ] BF-016-07 — Guards : `authGuard` et `adminGuard` (rôle)
+- [x] BF-016-03 — `core/auth` : `AuthService` (login, register, logout, refresh) avec un état basé sur les Signals
+- [x] BF-016-04 — Stocker le token de façon sécurisée (choix documenté) et gérer l'expiration
+- [x] BF-016-05 — Intercepteur HTTP : ajout du JWT, en-tête `X-Correlation-Id`, refresh automatique
+- [x] BF-016-06 — Intercepteur d'erreurs avec gestion centralisée (`MatSnackBar`, 401 qui redirige vers la page de connexion, 403)
+- [x] BF-016-07 — Guards : `authGuard` et `adminGuard` (rôle)
 - [ ] BF-016-08 — Écrans de connexion et d'inscription (formulaires réactifs et validations)
 - [ ] BF-016-09 — Layout (menu client et admin, en-tête, déconnexion)
 - [ ] BF-016-10 — Dashboard : synthèse des comptes, dernières opérations et notifications récentes
