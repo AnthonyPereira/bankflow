@@ -42,12 +42,12 @@
 
 L'application sera mise en ligne sur le serveur maison (portable Ubuntu avec Docker, Traefik et tunnel Cloudflare, déploiement par runner GitHub auto-hébergé) dès qu'une MVP existe. Procédure de référence : document « Serveur maison : connexion et hébergement d'applis web Docker ».
 
-| Jalon | Lots nécessaires | Ce qui est visible en ligne |
-|---|---|---|
-| **MVP 1 : socle** (cible de la première mise en ligne) | BF-002, BF-003, BF-004, BF-005, BF-016 | Inscription, connexion et dashboard Angular |
-| **MVP 2 : bancaire** | MVP 1 + BF-006 à BF-009, BF-017 | Clients, comptes, dépôts, retraits et virements |
+| Jalon | Release | Lots nécessaires | Ce qui est visible en ligne |
+|---|---|---|---|
+| **MVP 1 : socle** (cible de la première mise en ligne) | `0.1.0` | BF-002, BF-003, BF-004, BF-005, BF-016 | Inscription, connexion et dashboard Angular |
+| **MVP 2 : bancaire** | `0.2.0` | MVP 1 + BF-006 à BF-009, BF-017 | Clients, comptes, dépôts, retraits et virements |
 
-Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images Docker, publication GHCR et déploiement). Ensuite, chaque lot fusionné dans `main` est déployé automatiquement.
+Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images Docker, publication GHCR et déploiement). Ensuite, chaque release fusionnée dans `main` est déployée automatiquement : avec Gitflow, un lot terminé arrive d'abord sur `develop` et n'est mis en ligne qu'avec sa release (voir les jalons de `CONTRIBUTING.md`).
 
 ---
 
