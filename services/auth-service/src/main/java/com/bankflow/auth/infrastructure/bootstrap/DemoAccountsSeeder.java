@@ -11,7 +11,11 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/** Crée les comptes de démonstration absents. Un compte existant n'est jamais modifié. */
+/**
+ * Crée les comptes de démonstration absents, marqués comme tels pour qu'ils ne puissent jamais être
+ * désactivés. Un compte existant n'est jamais modifié. Avec {@code DEMO_ACCOUNTS_ENABLED=false},
+ * plus aucun compte n'est créé, mais ceux qui existent restent actifs.
+ */
 @Component
 class DemoAccountsSeeder implements ApplicationRunner {
 
@@ -40,7 +44,7 @@ class DemoAccountsSeeder implements ApplicationRunner {
                 continue;
             }
             users.save(
-                    User.register(
+                    User.registerDemo(
                             account.email(),
                             passwordEncoder.encode(account.password()),
                             account.role(),
