@@ -4,7 +4,7 @@ Plateforme bancaire **fictive** et **pédagogique** construite en microservices 
 
 - **Backend** : Java 27, Spring Boot 4.2, Spring Cloud 2026.0, Spring Kafka, PostgreSQL ([ADR-001](docs/adr/ADR-001-stack-backend.md))
 - **Frontend** : Angular 22, Angular Material, Signals ([ADR-002](docs/adr/ADR-002-stack-frontend.md))
-- **Infrastructure** : Docker Compose, Kafka (KRaft), Kafka UI, Mailpit, Prometheus, Grafana
+- **Infrastructure** : Docker Compose, Kafka (KRaft), Kafka UI, Mailpit ; Prometheus et Grafana prévus au lot BF-020
 
 ## Documentation
 
@@ -27,7 +27,7 @@ bankflow/
 │   ├── notification-service/
 │   └── analytics-fraud-service/
 ├── frontend/      # application Angular (bankflow-web)
-├── infra/         # Docker, Kafka, PostgreSQL, Prometheus, Grafana
+├── infra/         # Docker, Kafka, PostgreSQL (Prometheus et Grafana prévus, BF-020)
 ├── contracts/     # contrats d'événements Kafka versionnés (JSON Schema)
 └── docs/          # ADR, architecture, runbooks
 ```
@@ -39,14 +39,26 @@ bankflow/
 - Docker Desktop (Docker Compose v2)
 - Git
 
-## Démarrage
+## Construire et tester un service
 
-> Disponible à partir du lot BF-002.
+Chaque service se construit seul, avec son wrapper Maven (JDK 27 et Docker requis : les tests utilisent Testcontainers).
+
+```bash
+cd services/auth-service
+./mvnw verify          # compilation, formatage (Spotless) et tests
+./mvnw spotless:apply  # reformate le code
+```
+
+La CI GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) lance `./mvnw verify` sur les six services, puis le lint, les tests et le build du frontend, à chaque push et Pull Request vers `develop` ou `main`.
+
+## Démarrage
 
 ```bash
 cp .env.example .env   # puis renseigner les valeurs
 docker compose up -d
 ```
+
+Les ports, les bases et les commandes utiles sont décrits dans [infra/README.md](infra/README.md).
 
 ## Avertissement
 

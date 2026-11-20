@@ -1,16 +1,77 @@
 # Conventions BankFlow
 
-## 1. Branches
+## 1. Branches : Gitflow
+
+Le dépôt suit le modèle **Gitflow** ([Atlassian](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow)).
+
+### Branches permanentes
 
 | Branche | Rôle |
 |---|---|
-| `main` | Toujours stable : compile et les tests passent. Aucun commit direct dès que la CI existe. |
-| `feature/BF-XXX-description-courte` | Développement d'un lot ou d'une tâche (`feature/BF-005-jwt-login`) |
-| `fix/BF-XXX-description-courte` | Correction d'un bug |
-| `docs/description-courte` | Documentation seule |
-| `chore/description-courte` | Outillage, dépendances, CI |
+| `main` | Historique des **versions publiées**. Chaque commit sur `main` correspond à une version et porte un tag. Aucun commit direct. |
+| `develop` | **Branche d'intégration** : elle reçoit les fonctionnalités terminées. C'est la branche par défaut des Pull Requests. |
 
-Le modèle est le *trunk-based* simplifié : des branches courtes, fusionnées dans `main` par Pull Request (squash merge).
+### Branches temporaires
+
+| Type | Part de | Fusionne dans | Nommage | Usage |
+|---|---|---|---|---|
+| Feature | `develop` | `develop` | `feature/BF-XXX-description-courte` | Une tâche ou un lot du backlog (`feature/BF-005-jwt-login`). Ne touche jamais `main` directement. |
+| Release | `develop` | `main` **et** `develop` | `release/X.Y.0` | Préparation d'une version. On n'y fait que des corrections, de la documentation et la montée de version, aucune nouvelle fonctionnalité. |
+| Hotfix | `main` | `main` **et** `develop` (ou la `release/` en cours) | `hotfix/X.Y.Z` | Correction urgente d'une version publiée. |
+
+### Règles
+
+- Les fusions se font **sans fast-forward** (`git merge --no-ff`), pour garder la trace de chaque branche dans l'historique.
+- Chaque fusion dans `main` est **taguée** `vX.Y.Z` (tag annoté) :
+  - en [SemVer](https://semver.org/lang/fr/) : MINEUR pour une release, CORRECTIF pour un hotfix ;
+  - en `0.x` tant que la V1 n'est pas complète.
+- Une branche feature, release ou hotfix est supprimée (en local et sur le dépôt distant) une fois fusionnée.
+- Il faut tenir sa branche feature à jour avec `develop` (`git merge develop`) avant d'ouvrir la PR.
+
+### Cycle d'une fonctionnalité
+
+```bash
+git checkout develop && git pull
+git checkout -b feature/BF-XXX-description
+# ... commits ...
+git push -u origin feature/BF-XXX-description
+# Pull Request vers develop, revue, CI au vert, merge (--no-ff)
+```
+
+### Cycle d'une release
+
+```bash
+git checkout -b release/0.1.0 develop
+# corrections, mise à jour des versions (pom.xml, package.json), CHANGELOG
+git checkout main && git merge --no-ff release/0.1.0
+git tag -a v0.1.0 -m "BankFlow 0.1.0"
+git checkout develop && git merge --no-ff release/0.1.0
+git branch -d release/0.1.0
+git push origin main develop --tags
+```
+
+### Cycle d'un hotfix
+
+```bash
+git checkout -b hotfix/0.1.1 main
+# correction et montée de version
+git checkout main && git merge --no-ff hotfix/0.1.1 && git tag -a v0.1.1 -m "BankFlow 0.1.1"
+git checkout develop && git merge --no-ff hotfix/0.1.1
+git branch -d hotfix/0.1.1
+git push origin main develop --tags
+```
+
+### Jalons de release proposés
+
+| Version | Contenu (lots) |
+|---|---|
+| `0.1.0` | **MVP 1, socle et première mise en ligne** : BF-001 à BF-005, BF-016 et le déploiement (BF-023-05, BF-023-06, BF-023-16) |
+| `0.2.0` | **MVP 2, cœur bancaire** : BF-006 à BF-009, BF-017 |
+| `0.3.0` | Événements fiables : BF-010 à BF-013 |
+| `0.4.0` | Analytics et fraude : BF-014, BF-015 |
+| `0.5.0` | Interface complémentaire (notifications, statistiques, administration) : BF-018 |
+| `0.6.0` | Fiabilité et monitoring : BF-019, BF-020 |
+| `1.0.0` | Saga, Kafka Streams, documentation et CI/CD : BF-021, BF-022, reste de BF-023, et validation finale |
 
 ## 2. Messages de commit : Conventional Commits
 
@@ -37,6 +98,8 @@ Un changement incompatible (d'API ou de contrat d'événement) est signalé par 
 
 ## 3. Pull Requests
 
+- Une PR `feature/*` cible **`develop`**. Seules les PR `release/*` et `hotfix/*` ciblent `main` (puis sont reportées dans `develop`).
+- Le merge se fait en **merge commit** (pas de squash ni de rebase) pour respecter le `--no-ff` de Gitflow.
 - Une PR correspond à une tâche ou un lot cohérent du backlog, et référence `BF-XXX`.
 - La CI doit être au vert (build, tests, lint).
 - La checklist des **exigences transverses** du backlog doit être vérifiée.
@@ -50,7 +113,8 @@ Un changement incompatible (d'API ou de contrat d'événement) est signalé par 
 
 ## 5. Code
 
-- **Java** : packages `api`, `application`, `domain`, `infrastructure` ; formatage Spotless ; montants en `BigDecimal` uniquement.
+- **Java** : packages `api`, `application`, `domain`, `infrastructure`, puis un sous-package par fonctionnalité (voir `services/README.md`) ; montants en `BigDecimal` uniquement.
+- **Formatage Java** : Spotless avec google-java-format, style AOSP (4 espaces, 100 colonnes). `./mvnw verify` échoue si le code n'est pas formaté, et `./mvnw spotless:apply` corrige automatiquement.
 - **Angular** : `@Service()` avec `inject()`, composants standalone, formatage ESLint et Prettier.
 - **Encodage et fins de ligne** : UTF-8 et LF (voir `.editorconfig` et `.gitattributes`).
 

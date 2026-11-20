@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: api-gateway
+  threads:
+    virtual:
+      enabled: true
+  http:
+    clients:
+      connect-timeout: 3s
+      read-timeout: 30s
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${JWK_SET_URI:http://localhost:8081/.well-known/jwks.json}
+          issuer-uri: ${JWT_ISSUER:https://bankflow.local/auth}
+          audiences:
+            - bankflow-api
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/auth/**
+              filters:
+                - StripPrefix=1
+            - id: customer-service
+              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/customers/**
+              filters:
+                - StripPrefix=1
+            - id: banking-service
+              uri: ${BANKING_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/accounts/**,/api/transfers/**,/api/transactions/**
+              filters:
+                - StripPrefix=1
+            - id: notification-service
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/notifications/**
+              filters:
+                - StripPrefix=1
+            - id: analytics-fraud-service
+              uri: ${ANALYTICS_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/analytics/**
+              filters:
+                - StripPrefix=1
+
+bankflow:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  rate-limit:
+    login-per-minute: ${RATE_LIMIT_LOGIN_PER_MINUTE:10}
+    register-per-minute: ${RATE_LIMIT_REGISTER_PER_MINUTE:5}
+    transfers-per-minute: ${RATE_LIMIT_TRANSFERS_PER_MINUTE:30}
+
+server:
+  port: 8080
+  # Lit l'adresse du client dans X-Forwarded-For, uniquement si le proxy est sur un réseau interne
+  forward-headers-strategy: native
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

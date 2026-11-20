@@ -34,9 +34,20 @@
 | BF-020 | Monitoring | Prometheus et Grafana | P2 | BF-013 |
 | BF-021 | Architecture | Saga Pattern | P3 | BF-011 |
 | BF-022 | Optimisation | Kafka Streams | P3 | BF-015 |
-| BF-023 | Finalisation | Documentation et CI/CD | P2 | tous |
+| BF-023 | Finalisation | Documentation, CI/CD et déploiement (déploiement avancé au jalon MVP 1) | P2 | tous |
 
 > **Note :** la CI de base (build et tests) peut démarrer dès BF-001 et s'enrichir au fil des lots. BF-023 la finalise.
+
+### Mise en ligne sur le serveur maison
+
+L'application sera mise en ligne sur le serveur maison (portable Ubuntu avec Docker, Traefik et tunnel Cloudflare, déploiement par runner GitHub auto-hébergé) dès qu'une MVP existe. Procédure de référence : document « Serveur maison : connexion et hébergement d'applis web Docker ».
+
+| Jalon | Release | Lots nécessaires | Ce qui est visible en ligne |
+|---|---|---|---|
+| **MVP 1 : socle** (cible de la première mise en ligne) | `0.1.0` | BF-002, BF-003, BF-004, BF-005, BF-016 | Inscription, connexion et dashboard Angular |
+| **MVP 2 : bancaire** | `0.2.0` | MVP 1 + BF-006 à BF-009, BF-017 | Clients, comptes, dépôts, retraits et virements |
+
+Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images Docker, publication GHCR et déploiement). Ensuite, chaque release fusionnée dans `main` est déployée automatiquement : avec Gitflow, un lot terminé arrive d'abord sur `develop` et n'est mis en ligne qu'avec sa release (voir les jalons de `CONTRIBUTING.md`).
 
 ---
 
@@ -46,10 +57,10 @@
 **Objectif pédagogique :** organiser un mono-dépôt de microservices indépendants et vérifier la stack.
 
 ### Tâches
-- [~] BF-001-01 — Vérifier la compatibilité officielle Java 27 ↔ Spring Boot ↔ Spring Cloud et figer les versions → voir [ADR-001](docs/adr/ADR-001-stack-backend.md) (versions exactes à figer après les GA)
-- [~] BF-001-02 — Vérifier la disponibilité d'Angular 22, d'Angular Material et de Vitest, puis figer les versions → voir [ADR-002](docs/adr/ADR-002-stack-frontend.md)
+- [x] BF-001-01 — Vérifier la compatibilité officielle Java 27 ↔ Spring Boot ↔ Spring Cloud et figer les versions → voir [ADR-001](docs/adr/ADR-001-stack-backend.md). Versions GA figées le 2026-11-20 : Spring Boot 4.2.0 et Spring Cloud 2026.0.0, `./mvnw verify` au vert sur JDK 27.0.1 pour les six services
+- [x] BF-001-02 — Vérifier la disponibilité d'Angular 22, d'Angular Material et de Vitest, puis figer les versions → voir [ADR-002](docs/adr/ADR-002-stack-frontend.md)
 - [x] BF-001-03 — Initialiser le dépôt Git (`.gitignore` Java/Maven/Node/IDE, `.editorconfig`, `.gitattributes`)
-- [ ] BF-001-04 — Définir l'arborescence :
+- [x] BF-001-04 — Définir l'arborescence :
   ```
   bankflow/
   ├── services/ (api-gateway, auth-service, customer-service, banking-service, notification-service, analytics-fraud-service)
@@ -58,17 +69,17 @@
   ├── contracts/ (events/ — contrats JSON versionnés)
   └── docs/ (adr/, architecture/, runbooks/)
   ```
-- [ ] BF-001-05 — Générer les 6 projets Spring Boot indépendants (chacun avec son propre `pom.xml` et sans module Java métier partagé)
-- [x] BF-001-06 — Rédiger les conventions : nommage des branches, Conventional Commits, structure des packages (`api`, `application`, `domain`, `infrastructure`), style de code
-- [ ] BF-001-07 — Configurer le formatage et l'analyse statique (Spotless ou Checkstyle, ESLint ou Prettier)
+- [x] BF-001-05 — Générer les 6 projets Spring Boot indépendants (chacun avec son propre `pom.xml` et sans module Java métier partagé)
+- [x] BF-001-06 — Rédiger les conventions (Gitflow, voir `CONTRIBUTING.md`) : nommage des branches, Conventional Commits, structure des packages (`api`, `application`, `domain`, `infrastructure`), style de code
+- [x] BF-001-07 — Configurer le formatage et l'analyse statique : Spotless (google-java-format AOSP) dans chaque service. ESLint et Prettier sont reportés à BF-016-01, à la création du frontend
 - [x] BF-001-08 — Rédiger le `README.md` racine (présentation, prérequis, démarrage)
 - [x] BF-001-09 — Créer un modèle de `.env.example` et la règle « aucun secret commité »
-- [ ] BF-001-10 — Mettre en place une première CI GitHub Actions (compilation Maven de chaque service)
+- [x] BF-001-10 — Mettre en place une première CI GitHub Actions (compilation Maven de chaque service) → `.github/workflows/ci.yml` : `./mvnw verify` par service (matrice, JDK 27 Temurin, Spotless et Testcontainers), plus Dependabot (`.github/dependabot.yml`). Premier run au vert sur GitHub le 2026-11-17 ([run 44127150173](https://github.com/AnthonyPereira/bankflow/actions/runs/44127150173))
 
 ### Critères de validation
-- [ ] Chaque service compile seul avec `mvn verify`
-- [ ] Les versions retenues sont documentées et leur compatibilité est vérifiée
-- [ ] Aucune classe métier n'est partagée entre services
+- [x] Chaque service compile seul avec `mvn verify` (vérifié le 2026-11-20 en local sur JDK 27.0.1, avec Spring Boot 4.2.0 et Spring Cloud 2026.0.0)
+- [x] Les versions retenues sont documentées et leur compatibilité est vérifiée (versions GA figées le 2026-11-20, voir ADR-001 §5)
+- [x] Aucune classe métier n'est partagée entre services
 
 ---
 
@@ -78,20 +89,20 @@
 **Objectif pédagogique :** conteneuriser l'environnement et isoler les données par service.
 
 ### Tâches
-- [ ] BF-002-01 — Créer `docker-compose.yml` avec un réseau Docker privé
-- [ ] BF-002-02 — Ajouter un conteneur PostgreSQL et un script d'initialisation qui crée `auth_db`, `customer_db`, `banking_db`, `notification_db` et `analytics_db`
-- [ ] BF-002-03 — Créer un utilisateur PostgreSQL dédié par base, avec des droits limités à sa propre base
-- [ ] BF-002-04 — Ajouter Mailpit (SMTP et interface web)
-- [ ] BF-002-05 — Ajouter des volumes persistants et des healthchecks
-- [ ] BF-002-06 — Configurer Flyway dans chaque service (dossier `db/migration`, migration V1 vide ou initiale)
-- [ ] BF-002-07 — Écrire un `Dockerfile` multi-stage générique pour les services Spring Boot
-- [ ] BF-002-08 — Externaliser la configuration (variables d'environnement et profils `dev`, `test`, `prod-sim`)
-- [ ] BF-002-09 — Configurer Actuator (`/actuator/health`) dans chaque service
-- [ ] BF-002-10 — Documenter les ports, les URL et les commandes (`docker compose up -d`, `down -v`, logs)
+- [x] BF-002-01 — Créer `docker-compose.yml` avec un réseau Docker privé
+- [x] BF-002-02 — Ajouter un conteneur PostgreSQL et un script d'initialisation qui crée `auth_db`, `customer_db`, `banking_db`, `notification_db` et `analytics_db`
+- [x] BF-002-03 — Créer un utilisateur PostgreSQL dédié par base, avec des droits limités à sa propre base
+- [x] BF-002-04 — Ajouter Mailpit (SMTP et interface web)
+- [x] BF-002-05 — Ajouter des volumes persistants et des healthchecks
+- [x] BF-002-06 — Configurer Flyway dans chaque service (dossier `db/migration`, migration V1 vide ou initiale)
+- [x] BF-002-07 — Écrire un `Dockerfile` multi-stage générique pour les services Spring Boot
+- [x] BF-002-08 — Externaliser la configuration (variables d'environnement et profils `dev`, `test`, `prod-sim`)
+- [x] BF-002-09 — Configurer Actuator (`/actuator/health`) dans chaque service
+- [x] BF-002-10 — Documenter les ports, les URL et les commandes (`docker compose up -d`, `down -v`, logs) → `infra/README.md`
 
 ### Critères de validation
-- [ ] `docker compose up -d` démarre PostgreSQL et Mailpit, et tous les healthchecks sont au vert
-- [ ] Chaque service se connecte uniquement à sa propre base
+- [x] `docker compose up -d` démarre PostgreSQL et Mailpit, et tous les healthchecks sont au vert
+- [x] Chaque service se connecte uniquement à sa propre base
 
 ---
 
@@ -101,23 +112,23 @@
 **Objectif pédagogique :** comprendre les notions de producer, consumer, topic, partition, offset, consumer group et clé.
 
 ### Tâches
-- [ ] BF-003-01 — Ajouter Kafka en mode KRaft (broker unique) dans Docker Compose
-- [ ] BF-003-02 — Ajouter Kafka UI
-- [ ] BF-003-03 — Créer les topics initiaux de façon déclarative (script d'initialisation ou `NewTopic`) : `bank.users`, `bank.customers`, `bank.accounts`, `bank.transfers`, `bank.transactions`, `bank.fraud-alerts`
-- [ ] BF-003-04 — Documenter la configuration de chaque topic (partitions, réplication, rétention, `cleanup.policy`) dans `docs/kafka/topics.md`
-- [ ] BF-003-05 — Définir l'enveloppe d'événement commune (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `payload`) dans `contracts/events/envelope.md` et son JSON Schema
-- [ ] BF-003-06 — Implémenter un Producer et un Consumer de démonstration (Spring Kafka, sérialisation JSON)
-- [ ] BF-003-07 — Faire des expériences guidées : clé et partition, deux consommateurs dans un même groupe, deux groupes distincts, reset d'offsets
-- [ ] BF-003-08 — Configurer le producer pour la fiabilité (`acks=all`, `enable.idempotence=true`)
-- [ ] BF-003-09 — Configurer le consumer (`enable.auto.commit=false`, mode d'acquittement maîtrisé, `auto.offset.reset`)
-- [ ] BF-003-10 — Documenter les concepts appris (notes pédagogiques)
+- [x] BF-003-01 — Ajouter Kafka en mode KRaft (broker unique) dans Docker Compose
+- [x] BF-003-02 — Ajouter Kafka UI
+- [x] BF-003-03 — Créer les topics initiaux de façon déclarative (script d'initialisation ou `NewTopic`) : `bank.users`, `bank.customers`, `bank.accounts`, `bank.transfers`, `bank.transactions`, `bank.fraud-alerts`
+- [x] BF-003-04 — Documenter la configuration de chaque topic (partitions, réplication, rétention, `cleanup.policy`) dans `docs/kafka/topics.md`
+- [x] BF-003-05 — Définir l'enveloppe d'événement commune (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `payload`) dans `contracts/events/envelope.md` et son JSON Schema
+- [x] BF-003-06 — Implémenter un Producer et un Consumer de démonstration (Spring Kafka, sérialisation JSON)
+- [x] BF-003-07 — Faire des expériences guidées : clé et partition, deux consommateurs dans un même groupe, deux groupes distincts, reset d'offsets
+- [x] BF-003-08 — Configurer le producer pour la fiabilité (`acks=all`, `enable.idempotence=true`)
+- [x] BF-003-09 — Configurer le consumer (`enable.auto.commit=false`, mode d'acquittement maîtrisé, `auto.offset.reset`)
+- [x] BF-003-10 — Documenter les concepts appris (notes pédagogiques)
 
 ### Tests
-- [ ] Test d'intégration Testcontainers Kafka : un message produit est bien consommé
+- [x] Test d'intégration Testcontainers Kafka : un message produit est bien consommé
 
 ### Critères de validation
-- [ ] Les topics sont visibles dans Kafka UI avec la configuration documentée
-- [ ] La répartition des partitions dans un consumer group est démontrée
+- [x] Les topics sont visibles dans Kafka UI avec la configuration documentée
+- [x] La répartition des partitions dans un consumer group est démontrée
 
 ---
 
@@ -127,27 +138,27 @@
 **Objectif pédagogique :** routage, filtres et sécurité transverse avec Spring Cloud Gateway.
 
 ### Tâches
-- [ ] BF-004-01 — Créer le projet `api-gateway` (Spring Cloud Gateway)
-- [ ] BF-004-02 — Configurer les routes :
+- [x] BF-004-01 — Créer le projet `api-gateway` (Spring Cloud Gateway) → squelette créé avec BF-001-05 (`spring-cloud-starter-gateway-server-webmvc`)
+- [x] BF-004-02 — Configurer les routes :
   - `/api/auth/**` → Auth Service
   - `/api/customers/**` → Customer Service
   - `/api/accounts/**`, `/api/transfers/**`, `/api/transactions/**` → Banking Service
   - `/api/notifications/**` → Notification Service
   - `/api/analytics/**` → Analytics & Fraud Service
-- [ ] BF-004-03 — Valider le JWT (clé publique ou JWKS de l'Auth Service) et laisser passer les routes publiques (`/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`)
-- [ ] BF-004-04 — Propager les informations utiles (en-têtes `X-User-Id`, `X-User-Role`, `X-Correlation-Id`) et supprimer les en-têtes usurpables venant du client
-- [ ] BF-004-05 — Configurer CORS pour le frontend Angular
-- [ ] BF-004-06 — Uniformiser les erreurs HTTP (format `ProblemDetail`, RFC 9457)
-- [ ] BF-004-07 — Limiter le débit (rate limiting) sur les routes sensibles (login, register, transfers)
-- [ ] BF-004-08 — Générer un `correlationId` quand il est absent
-- [ ] BF-004-09 — Ajouter le service au Docker Compose
+- [x] BF-004-03 — Valider le JWT (clé publique ou JWKS de l'Auth Service) et laisser passer les routes publiques (`/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`)
+- [x] BF-004-04 — Propager les informations utiles (en-têtes `X-User-Id`, `X-User-Role`, `X-Correlation-Id`) et supprimer les en-têtes usurpables venant du client
+- [x] BF-004-05 — Configurer CORS pour le frontend Angular (utile en développement ; en ligne, le front et `/api` partagent la même adresse, donc pas de CORS)
+- [x] BF-004-06 — Uniformiser les erreurs HTTP (format `ProblemDetail`, RFC 9457)
+- [x] BF-004-07 — Limiter le débit (rate limiting) sur les routes sensibles (login, register, transfers)
+- [x] BF-004-08 — Générer un `correlationId` quand il est absent
+- [x] BF-004-09 — Ajouter le service au Docker Compose
 
 ### Tests
-- [ ] Tests de routage, de rejet sans JWT ou avec un JWT invalide ou expiré, de CORS et de rate limiting
+- [x] Tests de routage, de rejet sans JWT ou avec un JWT invalide ou expiré, de CORS et de rate limiting
 
 ### Critères de validation
-- [ ] Toutes les routes répondent via la Gateway
-- [ ] Les services internes protègent aussi leurs propres API (la Gateway n'est pas l'unique frontière de sécurité)
+- [x] Toutes les routes répondent via la Gateway
+- [x] Les services internes protègent aussi leurs propres API (la Gateway n'est pas l'unique frontière de sécurité)
 
 ---
 
@@ -157,27 +168,27 @@
 **Objectif pédagogique :** Spring Security, JWT asymétrique et hachage des mots de passe.
 
 ### Tâches
-- [ ] BF-005-01 — Migration Flyway : table `users` (`id UUID`, `email` unique, `password_hash`, `role`, `enabled`, `created_at`, `updated_at`)
-- [ ] BF-005-02 — Entité `User`, repository, DTO, mappers MapStruct
-- [ ] BF-005-03 — `POST /auth/register` : validation des entrées, unicité de l'email, hachage BCrypt ou Argon2, rôle `ROLE_CLIENT` par défaut
-- [ ] BF-005-04 — `POST /auth/login` : génération d'un JWT signé RSA ou EC avec une durée de vie courte
-- [ ] BF-005-05 — `POST /auth/refresh` : décider s'il est retenu (ADR), puis implémenter le refresh token (stockage, rotation, révocation)
-- [ ] BF-005-06 — `GET /auth/me`
-- [ ] BF-005-07 — Exposer la clé publique (endpoint JWKS) pour la Gateway et les services
-- [ ] BF-005-08 — Protéger contre le brute force (compteur d'échecs, verrouillage temporaire ou backoff)
-- [ ] BF-005-09 — Créer un compte administrateur initial (seed sécurisé via variable d'environnement)
-- [ ] BF-005-10 — Publier `UserRegistered` sur `bank.users` (clé `userId`), sans mot de passe ni token
-- [ ] BF-005-11 — Documenter le contrat `contracts/events/UserRegistered.v1.json`
-- [ ] BF-005-12 — Configurer la sécurité commune des services en Resource Server (validation JWT et extraction du rôle), en dupliquant la configuration par service sans module partagé
-- [ ] BF-005-13 — Ajouter la documentation OpenAPI/Swagger
+- [x] BF-005-01 — Migration Flyway : table `users` (`id UUID`, `email` unique, `password_hash`, `role`, `enabled`, `created_at`, `updated_at`)
+- [x] BF-005-02 — Entité `User`, repository, DTO, mappers MapStruct
+- [x] BF-005-03 — `POST /auth/register` : validation des entrées, unicité de l'email, hachage BCrypt ou Argon2, rôle `ROLE_CLIENT` par défaut
+- [x] BF-005-04 — `POST /auth/login` : génération d'un JWT signé RSA ou EC avec une durée de vie courte
+- [x] BF-005-05 — `POST /auth/refresh` : décider s'il est retenu (ADR), puis implémenter le refresh token (stockage, rotation, révocation)
+- [x] BF-005-06 — `GET /auth/me`
+- [x] BF-005-07 — Exposer la clé publique (endpoint JWKS) pour la Gateway et les services
+- [x] BF-005-08 — Protéger contre le brute force (compteur d'échecs, verrouillage temporaire ou backoff)
+- [x] BF-005-09 — Créer un compte administrateur initial (seed sécurisé via variable d'environnement)
+- [x] BF-005-10 — Publier `UserRegistered` sur `bank.users` (clé `userId`), sans mot de passe ni token
+- [x] BF-005-11 — Documenter le contrat `contracts/events/UserRegistered.v1.json`
+- [x] BF-005-12 — Configurer la sécurité commune des services en Resource Server (validation JWT et extraction du rôle), en dupliquant la configuration par service sans module partagé
+- [x] BF-005-13 — Ajouter la documentation OpenAPI/Swagger
 
 ### Tests
-- [ ] Tests unitaires : hachage, génération et validation du JWT, expiration, verrouillage après échecs
-- [ ] Tests d'intégration : register, login, me, email dupliqué, mot de passe invalide
+- [x] Tests unitaires : hachage, génération et validation du JWT, expiration, verrouillage après échecs
+- [x] Tests d'intégration : register, login, me, email dupliqué, mot de passe invalide
 
 ### Critères de validation
-- [ ] Inscription et authentification fonctionnelles via la Gateway
-- [ ] `UserRegistered` est visible dans Kafka UI et ne contient aucune donnée sensible
+- [x] Inscription et authentification fonctionnelles via la Gateway
+- [x] `UserRegistered` est visible dans Kafka UI et ne contient aucune donnée sensible
 
 ---
 
@@ -193,7 +204,7 @@
 - [ ] BF-006-04 — `PUT /customers/me` : modification des coordonnées avec validation
 - [ ] BF-006-05 — `GET /customers/{id}` : réservé au propriétaire ou à un administrateur
 - [ ] BF-006-06 — `GET /customers` : liste paginée et filtrable, réservée à `ROLE_ADMIN`
-- [ ] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…)
+- [ ] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…). La suspension doit refuser les comptes de démonstration (`User.disable` de l'Auth Service lève `DemoAccountCannotBeDisabledException`)
 - [ ] BF-006-08 — Publier `CustomerCreated` et `CustomerUpdated` sur `bank.customers` (payload minimal)
 - [ ] BF-006-09 — Documenter les contrats d'événements
 - [ ] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
@@ -440,26 +451,29 @@
 **Objectif pédagogique :** architecture Angular, Signals, guards et intercepteurs.
 
 ### Tâches
-- [ ] BF-016-01 — Initialiser le projet Angular 22 (standalone, zoneless), Angular Material et CDK (thème M3), Vitest, angular-eslint et Prettier (ADR-002)
-- [ ] BF-016-02 — Créer l'arborescence `core/`, `shared/`, `features/` et `app.routes.ts` conformément au cahier des charges
-- [ ] BF-016-03 — `core/auth` : `AuthService` (login, register, logout, refresh) avec un état basé sur les Signals
-- [ ] BF-016-04 — Stocker le token de façon sécurisée (choix documenté) et gérer l'expiration
-- [ ] BF-016-05 — Intercepteur HTTP : ajout du JWT, en-tête `X-Correlation-Id`, refresh automatique
-- [ ] BF-016-06 — Intercepteur d'erreurs avec gestion centralisée (`MatSnackBar`, 401 qui redirige vers la page de connexion, 403)
-- [ ] BF-016-07 — Guards : `authGuard` et `adminGuard` (rôle)
-- [ ] BF-016-08 — Écrans de connexion et d'inscription (formulaires réactifs et validations)
-- [ ] BF-016-09 — Layout (menu client et admin, en-tête, déconnexion)
-- [ ] BF-016-10 — Dashboard : synthèse des comptes, dernières opérations et notifications récentes
-- [ ] BF-016-11 — Écran de profil (`/customers/me`)
-- [ ] BF-016-12 — `shared/models` (interfaces TypeScript) et `shared/pipes` (montant ou devise, date)
-- [ ] BF-016-13 — Configurer les environnements (URL de la Gateway)
-- [ ] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
+- [x] BF-016-01 — Initialiser le projet Angular 22 (standalone, zoneless), Angular Material et CDK (thème M3), Vitest, angular-eslint et Prettier (ADR-002)
+- [x] BF-016-02 — Créer l'arborescence `core/`, `shared/`, `features/` et `app.routes.ts` conformément au cahier des charges
+- [x] BF-016-03 — `core/auth` : `AuthService` (login, register, logout, refresh) avec un état basé sur les Signals
+- [x] BF-016-04 — Stocker le token de façon sécurisée (choix documenté) et gérer l'expiration
+- [x] BF-016-05 — Intercepteur HTTP : ajout du JWT, en-tête `X-Correlation-Id`, refresh automatique
+- [x] BF-016-06 — Intercepteur d'erreurs avec gestion centralisée (`MatSnackBar`, 401 qui redirige vers la page de connexion, 403)
+- [x] BF-016-07 — Guards : `authGuard` et `adminGuard` (rôle)
+- [x] BF-016-08 — Écrans de connexion et d'inscription (formulaires réactifs et validations)
+- [x] BF-016-09 — Layout (menu client et admin, en-tête, déconnexion)
+- [x] BF-016-10 — Dashboard réduit pour la MVP 1 : informations du compte (`/auth/me`) et sections « bientôt disponible », sans donnée fictive
+- [ ] BF-016-10b — Dashboard complet (MVP 2) : synthèse des comptes, dernières opérations et notifications récentes
+- [ ] BF-016-11 — Écran de profil (`/customers/me`) (reporté à la MVP 2, avec BF-006)
+- [x] BF-016-12 — `shared/models` (interfaces TypeScript)
+- [ ] BF-016-12b — `shared/pipes` (montant ou devise, date) (reporté à la MVP 2, avec les premiers montants affichés)
+- [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
+- [x] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
+- [x] BF-016-15 — Afficher sur la page de connexion un tableau des comptes de démonstration (client et administrateur, mots de passe publics). Ils sont créés au démarrage de l'Auth Service et servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire après 5 échecs compris, `demo.admin` est un vrai `ROLE_ADMIN`), sauf qu'ils ne peuvent jamais être désactivés définitivement (colonne `users.demo`). `DEMO_ACCOUNTS_ENABLED=false` masque la liste et ne crée plus les comptes absents, sans désactiver ceux qui existent déjà. Le compte administrateur initial (`ADMIN_PASSWORD`) reste secret
 
 ### Tests
-- [ ] Tests Vitest : AuthService, intercepteurs, guards, formulaires de connexion et d'inscription
+- [x] Tests Vitest : AuthService, intercepteurs, guards, formulaires de connexion et d'inscription
 
 ### Critères de validation
-- [ ] Parcours complet inscription → connexion → dashboard → déconnexion
+- [x] Parcours complet inscription → connexion → dashboard → déconnexion
 - [ ] Routes admin inaccessibles à un client (et refusées aussi côté backend)
 
 ---
@@ -584,13 +598,13 @@
 ## BF-023 — Finalisation : documentation et CI/CD
 
 ### Tâches — CI/CD (GitHub Actions)
-- [ ] BF-023-01 — Compilation Maven de chaque service (matrice)
-- [ ] BF-023-02 — Exécution des tests backend (unitaires et Testcontainers)
-- [ ] BF-023-03 — Compilation Angular
-- [ ] BF-023-04 — Exécution des tests frontend (Vitest)
-- [ ] BF-023-05 — Construction des images Docker
-- [ ] BF-023-06 — Publication des images (GHCR) sur la branche principale ou sur les tags
-- [ ] BF-023-07 — Rapports de couverture et cache Maven/npm
+- [x] BF-023-01 — Compilation Maven de chaque service (matrice) → `.github/workflows/ci.yml`, mis en place avec BF-001-10
+- [x] BF-023-02 — Exécution des tests backend (unitaires et Testcontainers) → `./mvnw verify` dans `.github/workflows/ci.yml`, mis en place avec BF-001-10
+- [x] BF-023-03 — Compilation Angular
+- [x] BF-023-04 — Exécution des tests frontend (Vitest)
+- [x] BF-023-05 — Construction des images Docker (à avancer au jalon MVP 1)
+- [x] BF-023-06 — Publication des images (GHCR) sur la branche principale ou sur les tags (à avancer au jalon MVP 1)
+- [x] BF-023-07 — Rapports de couverture (JaCoCo, Vitest), cache Maven/npm et analyse SonarQube Cloud → `docs/runbooks/sonarqube.md`
 
 ### Tâches — Documentation
 - [ ] BF-023-08 — Swagger/OpenAPI de chaque service, avec agrégation éventuelle via la Gateway
@@ -601,6 +615,20 @@
 - [ ] BF-023-13 — Environnement « production simulée » : secrets externalisés, Kafka multi-broker et répliqué (étude), sauvegardes PostgreSQL
 - [ ] BF-023-14 — (Étude) Sécurité Kafka renforcée : TLS, SASL, ACL, comptes techniques distincts
 - [ ] BF-023-15 — (Étude) Avro et Schema Registry
+
+### Tâches — Déploiement sur le serveur maison (à avancer au jalon MVP 1)
+- [ ] BF-023-16 — Déployer `main` sur le serveur maison (`https://bankflow.anthonypereira.dpdns.org`) :
+  - garder ce dépôt **public** et porter le runner auto-hébergé dans le dépôt privé `deploy-platform`, qui peut déployer plusieurs applications ;
+  - écrire un `docker-compose.yml` de déploiement : seuls le front (port 80) et l'api-gateway (`/api`) sont routés par Traefik (réseau `web`) ; services, PostgreSQL et Kafka restent sur un réseau interne ; Kafka UI, Mailpit, Prometheus et Grafana ne sont jamais exposés ;
+  - limiter la mémoire de chaque JVM (ex. `-Xmx256m`) et ne déployer que les services développés (le serveur a 8 Go de RAM) ;
+  - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), puis signal vers `deploy-platform`, qui lance `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
+  - configurer le profil `prod-sim` (BF-002-08) ; les secrets vivent dans `~/apps/bankflow/.env` sur le serveur, jamais dans Git ;
+  - sur le serveur : retirer le sudo temporaire (`/etc/sudoers.d/claude-temp`), puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
+  - documenter le déploiement et le retour arrière dans `docs/runbooks/`.
+
+### Critères de validation — Déploiement
+- [ ] Un `git push` sur `main` met l'application à jour en ligne en moins de 5 minutes
+- [ ] Seuls le front et `/api` répondent depuis Internet
 
 ---
 
@@ -664,7 +692,7 @@ Connexion à de vraies banques ou paiements SEPA réels · cartes bancaires et c
 
 ## Décisions à prendre (ADR)
 1. ~~Versions et stack backend et frontend (BF-001)~~ → ADR-001 et ADR-002 (acceptés le 2026-11-16)
-2. Refresh token retenu ou non, et stratégie de stockage du token côté frontend (BF-005, BF-016)
+2. ~~Refresh token retenu ou non, et stratégie de stockage du token côté frontend (BF-005, BF-016)~~ → ADR-003 (accepté le 2026-11-18)
 3. Résolution `userId` → `customerId` dans le Banking Service (BF-007)
 4. Mapping événement → topic pour `DepositCompleted` et `WithdrawalCompleted` (BF-010)
 5. Source de l'email du destinataire dans le Notification Service (BF-012)

@@ -1,0 +1,39 @@
+<h1>Tableau de bord</h1>
+<p class="intro">Retrouvez ici l'essentiel de votre espace BankFlow.</p>
+
+<section class="panel account" aria-labelledby="account-title">
+  <h2 id="account-title">Mon compte utilisateur</h2>
+
+  @if (user.isLoading()) {
+    <mat-spinner diameter="32" aria-label="Chargement de votre compte" />
+  } @else if (user.error()) {
+    <p role="alert">Vos informations n'ont pas pu être chargées.</p>
+    <button matButton="outlined" type="button" (click)="user.reload()">Réessayer</button>
+  } @else if (user.value(); as current) {
+    <dl>
+      <div>
+        <dt>Adresse email</dt>
+        <dd>{{ current.email }}</dd>
+      </div>
+      <div>
+        <dt>Profil</dt>
+        <dd>{{ getRoleLabel() }}</dd>
+      </div>
+      <div>
+        <dt>Membre depuis le</dt>
+        <dd>{{ current.createdAt | date: 'longDate' }}</dd>
+      </div>
+    </dl>
+  }
+</section>
+
+<ul class="upcoming">
+  @for (section of upcomingSections; track section.title) {
+    <li class="panel">
+      <mat-icon aria-hidden="true" [svgIcon]="section.icon" />
+      <h2>{{ section.title }}</h2>
+      <p>{{ section.text }}</p>
+      <span class="badge">Bientôt disponible</span>
+    </li>
+  }
+</ul>

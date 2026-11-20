@@ -1,0 +1,124 @@
+name: Déploiement
+
+# Construit les images, puis demande leur mise en ligne au dépôt privé deploy-platform.
+# Ce dépôt est public : aucun job ne doit s'exécuter sur le serveur maison.
+#
+# Le déploiement part d'un push dans main, et seulement une fois la CI de ce même commit verte : le
+# job « verifier » l'attend en interrogeant l'API. On n'utilise pas workflow_run : il s'exécute avec
+# les secrets dans le contexte d'un run qui peut venir d'une PR, ce qui oblige à filtrer finement.
+# Ici, le checkout ne récupère que le commit poussé sur main, du code de confiance.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploiement
+  cancel-in-progress: false
+
+jobs:
+  verifier:
+    name: CI verte sur main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+    outputs:
+      version: ${{ steps.ci.outputs.version }}
+    steps:
+      - name: Attendre la CI de ce commit
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::SHA invalide"; exit 1; }
+          url="repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&event=push&branch=main"
+          for _ in $(seq 1 80); do
+            # Une erreur passagère de l'API ne doit pas faire échouer l'attente
+            etat="$(gh api "$url" --jq '.workflow_runs | sort_by(.created_at) | last | "\(.status // "")/\(.conclusion // "")"')" || etat=""
+            case "$etat" in
+              completed/success)
+                echo "version=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
+              completed/*)
+                echo "::error::La CI de $GITHUB_SHA a échoué (${etat#completed/})"
+                exit 1 ;;
+            esac
+            sleep 30
+          done
+          echo "::error::La CI de $GITHUB_SHA n'est pas terminée après 40 minutes"
+          exit 1
+
+  build:
+    name: image ${{ matrix.name }}
+    needs: verifier
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: frontend
+            context: frontend/bankflow-web
+            dockerfile: frontend/bankflow-web/Dockerfile
+          - name: api-gateway
+            context: services/api-gateway
+            dockerfile: infra/docker/spring-boot.Dockerfile
+          - name: auth-service
+            context: services/auth-service
+            dockerfile: infra/docker/spring-boot.Dockerfile
+          - name: postgres
+            context: infra/postgres
+            dockerfile: infra/postgres/Dockerfile
+          - name: kafka-init
+            context: infra/kafka
+            dockerfile: infra/kafka/Dockerfile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Nom d'image en minuscules
+        run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ needs.verifier.outputs.version }}
+
+  deployer:
+    name: demande de mise en ligne
+    needs: [verifier, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Prévenir deploy-platform
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
+          VERSION: ${{ needs.verifier.outputs.version }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY_OWNER}/deploy-platform/dispatches" \
+            -f event_type=deployer \
+            -f "client_payload[app]=bankflow" \
+            -f "client_payload[version]=$VERSION"

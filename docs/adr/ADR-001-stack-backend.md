@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Statut** | Accepté (2026-11-16). Les versions exactes restent à figer (voir §5) |
+| **Statut** | Accepté (2026-11-16). Versions GA figées le 2026-11-20 (voir §5) |
 | **Date** | 2026-11-16 |
 | **Lots concernés** | BF-001 (initialisation), puis tous les lots backend |
 | **Remplace / complète** | Section 3.1 du cahier des charges |
@@ -139,7 +139,7 @@ Il tient compte de quatre contraintes :
 
 | Outil | Utilisation |
 |---|---|
-| **Spotless** (format google-java-format ou palantir) | Formatage vérifié en CI. Il faut vérifier sa compatibilité avec le JDK 27 dès l'installation, puisqu'il dépend des API de javac. |
+| **Spotless** (format google-java-format, style AOSP) | Formatage vérifié en CI. Il faut vérifier sa compatibilité avec le JDK 27 dès l'installation, puisqu'il dépend des API de javac. **Précision (BF-001-07)** : palantir-java-format 2.103.0 est incompatible avec le JDK 27 (`NoSuchFieldError` sur `JCCompilationUnit.endPositions`, voir palantir/palantir-java-format#1785). On retient donc google-java-format 2.0.0 en style AOSP (indentation de 4 espaces, 100 colonnes). |
 | **Dependabot** (GitHub) | Mises à jour et alertes de sécurité sur les dépendances. |
 | **GitHub Actions** | CI/CD (voir BF-023). |
 
@@ -176,6 +176,6 @@ Il tient compte de quatre contraintes :
 - Le JSON est sérialisé et désérialisé à la main pour Kafka : un peu plus de code, en contrepartie d'un découplage explicite.
 
 ## 5. Actions de suivi
-- [ ] BF-001-01 : figer les versions exactes après les GA de Boot 4.2 et Spring Cloud 2026.0, puis mettre à jour cet ADR (statut « Accepté »).
+- [x] BF-001-01 : versions figées le 2026-11-20 après les GA : **Spring Boot 4.2.0** et **Spring Cloud 2026.0.0**. Les six services passent `./mvnw verify` sur JDK 27.0.1.
 - [ ] Vérifier la compatibilité JDK 27 de MapStruct, Spotless, JaCoCo, springdoc-openapi et ArchUnit.
 - [ ] Créer un squelette de service de référence qui applique cet ADR, et le dupliquer (sans le partager) pour chaque service.
