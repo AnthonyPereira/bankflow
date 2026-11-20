@@ -57,7 +57,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** organiser un mono-dépôt de microservices indépendants et vérifier la stack.
 
 ### Tâches
-- [~] BF-001-01 — Vérifier la compatibilité officielle Java 27 ↔ Spring Boot ↔ Spring Cloud et figer les versions → voir [ADR-001](docs/adr/ADR-001-stack-backend.md) (versions exactes à figer après les GA). Compatibilité JDK 27 vérifiée le 2026-11-17 sur Spring Boot 4.2.0-RC2 et Spring Cloud 2026.0.0-RC2. Reste à faire : passer les six `pom.xml` en version GA après la sortie de Spring Boot 4.2 (annoncée le 2026-11-19), relancer la CI et mettre à jour ADR-001 §5
+- [x] BF-001-01 — Vérifier la compatibilité officielle Java 27 ↔ Spring Boot ↔ Spring Cloud et figer les versions → voir [ADR-001](docs/adr/ADR-001-stack-backend.md). Versions GA figées le 2026-11-20 : Spring Boot 4.2.0 et Spring Cloud 2026.0.0, `./mvnw verify` au vert sur JDK 27.0.1 pour les six services
 - [x] BF-001-02 — Vérifier la disponibilité d'Angular 22, d'Angular Material et de Vitest, puis figer les versions → voir [ADR-002](docs/adr/ADR-002-stack-frontend.md)
 - [x] BF-001-03 — Initialiser le dépôt Git (`.gitignore` Java/Maven/Node/IDE, `.editorconfig`, `.gitattributes`)
 - [x] BF-001-04 — Définir l'arborescence :
@@ -77,8 +77,8 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-001-10 — Mettre en place une première CI GitHub Actions (compilation Maven de chaque service) → `.github/workflows/ci.yml` : `./mvnw verify` par service (matrice, JDK 27 Temurin, Spotless et Testcontainers), plus Dependabot (`.github/dependabot.yml`). Premier run au vert sur GitHub le 2026-11-17 ([run 44127150173](https://github.com/AnthonyPereira/bankflow/actions/runs/44127150173))
 
 ### Critères de validation
-- [x] Chaque service compile seul avec `mvn verify` (vérifié le 2026-11-17 en local sur JDK 27.0.1 et en CI sur JDK 27 Temurin, avec Spring Boot 4.2.0-RC2 et Spring Cloud 2026.0.0-RC2)
-- [~] Les versions retenues sont documentées et leur compatibilité est vérifiée (compatibilité JDK 27 vérifiée sur les RC ; versions GA à figer après la sortie de Spring Boot 4.2, annoncée le 2026-11-19)
+- [x] Chaque service compile seul avec `mvn verify` (vérifié le 2026-11-20 en local sur JDK 27.0.1, avec Spring Boot 4.2.0 et Spring Cloud 2026.0.0)
+- [x] Les versions retenues sont documentées et leur compatibilité est vérifiée (versions GA figées le 2026-11-20, voir ADR-001 §5)
 - [x] Aucune classe métier n'est partagée entre services
 
 ---

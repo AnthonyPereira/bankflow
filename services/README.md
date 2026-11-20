@@ -23,4 +23,4 @@ com.bankflow.<service>/
 
 ## Versions
 
-Spring Boot **4.2.0-RC2** et Spring Cloud **2026.0.0-RC2** (Gateway), Java **27**. À passer en GA dès leur publication (BF-001-01).
+Spring Boot **4.2.0** et Spring Cloud **2026.0.0** (Gateway), Java **27** ([ADR-001](../docs/adr/ADR-001-stack-backend.md)).
