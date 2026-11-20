@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,6 +77,23 @@ class LoginServiceTests {
 
         assertRejectedAfterDecoyHash();
         verify(users, never()).reserveLoginAttempt(any(), any(), anyInt(), any());
+    }
+
+    @Test
+    void uneConnexionReussieLitLHorlogeUneSeuleFois() {
+        var clock = mock(Clock.class);
+        when(clock.instant()).thenReturn(NOW, NOW.plusSeconds(1), NOW.plusSeconds(2));
+        var user = User.register(EMAIL, USER_HASH, Role.ROLE_CLIENT, NOW);
+        when(users.findByEmail(EMAIL)).thenReturn(Optional.of(user));
+        when(users.reserveLoginAttempt(any(UUID.class), any(), anyInt(), any())).thenReturn(1);
+        when(passwordEncoder.matches(PASSWORD, USER_HASH)).thenReturn(true);
+
+        new LoginService(users, passwordEncoder, clock, 5, Duration.ofMinutes(15))
+                .authenticate(EMAIL, PASSWORD);
+
+        verify(clock, times(1)).instant();
+        verify(users).reserveLoginAttempt(user.getId(), NOW, 5, NOW.plus(Duration.ofMinutes(15)));
+        verify(users).resetFailedLogins(user.getId(), NOW);
     }
 
     private static PasswordEncoder createPasswordEncoder() {
