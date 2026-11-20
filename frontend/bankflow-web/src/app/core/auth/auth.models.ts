@@ -1,5 +1,11 @@
 export type Role = 'ROLE_CLIENT' | 'ROLE_ADMIN';
 
+/** Seule table des libellés de rôle : le type impose un libellé à tout nouveau rôle. */
+export const ROLE_LABELS: Record<Role, string> = {
+  ROLE_CLIENT: 'Client',
+  ROLE_ADMIN: 'Administrateur',
+};
+
 export interface Credentials {
   email: string;
   password: string;

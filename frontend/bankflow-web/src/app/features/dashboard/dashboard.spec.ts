@@ -30,6 +30,13 @@ describe('Dashboard', () => {
     expect(screen.getByText('Client')).toBeTruthy();
   });
 
+  it('affiche le libellé du profil administrateur', async () => {
+    await setup(() => of({ ...USER, role: 'ROLE_ADMIN' }));
+
+    expect(await screen.findByText('Administrateur')).toBeTruthy();
+    expect(screen.queryByText('Client')).toBeNull();
+  });
+
   it('annonce les sections à venir sans donnée fictive', async () => {
     await setup(() => of(USER));
 

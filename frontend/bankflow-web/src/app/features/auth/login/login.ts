@@ -9,14 +9,10 @@ import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { DemoAccount, Role } from '../../../core/auth/auth.models';
+import { DemoAccount, Role, ROLE_LABELS } from '../../../core/auth/auth.models';
 import { AuthCard } from '../auth-card/auth-card';
 
 const DEFAULT_DESTINATION = '/tableau-de-bord';
-const ROLE_LABELS: Record<Role, string> = {
-  ROLE_CLIENT: 'Client',
-  ROLE_ADMIN: 'Administrateur',
-};
 
 @Component({
   selector: 'app-login',
