@@ -8,12 +8,21 @@ mat-form-field {
   width: 100%;
 }
 
-.form-error {
+.form-error,
+.form-info {
   margin-bottom: 8px;
   padding: 12px;
   border-radius: var(--mat-sys-corner-small);
+}
+
+.form-error {
   background: var(--mat-sys-error-container);
   color: var(--mat-sys-on-error-container);
+}
+
+.form-info {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
 }
 
 .submit {

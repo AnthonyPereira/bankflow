@@ -1,5 +1,5 @@
 <mat-toolbar class="toolbar">
-  @if (compact()) {
+  @if (isCompact()) {
     <button matIconButton type="button" aria-label="Ouvrir le menu" (click)="menuOpen.set(true)">
       <mat-icon aria-hidden="true" svgIcon="menu" />
     </button>
@@ -18,9 +18,9 @@
 <mat-sidenav-container class="container">
   <mat-sidenav
     class="nav"
-    [mode]="compact() ? 'over' : 'side'"
-    [opened]="navOpened()"
-    [disableClose]="!compact()"
+    [mode]="isCompact() ? 'over' : 'side'"
+    [opened]="isNavOpened()"
+    [disableClose]="!isCompact()"
     (closedStart)="closeMenu()"
   >
     <mat-nav-list aria-label="Navigation principale">

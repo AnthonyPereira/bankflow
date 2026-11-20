@@ -1,5 +1,8 @@
 <app-auth-card heading="Connexion" intro="Accédez à votre espace BankFlow.">
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (infoMessage(); as message) {
+      <p class="form-info" role="status">{{ message }}</p>
+    }
     @if (errorMessage(); as message) {
       <p class="form-error" role="alert">{{ message }}</p>
     }
@@ -62,7 +65,7 @@
         <tbody>
           @for (account of demoAccounts(); track account.email) {
             <tr>
-              <td>{{ roleLabel(account.role) }}</td>
+              <td>{{ getRoleLabel(account.role) }}</td>
               <td class="credentials">
                 <span>{{ account.email }}</span>
                 <code>{{ account.password }}</code>
@@ -71,7 +74,7 @@
                 <button
                   matButton
                   type="button"
-                  [attr.aria-label]="'Utiliser le compte ' + roleLabel(account.role)"
+                  [attr.aria-label]="'Utiliser le compte ' + getRoleLabel(account.role)"
                   (click)="useAccount(account)"
                 >
                   Utiliser

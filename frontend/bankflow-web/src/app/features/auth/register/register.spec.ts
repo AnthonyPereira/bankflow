@@ -76,6 +76,25 @@ describe('Register', () => {
     expect(navigate).toHaveBeenCalledWith('/tableau-de-bord');
   });
 
+  it.each([
+    ['trop de tentatives', new HttpErrorResponse({ status: 429 })],
+    ['service injoignable', new HttpErrorResponse({ status: 0 })],
+  ])(
+    'renvoie vers la connexion si le compte est créé mais la connexion échoue (%s)',
+    async (_cause, loginError) => {
+      const { navigate, user } = await setup();
+      auth.register.mockReturnValue(of({ id: '1', email: EMAIL }));
+      auth.login.mockReturnValue(throwError(() => loginError));
+
+      await submit(user, EMAIL, PASSWORD);
+
+      expect(navigate).toHaveBeenCalledWith('/connexion', {
+        state: { registeredEmail: EMAIL },
+      });
+      expect(screen.queryByRole('alert')).toBeNull();
+    },
+  );
+
   it('signale une adresse déjà utilisée', async () => {
     const { navigate, user } = await setup();
     auth.register.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409 })));

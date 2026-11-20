@@ -3,12 +3,13 @@ import { MatIconTestingModule } from '@angular/material/icon/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { DemoAccount } from '../../../shared/models/auth.models';
-import { Login } from './login';
+import { DemoAccount } from '../../../core/auth/auth.models';
+import { Login, LoginNavigationState } from './login';
 
 const EMAIL = 'a@bankflow.test';
 const PASSWORD = 'un-mot-de-passe-solide';
@@ -18,11 +19,11 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 ];
 
 describe('Login', () => {
-  const auth = { login: vi.fn(), demoAccounts: vi.fn() };
+  const auth = { login: vi.fn(), fetchDemoAccounts: vi.fn() };
 
   async function setup(returnUrl?: string, demoAccounts: DemoAccount[] = []) {
     auth.login.mockReset();
-    auth.demoAccounts.mockReturnValue(of(demoAccounts));
+    auth.fetchDemoAccounts.mockReturnValue(of(demoAccounts));
     await render(Login, {
       inputs: returnUrl ? { returnUrl } : {},
       providers: [
@@ -124,5 +125,34 @@ describe('Login', () => {
     await setup();
 
     expect(screen.queryByRole('heading', { name: 'Comptes de démonstration' })).toBeNull();
+  });
+
+  it("annonce le compte créé et préremplit l'email après l'inscription", async () => {
+    auth.fetchDemoAccounts.mockReturnValue(of([]));
+    TestBed.configureTestingModule({
+      providers: [
+        importProvidersFrom(MatIconTestingModule),
+        provideRouter([{ path: 'connexion', component: Login }]),
+        { provide: AuthService, useValue: auth },
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+    const state: LoginNavigationState = { registeredEmail: EMAIL };
+
+    await TestBed.inject(Router).navigateByUrl('/connexion', { state });
+    harness.detectChanges();
+
+    expect(screen.getByRole('status').textContent).toContain(
+      'Votre compte a été créé. Connectez-vous pour accéder à votre espace.',
+    );
+    expect(screen.getByLabelText<HTMLInputElement>('Adresse email').value).toBe(EMAIL);
+    expect(screen.getByLabelText<HTMLInputElement>('Mot de passe').value).toBe('');
+  });
+
+  it("n'annonce rien lors d'une connexion ordinaire", async () => {
+    await setup();
+
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>('Adresse email').value).toBe('');
   });
 });

@@ -33,14 +33,14 @@ export class Shell {
   private readonly router = inject(Router);
 
   protected readonly isAdmin = this.auth.isAdmin;
-  protected readonly compact = toSignal(
+  protected readonly isCompact = toSignal(
     inject(BreakpointObserver)
       .observe(COMPACT_LAYOUT)
       .pipe(map((state) => state.matches)),
     { initialValue: false },
   );
   protected readonly menuOpen = signal(false);
-  protected readonly navOpened = computed(() => !this.compact() || this.menuOpen());
+  protected readonly isNavOpened = computed(() => !this.isCompact() || this.menuOpen());
 
   protected closeMenu(): void {
     this.menuOpen.set(false);

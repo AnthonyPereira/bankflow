@@ -9,14 +9,15 @@ import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { DemoAccount, Role } from '../../../shared/models/auth.models';
+import { DemoAccount, Role, ROLE_LABELS } from '../../../core/auth/auth.models';
 import { AuthCard } from '../auth-card/auth-card';
 
 const DEFAULT_DESTINATION = '/tableau-de-bord';
-const ROLE_LABELS: Record<Role, string> = {
-  ROLE_CLIENT: 'Client',
-  ROLE_ADMIN: 'Administrateur',
-};
+
+/** État de navigation transmis par l'inscription quand la connexion automatique a échoué. */
+export interface LoginNavigationState {
+  registeredEmail: string;
+}
 
 @Component({
   selector: 'app-login',
@@ -40,16 +41,23 @@ export class Login {
   /** Page demandée avant la redirection vers la connexion. */
   readonly returnUrl = input<string>();
 
+  private readonly registeredEmail = readRegisteredEmail(this.router);
+
   protected readonly form = inject(NonNullableFormBuilder).group({
-    email: ['', [Validators.required, Validators.email]],
+    email: [this.registeredEmail ?? '', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+  protected readonly infoMessage = signal(
+    this.registeredEmail
+      ? 'Votre compte a été créé. Connectez-vous pour accéder à votre espace.'
+      : null,
+  );
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly passwordVisible = signal(false);
-  protected readonly demoAccounts = toSignal(this.auth.demoAccounts(), { initialValue: [] });
+  protected readonly demoAccounts = toSignal(this.auth.fetchDemoAccounts(), { initialValue: [] });
 
-  protected roleLabel(role: Role): string {
+  protected getRoleLabel(role: Role): string {
     return ROLE_LABELS[role];
   }
 
@@ -65,12 +73,13 @@ export class Login {
       return;
     }
     this.submitting.set(true);
+    this.infoMessage.set(null);
     this.errorMessage.set(null);
     this.auth
       .login(this.form.getRawValue())
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
-        next: () => void this.router.navigateByUrl(this.destination()),
+        next: () => void this.router.navigateByUrl(this.resolveDestination()),
         error: (error: HttpErrorResponse) => {
           if (error.status === 401) {
             this.errorMessage.set('Adresse email ou mot de passe incorrect.');
@@ -80,8 +89,14 @@ export class Login {
   }
 
   /** Seul un chemin interne est accepté, pour ne jamais rediriger vers un autre site. */
-  private destination(): string {
+  private resolveDestination(): string {
     const url = this.returnUrl();
     return url?.startsWith('/') && !url.startsWith('//') ? url : DEFAULT_DESTINATION;
   }
+}
+
+/** L'état de navigation n'existe que pendant la navigation qui construit le composant. */
+function readRegisteredEmail(router: Router): string | null {
+  const email: unknown = router.currentNavigation()?.extras.state?.['registeredEmail'];
+  return typeof email === 'string' ? email : null;
 }

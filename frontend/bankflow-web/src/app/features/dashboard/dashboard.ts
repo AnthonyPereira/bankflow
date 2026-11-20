@@ -4,6 +4,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ROLE_LABELS } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 
 /** Les données réelles des comptes arrivent avec la MVP 2 : aucune valeur fictive n'est affichée. */
@@ -36,8 +37,9 @@ export class Dashboard {
   private readonly auth = inject(AuthService);
 
   protected readonly upcomingSections = UPCOMING_SECTIONS;
-  protected readonly user = rxResource({ stream: () => this.auth.currentUser() });
-  protected readonly roleLabel = computed(() =>
-    this.user.value()?.role === 'ROLE_ADMIN' ? 'Administrateur' : 'Client',
-  );
+  protected readonly user = rxResource({ stream: () => this.auth.fetchCurrentUser() });
+  protected readonly getRoleLabel = computed(() => {
+    const role = this.user.value()?.role;
+    return role ? ROLE_LABELS[role] : '';
+  });
 }
