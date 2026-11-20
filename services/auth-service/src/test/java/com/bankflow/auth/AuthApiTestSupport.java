@@ -16,9 +16,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-abstract class AuthApiTestSupport {
+public abstract class AuthApiTestSupport {
 
-    static final String VALID_PASSWORD = "un-mot-de-passe-solide";
+    protected static final String VALID_PASSWORD = "un-mot-de-passe-solide";
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -27,34 +27,34 @@ abstract class AuthApiTestSupport {
     @Value("${local.server.port}")
     private int port;
 
-    static String uniqueEmail() {
+    protected static String uniqueEmail() {
         return "utilisateur-" + UUID.randomUUID() + "@bankflow.test";
     }
 
-    static JsonNode json(HttpResponse<String> response) {
+    protected static JsonNode json(HttpResponse<String> response) {
         return JSON.readTree(response.body());
     }
 
-    static String credentials(String email, String password) {
+    protected static String credentials(String email, String password) {
         return JSON.writeValueAsString(java.util.Map.of("email", email, "password", password));
     }
 
-    HttpRequest.Builder request(String path) {
+    protected HttpRequest.Builder request(String path) {
         return HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path));
     }
 
-    HttpResponse<String> send(HttpRequest.Builder request) throws Exception {
+    protected HttpResponse<String> send(HttpRequest.Builder request) throws Exception {
         return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
     }
 
-    HttpResponse<String> postJson(String path, String body) throws Exception {
+    protected HttpResponse<String> postJson(String path, String body) throws Exception {
         return send(
                 request(path)
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(body)));
     }
 
-    HttpResponse<String> register(String email, String password) throws Exception {
+    protected HttpResponse<String> register(String email, String password) throws Exception {
         return postJson("/auth/register", credentials(email, password));
     }
 }
