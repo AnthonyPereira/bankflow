@@ -28,17 +28,6 @@ spring:
         enable.idempotence: true
         # Une panne de Kafka ne doit pas bloquer longtemps une inscription
         max.block.ms: 3000
-    consumer:
-      # L'offset n'est validé qu'après le traitement du message
-      enable-auto-commit: false
-      auto-offset-reset: earliest
-      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      properties:
-        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-        spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-    listener:
-      ack-mode: record
 
 bankflow:
   # Comptes de démonstration au mot de passe public, affichés sur la page de connexion

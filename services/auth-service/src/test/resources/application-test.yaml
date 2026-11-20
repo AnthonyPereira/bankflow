@@ -2,6 +2,19 @@
 spring:
   main:
     banner-mode: "off"
+  kafka:
+    # Seule la démonstration Kafka (profil kafka-demo, sources de test) consomme des messages
+    consumer:
+      # L'offset n'est validé qu'après le traitement du message
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
 
 logging:
   level:
