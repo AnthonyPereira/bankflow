@@ -242,6 +242,16 @@ class RefreshTokenIntegrationTests extends AuthApiTestSupport {
     }
 
     @Test
+    void lesSessionsDUnUtilisateurSontIndexees() {
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT indexdef FROM pg_indexes WHERE tablename = 'refresh_tokens'"
+                                        + " AND indexname = 'ix_refresh_tokens_user'",
+                                String.class))
+                .contains("(user_id)");
+    }
+
+    @Test
     void laDeconnexionSansCookieReussit() throws Exception {
         assertThat(send(post("/auth/logout")).statusCode()).isEqualTo(204);
     }
