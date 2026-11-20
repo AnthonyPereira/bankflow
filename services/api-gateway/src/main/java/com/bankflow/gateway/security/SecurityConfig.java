@@ -57,6 +57,8 @@ class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_ROUTES)
                                 .permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/auth/demo-accounts")
+                                .permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->

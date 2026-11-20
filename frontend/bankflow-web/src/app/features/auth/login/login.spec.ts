@@ -7,16 +7,22 @@ import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
+import { DemoAccount } from '../../../shared/models/auth.models';
 import { Login } from './login';
 
 const EMAIL = 'a@bankflow.test';
 const PASSWORD = 'un-mot-de-passe-solide';
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  { email: 'demo.client@bankflow.local', password: 'demo-client-bankflow', role: 'ROLE_CLIENT' },
+  { email: 'demo.admin@bankflow.local', password: 'demo-admin-bankflow', role: 'ROLE_ADMIN' },
+];
 
 describe('Login', () => {
-  const auth = { login: vi.fn() };
+  const auth = { login: vi.fn(), demoAccounts: vi.fn() };
 
-  async function setup(returnUrl?: string) {
+  async function setup(returnUrl?: string, demoAccounts: DemoAccount[] = []) {
     auth.login.mockReset();
+    auth.demoAccounts.mockReturnValue(of(demoAccounts));
     await render(Login, {
       inputs: returnUrl ? { returnUrl } : {},
       providers: [
@@ -95,5 +101,28 @@ describe('Login', () => {
       'BUTTON',
     );
     expect(password.type).toBe('text');
+  });
+
+  it('affiche les comptes de démonstration et remplit le formulaire', async () => {
+    const { navigate, user } = await setup(undefined, DEMO_ACCOUNTS);
+    auth.login.mockReturnValue(of(undefined));
+
+    expect(screen.getByRole('heading', { name: 'Comptes de démonstration' })).toBeTruthy();
+    expect(screen.getByText('demo-admin-bankflow')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Utiliser le compte Administrateur' }));
+    await user.click(screen.getByRole('button', { name: 'Se connecter' }));
+
+    expect(auth.login).toHaveBeenCalledWith({
+      email: 'demo.admin@bankflow.local',
+      password: 'demo-admin-bankflow',
+    });
+    expect(navigate).toHaveBeenCalledWith('/tableau-de-bord');
+  });
+
+  it("n'affiche pas le tableau sans compte de démonstration", async () => {
+    await setup();
+
+    expect(screen.queryByRole('heading', { name: 'Comptes de démonstration' })).toBeNull();
   });
 });

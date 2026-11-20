@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,9 +9,14 @@ import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
+import { DemoAccount, Role } from '../../../shared/models/auth.models';
 import { AuthCard } from '../auth-card/auth-card';
 
 const DEFAULT_DESTINATION = '/tableau-de-bord';
+const ROLE_LABELS: Record<Role, string> = {
+  ROLE_CLIENT: 'Client',
+  ROLE_ADMIN: 'Administrateur',
+};
 
 @Component({
   selector: 'app-login',
@@ -25,7 +31,7 @@ const DEFAULT_DESTINATION = '/tableau-de-bord';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html',
-  styleUrl: '../auth-form.scss',
+  styleUrls: ['../auth-form.scss', './login.scss'],
 })
 export class Login {
   private readonly auth = inject(AuthService);
@@ -41,6 +47,17 @@ export class Login {
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly passwordVisible = signal(false);
+  protected readonly demoAccounts = toSignal(this.auth.demoAccounts(), { initialValue: [] });
+
+  protected roleLabel(role: Role): string {
+    return ROLE_LABELS[role];
+  }
+
+  /** Remplit le formulaire : le visiteur voit ce qui est envoyé avant de se connecter. */
+  protected useAccount(account: DemoAccount): void {
+    this.form.setValue({ email: account.email, password: account.password });
+    this.errorMessage.set(null);
+  }
 
   protected submit(): void {
     if (this.form.invalid) {

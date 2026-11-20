@@ -197,6 +197,7 @@ services:
       JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      DEMO_ACCOUNTS_ENABLED: ${DEMO_ACCOUNTS_ENABLED:-true}
 
   customer-service:
     <<: *spring-service
