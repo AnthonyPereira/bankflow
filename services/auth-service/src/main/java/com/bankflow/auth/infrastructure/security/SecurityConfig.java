@@ -58,7 +58,10 @@ class SecurityConfig {
                                         "/swagger-ui/**",
                                         "/swagger-ui.html")
                                 .permitAll()
-                                .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json")
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/.well-known/jwks.json",
+                                        "/auth/demo-accounts")
                                 .permitAll()
                                 .requestMatchers(
                                         HttpMethod.POST,

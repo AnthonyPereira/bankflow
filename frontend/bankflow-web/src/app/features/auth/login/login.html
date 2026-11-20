@@ -47,5 +47,42 @@
     </button>
   </form>
 
+  @if (demoAccounts().length) {
+    <section class="demo" aria-labelledby="demo-title">
+      <h2 id="demo-title">Comptes de démonstration</h2>
+      <p class="demo-intro">Découvrez l'application sans vous inscrire.</p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Profil</th>
+            <th scope="col">Identifiants</th>
+            <th scope="col"><span class="visually-hidden">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (account of demoAccounts(); track account.email) {
+            <tr>
+              <td>{{ roleLabel(account.role) }}</td>
+              <td class="credentials">
+                <span>{{ account.email }}</span>
+                <code>{{ account.password }}</code>
+              </td>
+              <td>
+                <button
+                  matButton
+                  type="button"
+                  [attr.aria-label]="'Utiliser le compte ' + roleLabel(account.role)"
+                  (click)="useAccount(account)"
+                >
+                  Utiliser
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+
   <p class="switch">Pas encore de compte ? <a routerLink="/inscription">Créer un compte</a></p>
 </app-auth-card>

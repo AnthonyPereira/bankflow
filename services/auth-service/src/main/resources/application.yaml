@@ -41,6 +41,9 @@ spring:
       ack-mode: record
 
 bankflow:
+  # Comptes de démonstration au mot de passe public, affichés sur la page de connexion
+  demo:
+    enabled: ${DEMO_ACCOUNTS_ENABLED:true}
   admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}

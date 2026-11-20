@@ -4,7 +4,7 @@ import { environment } from '../../../environments/environment';
 /** Une requête marquée ainsi gère elle-même ses erreurs, sans message global. */
 export const SILENT_ERRORS = new HttpContextToken<boolean>(() => false);
 
-const PUBLIC_AUTH_URLS = ['login', 'register', 'refresh', 'logout'].map(
+const PUBLIC_AUTH_URLS = ['login', 'register', 'refresh', 'logout', 'demo-accounts'].map(
   (path) => `${environment.apiUrl}/auth/${path}`,
 );
 

@@ -90,6 +90,14 @@ class GatewayIntegrationTests {
     }
 
     @Test
+    void lesComptesDeDemonstrationSontPublicsEnLecture() throws Exception {
+        var response = send(get("/api/auth/demo-accounts"));
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(LAST_REQUEST.get().path()).isEqualTo("/auth/demo-accounts");
+    }
+
+    @Test
     void routeProtegeeAvecJwtValideEstRelayee() throws Exception {
         var response = send(get("/api/accounts/42").header("Authorization", bearer(validToken())));
 

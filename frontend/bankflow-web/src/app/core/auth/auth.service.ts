@@ -16,7 +16,13 @@ import {
   timer,
 } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Credentials, Role, TokenResponse, User } from '../../shared/models/auth.models';
+import {
+  Credentials,
+  DemoAccount,
+  Role,
+  TokenResponse,
+  User,
+} from '../../shared/models/auth.models';
 import { SILENT_ERRORS } from '../http/api';
 
 interface Session {
@@ -52,6 +58,13 @@ export class AuthService {
         this.startSession(response.accessToken);
       }),
     );
+  }
+
+  /** Comptes de démonstration. Une erreur donne une liste vide : la connexion reste possible. */
+  demoAccounts(): Observable<DemoAccount[]> {
+    return this.http
+      .get<DemoAccount[]>(`${AUTH_URL}/demo-accounts`, { context: silent() })
+      .pipe(catchError(() => of([])));
   }
 
   currentUser(): Observable<User> {

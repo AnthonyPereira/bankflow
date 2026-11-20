@@ -467,6 +467,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-016-12b — `shared/pipes` (montant ou devise, date) (reporté à la MVP 2, avec les premiers montants affichés)
 - [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
 - [x] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
+- [x] BF-016-15 — Afficher sur la page de connexion un tableau des comptes de démonstration (client et administrateur, mots de passe publics). Ils sont créés au démarrage de l'Auth Service et servis par `GET /auth/demo-accounts`. On les coupe avec `DEMO_ACCOUNTS_ENABLED=false`. Le compte administrateur initial (`ADMIN_PASSWORD`) reste secret
 
 ### Tests
 - [x] Tests Vitest : AuthService, intercepteurs, guards, formulaires de connexion et d'inscription
