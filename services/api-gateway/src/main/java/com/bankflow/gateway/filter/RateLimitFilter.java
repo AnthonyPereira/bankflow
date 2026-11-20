@@ -57,21 +57,23 @@ class RateLimitFilter extends OncePerRequestFilter {
                         "/api/transfers", transfers);
     }
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !HttpMethod.POST.matches(request.getMethod())
-                || !limitsPerMinute.containsKey(normalizePath(request));
-    }
-
+    // Le tri se fait ici plutôt que dans shouldNotFilter : le chemin n'est normalisé qu'une fois
     @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        if (!HttpMethod.POST.matches(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
         var path = normalizePath(request);
+        var perMinute = limitsPerMinute.get(path);
+        if (perMinute == null) {
+            chain.doFilter(request, response);
+            return;
+        }
         var bucket =
-                buckets.get(
-                        path + '|' + request.getRemoteAddr(),
-                        key -> createBucket(limitsPerMinute.get(path)));
+                buckets.get(path + '|' + request.getRemoteAddr(), key -> createBucket(perMinute));
         var probe = bucket.tryConsumeAndReturnRemaining(1);
         if (probe.isConsumed()) {
             chain.doFilter(request, response);
@@ -106,7 +108,10 @@ class RateLimitFilter extends OncePerRequestFilter {
         // Les paramètres de segment (;x=1) sont retirés avant le décodage, comme le fait Spring MVC
         var withoutParameters = PATH_PARAMETERS.matcher(raw).replaceAll("");
         var decoded = UriUtils.decode(withoutParameters, StandardCharsets.UTF_8);
-        var path = StringUtils.cleanPath(REPEATED_SLASHES.matcher(decoded).replaceAll("/"));
+        var path =
+                Objects.requireNonNullElse(
+                        StringUtils.cleanPath(REPEATED_SLASHES.matcher(decoded).replaceAll("/")),
+                        "/");
         return path.length() > 1 && path.endsWith("/")
                 ? path.substring(0, path.length() - 1)
                 : path;

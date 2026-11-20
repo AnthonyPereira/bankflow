@@ -8,14 +8,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Répond aux chemins qui ne correspondent à aucune route de la Gateway. */
+/**
+ * Répond 404 aux chemins qui ne correspondent à aucune route de la Gateway, en lecture ({@link
+ * #respondToUnknownRead}) comme en écriture ({@link #respondToUnknownWrite}).
+ */
 @RestController
 class FallbackController {
 
     @RequestMapping(
             path = "/**",
             method = {RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS})
-    void readNotFound(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    void respondToUnknownRead(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
         respondNotFound(request, response);
     }
 
@@ -27,7 +31,7 @@ class FallbackController {
                 RequestMethod.PATCH,
                 RequestMethod.DELETE
             })
-    void writeNotFound(HttpServletRequest request, HttpServletResponse response)
+    void respondToUnknownWrite(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         respondNotFound(request, response);
     }
