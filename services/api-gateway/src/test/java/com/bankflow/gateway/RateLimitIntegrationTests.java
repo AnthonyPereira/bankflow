@@ -72,6 +72,17 @@ class RateLimitIntegrationTests {
     }
 
     @Test
+    void deuxAdressesIpv6DuMemePrefixe64PartagentLaLimite() throws Exception {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            assertThat(post("/api/auth/login", "2001:db8:60::" + (attempt + 1)).statusCode())
+                    .isEqualTo(200);
+        }
+
+        assertThat(post("/api/auth/login", "2001:db8:60::ffff").statusCode()).isEqualTo(429);
+        assertThat(post("/api/auth/login", "2001:db8:61::1").statusCode()).isEqualTo(200);
+    }
+
+    @Test
     void chaqueRouteASaPropreLimite() throws Exception {
         var ip = "203.0.113.30";
 

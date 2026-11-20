@@ -25,12 +25,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /** Le service protège ses API même si une requête contourne la Gateway. */
-@Import(TestcontainersConfiguration.class)
+@Import({TestcontainersConfiguration.class, SecurityIntegrationTests.RoleProbeController.class})
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class SecurityIntegrationTests {
@@ -50,6 +53,17 @@ class SecurityIntegrationTests {
         registry.add(
                 "JWK_SET_URI",
                 () -> "http://127.0.0.1:" + JWKS.getAddress().getPort() + "/jwks.json");
+    }
+
+    /** Route de test : vérifie que le claim {@code role} devient bien une autorité. */
+    @RestController
+    static class RoleProbeController {
+
+        @GetMapping("/test/admin")
+        @PreAuthorize("hasRole('ADMIN')")
+        String readAdminProbe() {
+            return "ok";
+        }
     }
 
     @AfterAll
@@ -87,6 +101,32 @@ class SecurityIntegrationTests {
         assertThat(get("/ressource", createToken(ISSUER, "autre-api")).statusCode()).isEqualTo(401);
     }
 
+    @Test
+    void leClaimRoleClientNeDonnePasAccesAUneRouteAdmin() throws Exception {
+        var response = get("/test/admin", createToken(ISSUER, AUDIENCE, "ROLE_CLIENT"));
+
+        assertThat(response.statusCode()).isEqualTo(403);
+        assertThat(response.headers().firstValue("Content-Type").orElseThrow())
+                .contains("application/problem+json");
+    }
+
+    @Test
+    void leClaimRoleAdminDonneAccesAUneRouteAdmin() throws Exception {
+        var response = get("/test/admin", createToken(ISSUER, AUDIENCE, "ROLE_ADMIN"));
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).isEqualTo("ok");
+    }
+
+    @Test
+    void unRoleSansPrefixeOuAbsentNeDonnePasAccesAUneRouteAdmin() throws Exception {
+        // Le claim est repris tel quel : « ADMIN » ne devient pas ROLE_ADMIN
+        assertThat(get("/test/admin", createToken(ISSUER, AUDIENCE, "ADMIN")).statusCode())
+                .isEqualTo(403);
+        assertThat(get("/test/admin", createToken(ISSUER, AUDIENCE, null)).statusCode())
+                .isEqualTo(403);
+    }
+
     private HttpResponse<String> get(String path, String token) throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path));
         if (token != null) {
@@ -96,12 +136,17 @@ class SecurityIntegrationTests {
     }
 
     private static String createToken(String issuer, String audience) throws Exception {
+        return createToken(issuer, audience, "ROLE_CLIENT");
+    }
+
+    private static String createToken(String issuer, String audience, String role)
+            throws Exception {
         var claims =
                 new JWTClaimsSet.Builder()
                         .subject("6f1c2d84-7a51-4e0b-9a36-0a7d5c1e9f22")
                         .issuer(issuer)
                         .audience(audience)
-                        .claim("role", "ROLE_CLIENT")
+                        .claim("role", role)
                         .expirationTime(Date.from(Instant.now().plusSeconds(300)))
                         .build();
         var jwt =

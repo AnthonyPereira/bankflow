@@ -156,6 +156,64 @@ class GatewayIntegrationTests {
     }
 
     @Test
+    void unJwtExpireNEmpechePasLeLoginNiLeRefresh() throws Exception {
+        var expired = formatBearer(createExpiredToken());
+        for (var path : List.of("/api/auth/login", "/api/auth/refresh", "/api/auth/logout")) {
+            var response = send(post(path).header("Authorization", expired));
+
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(LAST_REQUEST.get().path()).isEqualTo(path.substring("/api".length()));
+            // Le jeton n'a pas été validé : il n'est pas relayé à l'Auth Service
+            assertThat(LAST_REQUEST.get().findHeader("Authorization")).isNull();
+        }
+        assertThat(
+                        send(get("/api/auth/demo-accounts").header("Authorization", expired))
+                                .statusCode())
+                .isEqualTo(200);
+    }
+
+    @Test
+    void unJwtExpireResteRejeteSurUneRouteProtegee() throws Exception {
+        var expired = formatBearer(createExpiredToken());
+        var requests =
+                List.of(
+                        get("/api/auth/me"),
+                        get("/api/auth/m%65"),
+                        // Le refresh n'est public qu'en POST
+                        get("/api/auth/refresh"),
+                        get("/api/auth/%72efresh"),
+                        post("/api/auth/%72efresh/../../accounts"),
+                        post("/api/auth/refresh;/../../accounts"));
+        for (var request : requests) {
+            var response = send(request.header("Authorization", expired));
+
+            assertThat(response.statusCode()).isIn(400, 401);
+            assertThat(LAST_REQUEST.get()).isNull();
+        }
+    }
+
+    @Test
+    void uneRoutePubliqueEncodeeIgnoreLeJwtExpireSansRienOuvrirDAutre() throws Exception {
+        var response =
+                send(
+                        post("/api/auth/%72efresh")
+                                .header("Authorization", formatBearer(createExpiredToken())));
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(LAST_REQUEST.get().path()).isEqualTo("/auth/refresh");
+        assertThat(LAST_REQUEST.get().findHeader("Authorization")).isNull();
+    }
+
+    @Test
+    void leJwtValideResteRelayeSurUneRouteProtegee() throws Exception {
+        var token = formatBearer(createValidToken());
+
+        send(get("/api/accounts").header("Authorization", token));
+
+        assertThat(LAST_REQUEST.get().findHeader("Authorization")).isEqualTo(token);
+    }
+
+    @Test
     void jwtSigneParUneAutreCleEstRejete() throws Exception {
         var forged =
                 createToken(generateKey("cle-de-test"), ISSUER, AUDIENCE, computeOneHourFromNow());
@@ -318,6 +376,10 @@ class GatewayIntegrationTests {
 
     private static String createValidToken() throws Exception {
         return createToken(SIGNING_KEY, ISSUER, AUDIENCE, computeOneHourFromNow());
+    }
+
+    private static String createExpiredToken() throws Exception {
+        return createToken(SIGNING_KEY, ISSUER, AUDIENCE, Instant.now().minusSeconds(600));
     }
 
     private static Instant computeOneHourFromNow() {

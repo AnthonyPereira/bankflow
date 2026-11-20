@@ -93,6 +93,7 @@ Une migration Flyway déjà appliquée n'est pas annulée par ce retour arrière
 
 ```bash
 cd ~/apps/bankflow
+mkdir -p ~/sauvegardes
 docker compose -p bankflow exec -T postgres pg_dump -U bankflow_admin auth_db > ~/sauvegardes/bankflow-auth-$(date +%F).sql
 ```
 
