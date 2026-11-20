@@ -59,18 +59,18 @@ class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return !HttpMethod.POST.matches(request.getMethod())
-                || !limitsPerMinute.containsKey(normalizedPath(request));
+                || !limitsPerMinute.containsKey(normalizePath(request));
     }
 
     @Override
     protected void doFilterInternal(
             HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        var path = normalizedPath(request);
+        var path = normalizePath(request);
         var bucket =
                 buckets.get(
                         path + '|' + request.getRemoteAddr(),
-                        key -> newBucket(limitsPerMinute.get(path)));
+                        key -> createBucket(limitsPerMinute.get(path)));
         var probe = bucket.tryConsumeAndReturnRemaining(1);
         if (probe.isConsumed()) {
             chain.doFilter(request, response);
@@ -85,7 +85,7 @@ class RateLimitFilter extends OncePerRequestFilter {
                 "Trop de tentatives. Réessayez dans quelques instants.");
     }
 
-    private static Bucket newBucket(long perMinute) {
+    private static Bucket createBucket(long perMinute) {
         return Bucket.builder()
                 .addLimit(limit ->
                         limit.capacity(perMinute).refillGreedy(perMinute, Duration.ofMinutes(1)))
@@ -98,7 +98,7 @@ class RateLimitFilter extends OncePerRequestFilter {
      * /auth/login}. Ce filtre passe avant le pare-feu de Spring Security : il ne peut donc pas
      * compter sur lui pour écarter les chemins non normalisés.
      */
-    private static String normalizedPath(HttpServletRequest request) {
+    private static String normalizePath(HttpServletRequest request) {
         var raw = request.getRequestURI().substring(request.getContextPath().length());
         // Les paramètres de segment (;x=1) sont retirés avant le décodage, comme le fait Spring MVC
         var withoutParameters = PATH_PARAMETERS.matcher(raw).replaceAll("");

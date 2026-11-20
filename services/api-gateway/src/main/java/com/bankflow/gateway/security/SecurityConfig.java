@@ -28,8 +28,8 @@ class SecurityConfig {
         "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout"
     };
 
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Bean("securityFilterChain")
+    SecurityFilterChain createSecurityFilterChain(HttpSecurity http) throws Exception {
         AuthenticationEntryPoint unauthorized =
                 (request, response, exception) -> {
                     response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
@@ -72,8 +72,8 @@ class SecurityConfig {
                 .build();
     }
 
-    @Bean
-    CorsConfigurationSource corsConfigurationSource(
+    @Bean("corsConfigurationSource")
+    CorsConfigurationSource createCorsConfigurationSource(
             @Value("${bankflow.cors.allowed-origins}") List<String> allowedOrigins) {
         var configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);

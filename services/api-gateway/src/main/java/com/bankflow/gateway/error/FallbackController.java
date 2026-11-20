@@ -16,7 +16,7 @@ class FallbackController {
             path = "/**",
             method = {RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS})
     void readNotFound(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        notFound(request, response);
+        respondNotFound(request, response);
     }
 
     @RequestMapping(
@@ -29,10 +29,10 @@ class FallbackController {
             })
     void writeNotFound(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
-        notFound(request, response);
+        respondNotFound(request, response);
     }
 
-    private static void notFound(HttpServletRequest request, HttpServletResponse response)
+    private static void respondNotFound(HttpServletRequest request, HttpServletResponse response)
             throws IOException {
         ProblemResponses.write(
                 request, response, HttpStatus.NOT_FOUND, "Aucune ressource à cette adresse.");
