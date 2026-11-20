@@ -2,6 +2,12 @@
 
 BankFlow est publié sur `https://bankflow.anthonypereira.dpdns.org`. Chaque fusion dans `main` déclenche la CI ; **seulement si elle est verte**, le workflow `Déploiement` construit les images du commit testé et les publie sur GHCR. Le dépôt privé `AnthonyPereira/deploy-platform` lance ensuite la mise en ligne depuis le runner du serveur. Un lancement manuel de `Déploiement` (Run workflow, sur `main`) reconstruit le dernier commit de `main`, et échoue si ce commit n'a pas de CI verte.
 
+### Conditions de départ
+
+- **Toute la CI doit réussir**, y compris le job `sonarqube` : il attend la Quality Gate SonarCloud (`sonar.qualitygate.wait=true`) et échoue si elle est rouge. Une Quality Gate rouge ou une panne de SonarCloud sur `main` bloque donc la mise en ligne, même quand les tests sont verts (marche à suivre dans le [dépannage](#dépannage)). Ce job ne tourne que si la variable `SONAR_CI_ENABLED` vaut `true` (voir `sonarqube.md`).
+- **Le commit testé doit encore être la tête de `main`.** Si `main` a avancé entre la fin de la CI et le déploiement, le run s'arrête avec le message `main a avancé` sans rien publier : ce n'est pas une panne, le run déclenché par la CI du commit plus récent déploiera. Le même contrôle est refait au checkout des images (`main a avancé pendant le déploiement`).
+- Le lancement manuel (`workflow_dispatch`) obéit à la même règle : il refuse un commit de `main` sans CI verte sur push, job `sonarqube` compris.
+
 Ce dépôt reste public : **n'y enregistrez jamais de runner**, car une PR de fork pourrait exécuter du code sur le serveur. Le compose de production se trouve dans `apps/bankflow/` du dépôt `deploy-platform`.
 
 Seul le frontend est routé par Traefik. Il relaie `/api` vers la Gateway, et les autres conteneurs restent sur le réseau interne.
@@ -98,7 +104,10 @@ docker compose -p bankflow exec -T postgres pg_dump -U bankflow_admin auth_db > 
 | `denied` sur `ghcr.io` | Secret `GHCR_PULL_TOKEN` absent ou expiré |
 | `demande de mise en ligne` échoue | Secret `DEPLOY_DISPATCH_TOKEN` absent ou expiré |
 | `Déploiement` ne démarre pas après une fusion | CI rouge ou annulée sur `main` : corriger, ou relancer la CI |
-| `Aucune CI verte sur push` au lancement manuel | Le dernier commit de `main` n'a pas de CI verte |
+| Job `sonarqube` rouge sur `main`, tests verts | Quality Gate rouge : ouvrir le lien SonarCloud du job, corriger le code par un hotfix (`CONTRIBUTING.md`) ; la CI du correctif relance le déploiement |
+| Job `sonarqube` en erreur ou en délai dépassé sans Quality Gate | Panne de SonarCloud : consulter la page de statut de SonarCloud, puis relancer le job depuis le run de CI (Re-run failed jobs) ; une fois la CI verte, le déploiement part seul, ou par lancement manuel |
+| `Aucune CI verte sur push` au lancement manuel | Le dernier commit de `main` n'a pas de CI verte (job `sonarqube` compris) : la rendre verte d'abord |
+| Run arrêté avec `main a avancé` | Un commit plus récent est arrivé sur `main` : rien à faire, le run déclenché par sa CI déploie |
 | Adresse en 404 | Le conteneur `frontend` n'est pas sur le réseau `web` |
 | Connexion refusée en 403 | `APP_HOST` différent de l'adresse publique |
 
