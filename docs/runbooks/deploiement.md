@@ -1,10 +1,14 @@
 # Déploiement sur le serveur maison
 
-BankFlow est publié sur `https://bankflow.anthonypereira.dpdns.org`. Chaque fusion dans `main` construit les images sur GitHub et les publie sur GHCR. Le dépôt privé `AnthonyPereira/deploy-platform` lance ensuite la mise en ligne depuis le runner du serveur.
+BankFlow est publié sur `https://bankflow.anthonypereira.dpdns.org`. Chaque fusion dans `main` déclenche la CI ; **seulement si elle est verte**, le workflow `Déploiement` construit les images du commit testé et les publie sur GHCR. Le dépôt privé `AnthonyPereira/deploy-platform` lance ensuite la mise en ligne depuis le runner du serveur. Un lancement manuel de `Déploiement` (Run workflow, sur `main`) reconstruit le dernier commit de `main`, et échoue si ce commit n'a pas de CI verte.
 
 Ce dépôt reste public : **n'y enregistrez jamais de runner**, car une PR de fork pourrait exécuter du code sur le serveur. Le compose de production se trouve dans `apps/bankflow/` du dépôt `deploy-platform`.
 
 Seul le frontend est routé par Traefik. Il relaie `/api` vers la Gateway, et les autres conteneurs restent sur le réseau interne.
+
+La MVP 1 ne déploie que le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka (avec `kafka-init`) : le serveur n'a que 8 Go de mémoire. Customer, Banking, Notification et Analytics ne sont ni construits ni lancés, et la Gateway répond 503 sur leurs routes. Chaque MVP suivante ajoutera son service à la matrice de `deploy.yml` et au compose de `deploy-platform`.
+
+L'adresse du visiteur (quotas de la Gateway) vient de l'en-tête `CF-Connecting-IP`. Nginx ne le croit que s'il est relayé depuis un réseau privé (Traefik) : Traefik ne doit donc être joignable que par le tunnel Cloudflare.
 
 ## Première activation
 
@@ -93,6 +97,8 @@ docker compose -p bankflow exec -T postgres pg_dump -U bankflow_admin auth_db > 
 | `à définir dans ~/apps/bankflow/.env` | Secret manquant, voir l'étape 4 |
 | `denied` sur `ghcr.io` | Secret `GHCR_PULL_TOKEN` absent ou expiré |
 | `demande de mise en ligne` échoue | Secret `DEPLOY_DISPATCH_TOKEN` absent ou expiré |
+| `Déploiement` ne démarre pas après une fusion | CI rouge ou annulée sur `main` : corriger, ou relancer la CI |
+| `Aucune CI verte sur push` au lancement manuel | Le dernier commit de `main` n'a pas de CI verte |
 | Adresse en 404 | Le conteneur `frontend` n'est pas sur le réseau `web` |
 | Connexion refusée en 403 | `APP_HOST` différent de l'adresse publique |
 
