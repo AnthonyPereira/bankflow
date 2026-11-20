@@ -1,8 +1,10 @@
 # Infrastructure
 
-Docker Compose, PostgreSQL, Kafka (KRaft), Kafka UI, Mailpit, Prometheus et Grafana.
+Docker Compose, PostgreSQL, Kafka (KRaft), Kafka UI et Mailpit.
 
-Mis en place aux lots **BF-002** (PostgreSQL, Mailpit), **BF-003** (Kafka) et **BF-020** (monitoring).
+Mis en place aux lots **BF-002** (PostgreSQL, Mailpit) et **BF-003** (Kafka). Le monitoring (Prometheus et Grafana) est **prévu** au lot **BF-020** : les services exposent déjà `/actuator/prometheus`, mais aucun Prometheus ni Grafana n'est encore déployé.
+
+PostgreSQL et `kafka-init` sont construits depuis `infra/postgres` et `infra/kafka`, et le broker Kafka utilise le même digest : l'environnement local tourne sur les mêmes images que la production.
 
 ## Démarrage
 
@@ -23,7 +25,7 @@ Le profil Spring se choisit avec la variable `SPRING_PROFILE` : `dev` (par défa
 | `docker compose down` | Arrête l'environnement et conserve les données |
 | `docker compose down -v` | Arrête l'environnement et **supprime les données** |
 
-Le script `postgres/init/01-create-databases.sh` ne s'exécute qu'à la création du volume. Après un changement de mot de passe dans `.env`, il faut recréer le volume avec `docker compose down -v`.
+Le script `postgres/init/01-create-databases.sh` est intégré à l'image PostgreSQL : après une modification, il faut la reconstruire (`docker compose build postgres`). Il ne s'exécute qu'à la création du volume. Après un changement de mot de passe dans `.env`, il faut recréer le volume avec `docker compose down -v`.
 
 ## Ports (publiés sur `127.0.0.1` uniquement)
 
@@ -35,6 +37,7 @@ Le script `postgres/init/01-create-databases.sh` ne s'exécute qu'à la créatio
 | Kafka | 9092 | `KAFKA_HOST_PORT` | `localhost:9092` depuis le poste, `kafka:29092` entre conteneurs |
 | Kafka UI | 8090 | `KAFKA_UI_HOST_PORT` | <http://localhost:8090> |
 | API Gateway | 8080 | `GATEWAY_HOST_PORT` | <http://localhost:8080/api> (profil `apps`) |
+| Frontend | 8088 | `FRONTEND_HOST_PORT` | <http://localhost:8088>, l'application et `/api` sur la même origine (profil `apps`) |
 
 ## Bases de données
 

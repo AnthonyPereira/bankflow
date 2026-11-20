@@ -4,7 +4,7 @@ Plateforme bancaire **fictive** et **pédagogique** construite en microservices 
 
 - **Backend** : Java 27, Spring Boot 4.2, Spring Cloud 2026.0, Spring Kafka, PostgreSQL ([ADR-001](docs/adr/ADR-001-stack-backend.md))
 - **Frontend** : Angular 22, Angular Material, Signals ([ADR-002](docs/adr/ADR-002-stack-frontend.md))
-- **Infrastructure** : Docker Compose, Kafka (KRaft), Kafka UI, Mailpit, Prometheus, Grafana
+- **Infrastructure** : Docker Compose, Kafka (KRaft), Kafka UI, Mailpit ; Prometheus et Grafana prévus au lot BF-020
 
 ## Documentation
 
@@ -27,7 +27,7 @@ bankflow/
 │   ├── notification-service/
 │   └── analytics-fraud-service/
 ├── frontend/      # application Angular (bankflow-web)
-├── infra/         # Docker, Kafka, PostgreSQL, Prometheus, Grafana
+├── infra/         # Docker, Kafka, PostgreSQL (Prometheus et Grafana prévus, BF-020)
 ├── contracts/     # contrats d'événements Kafka versionnés (JSON Schema)
 └── docs/          # ADR, architecture, runbooks
 ```
