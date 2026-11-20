@@ -1,5 +1,6 @@
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -7,6 +8,7 @@ import { createFakeJwt } from '../../testing/fake-jwt';
 import { authInterceptor } from '../auth/auth.interceptor';
 import { AuthService } from '../auth/auth.service';
 import { NotificationUiService } from '../notifications/notification-ui.service';
+import { SILENT_ERRORS } from './api';
 import { correlationIdInterceptor } from './correlation-id.interceptor';
 import { errorInterceptor } from './error.interceptor';
 
@@ -14,18 +16,24 @@ const OLD_TOKEN = createFakeJwt('ROLE_CLIENT', 'ancien');
 const NEW_TOKEN = createFakeJwt('ROLE_CLIENT', 'nouveau');
 const UNAUTHORIZED = { status: 401, statusText: 'Unauthorized' };
 
+@Component({ template: '' })
+class StubPage {}
+
 describe('intercepteurs HTTP', () => {
   let client: HttpClient;
   let http: HttpTestingController;
   let auth: AuthService;
   let router: Router;
-  const notifications = { showError: vi.fn(), showInfo: vi.fn() };
+  const notifications = { showError: vi.fn() };
 
   beforeEach(async () => {
     notifications.showError.mockClear();
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
+        provideRouter([
+          { path: 'comptes', component: StubPage },
+          { path: 'connexion', component: StubPage },
+        ]),
         provideHttpClient(
           withInterceptors([correlationIdInterceptor, errorInterceptor, authInterceptor]),
         ),
@@ -81,20 +89,136 @@ describe('intercepteurs HTTP', () => {
     expect(notifications.showError).not.toHaveBeenCalled();
   });
 
-  it('renvoie vers la connexion quand la session ne peut plus être renouvelée', async () => {
+  it('réutilise le jeton déjà renouvelé par une autre requête', async () => {
+    const first = firstValueFrom(client.get('/api/accounts'));
+    const second = firstValueFrom(client.get('/api/transfers'));
+
+    // La première requête refusée déclenche le refresh et se termine avant la seconde.
+    http.expectOne('/api/accounts').flush(null, UNAUTHORIZED);
+    http.expectOne('/api/auth/refresh').flush({ accessToken: NEW_TOKEN });
+    http.expectOne('/api/accounts').flush({ ok: 1 });
+    await first;
+
+    // La seconde, partie avec l'ancien jeton, est rejouée sans nouveau refresh.
+    http.expectOne('/api/transfers').flush(null, UNAUTHORIZED);
+    http.expectNone('/api/auth/refresh');
+    const replay = http.expectOne('/api/transfers');
+    replay.flush({ ok: 2 });
+
+    expect(replay.request.headers.get('Authorization')).toBe(`Bearer ${NEW_TOKEN}`);
+    await expect(second).resolves.toEqual({ ok: 2 });
+  });
+
+  it('garde la session ouverte quand le refresh échoue pour une autre raison', async () => {
+    const navigate = vi.spyOn(router, 'navigate');
+    const response = firstValueFrom(client.get('/api/accounts')).catch((e: unknown) => e);
+
+    http.expectOne('/api/accounts').flush(null, UNAUTHORIZED);
+    http.expectOne('/api/auth/refresh').flush(null, { status: 503, statusText: 'Unavailable' });
+
+    expect(await response).toMatchObject({ status: 503 });
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(notifications.showError).toHaveBeenCalledWith(
+      'Une erreur est survenue. Réessayez plus tard.',
+    );
+  });
+
+  /** Le refresh est refusé deux fois : sans Web Locks, le service retente une fois. */
+  async function rejectRefresh(): Promise<void> {
+    http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
+    await vi.advanceTimersByTimeAsync(300);
+    http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
+  }
+
+  it('renvoie vers la connexion en gardant la page en cours', async () => {
+    await router.navigateByUrl('/comptes?onglet=epargne');
     vi.useFakeTimers();
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const response = firstValueFrom(client.get('/api/accounts')).catch((e: unknown) => e);
 
     http.expectOne('/api/accounts').flush(null, UNAUTHORIZED);
-    http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
-    await vi.advanceTimersByTimeAsync(300);
-    http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
+    await rejectRefresh();
     await response;
 
     expect(auth.isAuthenticated()).toBe(false);
-    expect(navigate).toHaveBeenCalledWith(['/connexion'], { queryParams: { returnUrl: '/' } });
+    expect(navigate).toHaveBeenCalledWith(['/connexion'], {
+      queryParams: { returnUrl: '/comptes?onglet=epargne' },
+    });
+    expect(notifications.showError).toHaveBeenCalledExactlyOnceWith(
+      'Votre session a expiré. Veuillez vous reconnecter.',
+    );
+  });
+
+  it('ne traite qu’une fois plusieurs requêtes refusées en même temps', async () => {
+    await router.navigateByUrl('/comptes');
+    vi.useFakeTimers();
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const first = firstValueFrom(client.get('/api/accounts')).catch((e: unknown) => e);
+    const second = firstValueFrom(client.get('/api/transfers')).catch((e: unknown) => e);
+
+    http.expectOne('/api/accounts').flush(null, UNAUTHORIZED);
+    http.expectOne('/api/transfers').flush(null, UNAUTHORIZED);
+    await rejectRefresh();
+    await Promise.all([first, second]);
+
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(['/connexion'], {
+      queryParams: { returnUrl: '/comptes' },
+    });
     expect(notifications.showError).toHaveBeenCalledTimes(1);
+  });
+
+  it('ne fait rien pour un 401 reçu sur la page de connexion', async () => {
+    await router.navigateByUrl('/connexion?returnUrl=%2Fcomptes');
+    const navigate = vi.spyOn(router, 'navigate');
+    vi.useFakeTimers();
+    const response = firstValueFrom(client.get('/api/accounts')).catch((e: unknown) => e);
+
+    http.expectOne('/api/accounts').flush(null, UNAUTHORIZED);
+    await rejectRefresh();
+    await response;
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(notifications.showError).not.toHaveBeenCalled();
+  });
+
+  it('ferme aussi la session sur une requête silencieuse', async () => {
+    vi.useFakeTimers();
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const context = new HttpContext().set(SILENT_ERRORS, true);
+    const response = firstValueFrom(client.get('/api/auth/me', { context })).catch(
+      (e: unknown) => e,
+    );
+
+    http.expectOne('/api/auth/me').flush(null, UNAUTHORIZED);
+    await rejectRefresh();
+    await response;
+
+    expect(auth.isAuthenticated()).toBe(false);
+    expect(navigate).toHaveBeenCalledTimes(1);
+  });
+
+  it("n'affiche aucun message pour une requête silencieuse", async () => {
+    const context = new HttpContext().set(SILENT_ERRORS, true);
+    const response = firstValueFrom(client.get('/api/auth/me', { context })).catch(
+      (e: unknown) => e,
+    );
+
+    http.expectOne('/api/auth/me').flush(null, { status: 503, statusText: 'Unavailable' });
+    await response;
+
+    expect(notifications.showError).not.toHaveBeenCalled();
+  });
+
+  it('signale un service injoignable', async () => {
+    const response = firstValueFrom(client.get('/api/accounts')).catch((e: unknown) => e);
+
+    http.expectOne('/api/accounts').error(new ProgressEvent('error'));
+
+    expect(await response).toMatchObject({ status: 0 });
+    expect(notifications.showError).toHaveBeenCalledWith(
+      'Le service est injoignable. Vérifiez votre connexion.',
+    );
   });
 
   it('laisse le formulaire traiter un mot de passe incorrect', async () => {
