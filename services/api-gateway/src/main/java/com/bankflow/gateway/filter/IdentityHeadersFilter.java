@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Retire les en-têtes d'identité envoyés par le client, puis les recrée depuis le JWT validé. Ce
- * filtre s'exécute après la chaîne Spring Security.
+ * filtre s'exécute après la chaîne Spring Security. Sur une route publique, le jeton n'a pas été
+ * validé : l'en-tête {@code Authorization} n'est alors pas relayé.
  */
 @Component
 @Order(0)
@@ -41,6 +43,8 @@ class IdentityHeadersFilter extends OncePerRequestFilter {
             if (role != null) {
                 wrapped.set(USER_ROLE_HEADER, role);
             }
+        } else {
+            wrapped.remove(HttpHeaders.AUTHORIZATION);
         }
         chain.doFilter(wrapped, response);
     }

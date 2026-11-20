@@ -13,9 +13,14 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -24,9 +29,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration(proxyBeanMethods = false)
 class SecurityConfig {
 
-    private static final String[] PUBLIC_AUTH_ROUTES = {
-        "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout"
-    };
+    /**
+     * Routes ouvertes sans jeton. La même liste sert aux autorisations et au résolveur de jeton :
+     * une route ne peut donc pas ignorer le jeton sans être aussi publique.
+     */
+    private static final RequestMatcher PUBLIC_ROUTES = createPublicRoutesMatcher();
 
     @Bean("securityFilterChain")
     SecurityFilterChain createSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -53,16 +60,13 @@ class SecurityConfig {
                 .authorizeHttpRequests(requests ->
                         requests.dispatcherTypeMatchers(DispatcherType.ERROR)
                                 .permitAll()
-                                .requestMatchers("/actuator/health/**", "/actuator/info")
-                                .permitAll()
-                                .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_ROUTES)
-                                .permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/auth/demo-accounts")
+                                .requestMatchers(PUBLIC_ROUTES)
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->
-                        oauth2.jwt(Customizer.withDefaults())
+                        oauth2.bearerTokenResolver(createBearerTokenResolver())
+                                .jwt(Customizer.withDefaults())
                                 .authenticationEntryPoint(unauthorized)
                                 .accessDeniedHandler(forbidden))
                 .exceptionHandling(exceptions ->
@@ -70,6 +74,30 @@ class SecurityConfig {
                                 .authenticationEntryPoint(unauthorized)
                                 .accessDeniedHandler(forbidden))
                 .build();
+    }
+
+    /**
+     * Ignore le jeton sur les routes publiques. Sans cela, un jeton expiré encore présent dans le
+     * navigateur ferait répondre 401 au login ou au refresh, qui servent justement à en obtenir un
+     * nouveau. Le résolveur tourne après le pare-feu de Spring Security, qui a déjà refusé les
+     * chemins ambigus ({@code ..}, {@code %2F}, {@code ;}) : il voit le même chemin que les
+     * autorisations.
+     */
+    private static BearerTokenResolver createBearerTokenResolver() {
+        var delegate = new DefaultBearerTokenResolver();
+        return request -> PUBLIC_ROUTES.matches(request) ? null : delegate.resolve(request);
+    }
+
+    private static RequestMatcher createPublicRoutesMatcher() {
+        var paths = PathPatternRequestMatcher.withDefaults();
+        return new OrRequestMatcher(
+                paths.matcher("/actuator/health/**"),
+                paths.matcher("/actuator/info"),
+                paths.matcher(HttpMethod.POST, "/api/auth/register"),
+                paths.matcher(HttpMethod.POST, "/api/auth/login"),
+                paths.matcher(HttpMethod.POST, "/api/auth/refresh"),
+                paths.matcher(HttpMethod.POST, "/api/auth/logout"),
+                paths.matcher(HttpMethod.GET, "/api/auth/demo-accounts"));
     }
 
     @Bean("corsConfigurationSource")
