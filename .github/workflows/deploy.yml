@@ -6,6 +6,8 @@ name: Déploiement
 # Le déploiement part seulement d'une CI verte sur un push dans main. workflow_run s'exécute avec
 # les secrets : il ne doit jamais traiter un run issu d'une PR (de fork ou non), d'où le filtre sur
 # l'événement, la branche et le dépôt d'origine. La version déployée est le commit testé par la CI.
+# Le checkout ne prend jamais une référence venue de l'événement : il récupère main, puis vérifie que
+# c'est bien le commit testé. Si main a avancé entre-temps, ce run s'arrête et le suivant déploiera.
 on:
   workflow_run:
     workflows: [CI]
@@ -36,6 +38,7 @@ jobs:
       actions: read
     outputs:
       version: ${{ steps.version.outputs.version }}
+      a-jour: ${{ steps.version.outputs.a-jour }}
     steps:
       - name: Version à déployer
         id: version
@@ -57,9 +60,19 @@ jobs:
           [[ "$version" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::SHA invalide"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+          # Un commit plus récent sur main aura son propre déploiement après sa CI
+          tete="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq '.sha')"
+          if [[ "$tete" == "$version" ]]; then
+            echo "a-jour=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::main a avancé ($tete) : déploiement laissé au run suivant"
+            echo "a-jour=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: image ${{ matrix.name }}
     needs: verifier
+    if: needs.verifier.outputs.a-jour == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -87,8 +100,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.verifier.outputs.version }}
+          ref: main
           persist-credentials: false
+
+      - name: Vérifier le commit récupéré
+        env:
+          VERSION: ${{ needs.verifier.outputs.version }}
+        run: |
+          [[ "$(git rev-parse HEAD)" == "$VERSION" ]] || {
+            echo "::error::main a avancé pendant le déploiement : le run suivant s'en charge"
+            exit 1
+          }
 
       - name: Nom d'image en minuscules
         run: echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"

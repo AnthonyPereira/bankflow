@@ -6,6 +6,7 @@ ALTER TABLE refresh_tokens ADD COLUMN family_created_at TIMESTAMPTZ;
 UPDATE refresh_tokens t
 SET family_created_at = (
     SELECT min(f.created_at) FROM refresh_tokens f WHERE f.family_id = t.family_id
-);
+)
+WHERE t.family_created_at IS NULL;
 
 ALTER TABLE refresh_tokens ALTER COLUMN family_created_at SET NOT NULL;

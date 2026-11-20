@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
@@ -99,7 +100,9 @@ class RateLimitFilter extends OncePerRequestFilter {
      * compter sur lui pour écarter les chemins non normalisés.
      */
     private static String normalizePath(HttpServletRequest request) {
-        var raw = request.getRequestURI().substring(request.getContextPath().length());
+        var uri = Objects.requireNonNullElse(request.getRequestURI(), "/");
+        var contextPath = Objects.requireNonNullElse(request.getContextPath(), "");
+        var raw = uri.startsWith(contextPath) ? uri.substring(contextPath.length()) : uri;
         // Les paramètres de segment (;x=1) sont retirés avant le décodage, comme le fait Spring MVC
         var withoutParameters = PATH_PARAMETERS.matcher(raw).replaceAll("");
         var decoded = UriUtils.decode(withoutParameters, StandardCharsets.UTF_8);
