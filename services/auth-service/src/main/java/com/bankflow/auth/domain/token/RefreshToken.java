@@ -2,6 +2,8 @@ package com.bankflow.auth.domain.token;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Duration;
@@ -35,6 +37,11 @@ public class RefreshToken {
 
     @Column(name = "revoked_at")
     private Instant revokedAt;
+
+    /** Absent pour les jetons révoqués avant la migration V7 : aucun délai de grâce. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "revoked_reason", length = 20)
+    private RevocationReason revokedReason;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -70,13 +77,19 @@ public class RefreshToken {
         return !familyCreatedAt.plus(maxSessionAge).isAfter(now);
     }
 
-    /** Vrai si le jeton a été remplacé il y a trop longtemps pour être une requête simultanée. */
-    public boolean isReuseSuspectedAt(Instant now, Duration grace) {
-        return isRevoked() && revokedAt.plus(grace).isBefore(now);
+    /**
+     * Vrai si le jeton vient d'être remplacé par une rotation : une requête simultanée d'un autre
+     * onglet peut encore le présenter. Une déconnexion ou une révocation pour vol n'ouvre aucun
+     * délai de grâce.
+     */
+    public boolean isInRotationGraceAt(Instant now, Duration grace) {
+        return revokedReason == RevocationReason.ROTATION && !revokedAt.plus(grace).isBefore(now);
     }
 
-    public void revoke(Instant now) {
+    /** Remplace le jeton lors d'une rotation. */
+    public void revokeForRotation(Instant now) {
         this.revokedAt = now;
+        this.revokedReason = RevocationReason.ROTATION;
     }
 
     public UUID getUserId() {
@@ -89,5 +102,9 @@ public class RefreshToken {
 
     public Instant getFamilyCreatedAt() {
         return familyCreatedAt;
+    }
+
+    public RevocationReason getRevokedReason() {
+        return revokedReason;
     }
 }

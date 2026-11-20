@@ -38,8 +38,10 @@ Le backlog laisse ouverte la question du refresh token. Un JWT d'accès doit res
 
 - Chaque appel à `/auth/refresh` révoque le jeton présenté et en émet un nouveau dans la même **famille**.
 - Présenter un jeton déjà révoqué signale un vol possible : **toute la famille est révoquée** et l'utilisateur doit se reconnecter.
-- Une **tolérance de 10 secondes** s'applique juste après la rotation : la requête est refusée sans révoquer la famille. Deux onglets qui se rafraîchissent en même temps ne déconnectent donc pas l'utilisateur.
+- Une **tolérance de 10 secondes** s'applique juste après la rotation : la requête est refusée sans révoquer la famille ni effacer le cookie. Deux onglets qui se rafraîchissent en même temps ne déconnectent donc pas l'utilisateur.
+- Cette tolérance ne vaut que pour un jeton **remplacé par une rotation** dont la session est encore ouverte (un jeton de la famille n'est pas révoqué). Chaque révocation enregistre son motif (`refresh_tokens.revoked_reason` : `ROTATION`, `LOGOUT`, `REUSE_DETECTED`, `ACCOUNT_DISABLED`). Un jeton révoqué par une déconnexion, par la détection d'un vol ou par la désactivation du compte est refusé aussitôt, avec effacement du cookie.
 - `/auth/logout` révoque la famille et efface le cookie.
+- Un jeton révoqué reste en base jusqu'à la fin de sa session (30 jours), même après son expiration (7 jours) : sa réutilisation doit révoquer la famille tant que celle-ci peut être active.
 
 ### 2.4 Durée de vie absolue d'une session
 
@@ -79,5 +81,5 @@ La clé privée RSA est fournie par la variable `JWT_PRIVATE_KEY`. Elle est obli
 - Un access token volé reste valable jusqu'à 15 minutes.
 - Un vol de refresh token non détecté donne accès au compte jusqu'à 30 jours au plus.
 - Un utilisateur actif doit se reconnecter au moins tous les 30 jours.
-- La table des refresh tokens grandit : les jetons expirés sont purgés chaque nuit (`bankflow.refresh.purge-cron`).
+- La table des refresh tokens grandit : une purge passe chaque nuit (`bankflow.refresh.purge-cron`). Elle supprime les familles ouvertes depuis plus de 30 jours et les jetons expirés non révoqués. Les jetons révoqués d'une session encore possible sont gardés, pour détecter leur réutilisation.
 - Un redémarrage avec une clé éphémère invalide les access tokens en cours, ce qui reste acceptable hors `prod-sim`. Grâce au `kid` unique, les jetons émis après le redémarrage sont acceptés dès que la Gateway a rechargé le JWKS.
