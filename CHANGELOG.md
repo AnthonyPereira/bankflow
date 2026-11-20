@@ -37,6 +37,8 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 
 ### Modifié
 
+- Le code de démonstration Kafka ne fait plus partie de l'artefact de production (il est passé dans `src/test`).
+- Les méthodes sont nommées par un verbe, et les modèles d'auth du frontend sont passés de `shared/models` à `core/auth`.
 - Passage à Spring Boot 4.2.0 et Spring Cloud 2026.0.0 en version GA (au lieu des RC2). #35
 - Dans chaque couche, les classes sont rangées par fonctionnalité. #36
 - Les icônes du frontend sont des fichiers SVG au lieu d'une police d'icônes. #30
@@ -45,10 +47,26 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 
 - Un refresh simultané depuis deux onglets ne perd plus le cookie de session. #26
 - Les alertes de sécurité remontées par SonarQube sont traitées. #33
+- Corrections issues de la revue de code de la release :
+  - **Gateway** : la limite de débit s'applique au chemin décodé et normalisé. Un chemin encodé comme `/api/auth/%6Cogin` contournait la limite de la connexion, de l'inscription et des virements.
+  - **Connexion** : le compteur d'échecs est verrouillé en base (`SELECT … FOR UPDATE`), si bien que des tentatives simultanées ne dépassent plus les 5 essais autorisés.
+  - **Sessions** : une session dure au plus 30 jours (`bankflow.refresh.max-session-age`), même si elle est renouvelée en continu ([ADR-003](docs/adr/ADR-003-sessions-refresh-token.md) §2.4).
+  - **`/auth/me`** : la route refuse la session d'un compte supprimé ou désactivé, avec un message adapté.
+  - **Comptes de démonstration** : ils suivent les mêmes règles que les autres comptes, mais ne peuvent jamais être désactivés définitivement.
+  - **Frontend** :
+    - un visiteur anonyme ne fait plus qu'un appel de refresh au démarrage, grâce à un verrou partagé entre onglets ;
+    - si l'inscription réussit mais que la connexion automatique échoue, l'utilisateur est renvoyé vers la page de connexion ;
+    - les libellés de rôle sont centralisés.
+  - **Déploiement et infra** :
+    - le déploiement attend une CI verte (`workflow_run`) ;
+    - les images de base sont épinglées par digest ;
+    - nginx ajoute HSTS et ne croit `CF-Connecting-IP` que depuis un proxy de confiance ;
+    - les checkouts de la CI n'utilisent plus `persist-credentials`.
 
 ### Limites connues
 
-- N'importe qui peut bloquer un compte de démonstration pendant 15 minutes en se trompant 5 fois de mot de passe.
+- Comme tout compte, un compte de démonstration est bloqué 15 minutes après 5 mots de passe faux. Ses identifiants étant publics, n'importe qui peut provoquer ce blocage.
+- Seuls le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka sont déployés : les routes des quatre autres services répondent 503.
 - Le Customer Service, le Banking Service, le Notification Service et l'Analytics & Fraud Service ne sont que des squelettes sécurisés, sans fonctionnalité métier.
 
 [0.1.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.0

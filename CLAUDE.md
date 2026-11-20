@@ -16,7 +16,7 @@ Banque fictive pédagogique en microservices : 6 services Spring Boot indépenda
 ## Arborescence
 
 - `services/<service>/` : un projet Maven autonome par service. **Aucune classe partagée** entre services.
-- `frontend/bankflow-web/` : Angular (`core/`, `features/`, `shared/`).
+- `frontend/bankflow-web/` : Angular (`core/` dont `core/auth` avec les modèles d'auth, `features/`, `testing/`).
 - `infra/` : Dockerfile Spring commun, config Kafka et PostgreSQL. `docker-compose.yml` est à la racine.
 - `docs/` : ADR, architecture, runbooks (`deploiement.md`, `sonarqube.md`).
 - `contracts/` : contrats d'événements Kafka.
@@ -59,7 +59,7 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 ## Mise en ligne
 
 - **Cible** : `https://bankflow.anthonypereira.dpdns.org`, sur le serveur maison (Traefik et tunnel Cloudflare).
-- **Déclenchement** : une fusion dans `main` lance `.github/workflows/deploy.yml`. Il publie les images sur GHCR puis envoie un signal `deployer` au dépôt **privé** `AnthonyPereira/deploy-platform`, qui porte le runner auto-hébergé `serveur-maison-deploy-platform`.
+- **Déclenchement** : une fusion dans `main` lance la CI ; une fois celle-ci verte, `.github/workflows/deploy.yml` démarre (`workflow_run`). Il publie les images sur GHCR puis envoie un signal `deployer` au dépôt **privé** `AnthonyPereira/deploy-platform`, qui porte le runner auto-hébergé `serveur-maison-deploy-platform`.
 - **Runner** : il ne doit **jamais** être enregistré sur `bankflow`, car le dépôt est public.
 - **Procédure** : [docs/runbooks/deploiement.md](docs/runbooks/deploiement.md).
 
@@ -70,12 +70,11 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 Les dernières étapes, toutes fusionnées dans `develop` avec une CI verte :
 - **#35** : Spring Boot 4.2.0 et Spring Cloud 2026.0.0 en GA (BF-001-01 terminé).
 - **#36** : packages rangés par fonctionnalité dans chaque couche.
-- **#37** : comptes de démonstration sur la page de connexion (BF-016-15). Ils sont créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts` et désactivables avec `DEMO_ACCOUNTS_ENABLED=false`. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_PASSWORD`) reste secret.
+- **#37** : comptes de démonstration sur la page de connexion (BF-016-15). Ils sont créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire compris, `demo.admin` est un vrai administrateur), mais ne peuvent jamais être désactivés définitivement. `DEMO_ACCOUNTS_ENABLED=false` masque le tableau et ne les crée plus, sans les désactiver. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_PASSWORD`) reste secret.
 
 Les secrets `DEPLOY_DISPATCH_TOKEN` (bankflow) et `GHCR_PULL_TOKEN` (deploy-platform) sont en place, et le runner est en ligne.
 
 ### Prochaines étapes
 
 1. **Après la release `0.1.0`** : vérifier en ligne que seuls le front et `/api` répondent, puis cocher BF-023-16.
-2. **Option proposée** : exclure les comptes de démo du verrouillage après 5 échecs de connexion, puisque n'importe qui peut aujourd'hui les bloquer 15 minutes.
-3. **MVP 2 (`0.2.0`)** : BF-006 (Customer Service), puis BF-007 à BF-009 (comptes, dépôts et retraits, virements), puis BF-017 (écrans Angular).
+2. **MVP 2 (`0.2.0`)** : BF-006 (Customer Service), puis BF-007 à BF-009 (comptes, dépôts et retraits, virements), puis BF-017 (écrans Angular).
