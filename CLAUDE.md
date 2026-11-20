@@ -59,7 +59,7 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 ## Mise en ligne
 
 - **Cible** : `https://bankflow.anthonypereira.dpdns.org`, sur le serveur maison (Traefik et tunnel Cloudflare).
-- **Déclenchement** : une fusion dans `main` lance la CI ; une fois celle-ci verte, `.github/workflows/deploy.yml` démarre (`workflow_run`). Il publie les images sur GHCR puis envoie un signal `deployer` au dépôt **privé** `AnthonyPereira/deploy-platform`, qui porte le runner auto-hébergé `serveur-maison-deploy-platform`.
+- **Déclenchement** : une fusion dans `main` lance la CI et `.github/workflows/deploy.yml`, qui attend que la CI de ce commit soit verte. Il publie les images sur GHCR puis envoie un signal `deployer` au dépôt **privé** `AnthonyPereira/deploy-platform`, qui porte le runner auto-hébergé `serveur-maison-deploy-platform`.
 - **Runner** : il ne doit **jamais** être enregistré sur `bankflow`, car le dépôt est public.
 - **Procédure** : [docs/runbooks/deploiement.md](docs/runbooks/deploiement.md).
 

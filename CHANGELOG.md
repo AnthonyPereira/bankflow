@@ -58,7 +58,7 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
     - si l'inscription réussit mais que la connexion automatique échoue, l'utilisateur est renvoyé vers la page de connexion ;
     - les libellés de rôle sont centralisés.
   - **Déploiement et infra** :
-    - le déploiement attend une CI verte (`workflow_run`) ;
+    - le déploiement attend que la CI du commit soit verte ;
     - les images de base sont épinglées par digest ;
     - nginx ajoute HSTS et ne croit `CF-Connecting-IP` que depuis un proxy de confiance ;
     - les checkouts de la CI n'utilisent plus `persist-credentials`.
