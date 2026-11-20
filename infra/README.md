@@ -2,7 +2,7 @@
 
 Docker Compose, PostgreSQL, Kafka (KRaft), Kafka UI et Mailpit.
 
-Mis en place aux lots **BF-002** (PostgreSQL, Mailpit) et **BF-003** (Kafka). Le monitoring (Prometheus et Grafana) est **prévu** au lot **BF-020** : les services exposent déjà `/actuator/prometheus`, mais aucun Prometheus ni Grafana n'est encore déployé.
+Mis en place aux lots **BF-002** (PostgreSQL, Mailpit) et **BF-003** (Kafka). Le monitoring (Prometheus et Grafana) est **prévu** au lot **BF-020** : aucun Prometheus ni Grafana n'est encore déployé. Les services, sauf l'Auth Service, exposent `/actuator/prometheus`, mais derrière un JWT : il faudra ouvrir cette route au réseau interne au moment de BF-020.
 
 PostgreSQL et `kafka-init` sont construits depuis `infra/postgres` et `infra/kafka`, et le broker Kafka utilise le même digest : l'environnement local tourne sur les mêmes images que la production.
 
