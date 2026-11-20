@@ -9,10 +9,10 @@ class OpenApiIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void laDocumentationDecritLesRoutesDAuthentification() throws Exception {
-        var response = send(request("/v3/api-docs"));
+        var response = send(buildRequest("/v3/api-docs"));
 
         assertThat(response.statusCode()).isEqualTo(200);
-        var paths = json(response).get("paths");
+        var paths = parseJson(response).get("paths");
         assertThat(paths.has("/auth/register")).isTrue();
         assertThat(paths.has("/auth/login")).isTrue();
         assertThat(paths.has("/auth/refresh")).isTrue();
@@ -22,6 +22,6 @@ class OpenApiIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void swaggerUiEstDisponible() throws Exception {
-        assertThat(send(request("/swagger-ui/index.html")).statusCode()).isEqualTo(200);
+        assertThat(send(buildRequest("/swagger-ui/index.html")).statusCode()).isEqualTo(200);
     }
 }

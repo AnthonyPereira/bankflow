@@ -16,8 +16,8 @@ class KafkaDemoConfig {
 
     static final String TOPIC = "bank.demo";
 
-    @Bean
-    NewTopic demoTopic() {
+    @Bean("demoTopic")
+    NewTopic createDemoTopic() {
         return TopicBuilder.name(TOPIC).partitions(3).replicas(1).build();
     }
 }

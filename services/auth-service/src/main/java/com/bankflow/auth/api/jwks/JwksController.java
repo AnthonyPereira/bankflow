@@ -20,7 +20,7 @@ class JwksController {
     }
 
     @GetMapping("/.well-known/jwks.json")
-    ResponseEntity<Map<String, Object>> jwks() {
+    ResponseEntity<Map<String, Object>> getJwks() {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
                 .body(publicKeys);

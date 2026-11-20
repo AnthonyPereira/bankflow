@@ -21,8 +21,8 @@ class UserRegisteredIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void lInscriptionPublieUserRegisteredSansDonneeSensible() throws Exception {
-        var email = uniqueEmail();
-        var userId = json(register(email, VALID_PASSWORD)).get("id").asString();
+        var email = generateUniqueEmail();
+        var userId = parseJson(register(email, VALID_PASSWORD)).get("id").asString();
 
         var record = awaitRecord(userId);
 
@@ -42,17 +42,17 @@ class UserRegisteredIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void uneInscriptionRefuseeNePublieAucunEvenement() throws Exception {
-        var email = uniqueEmail();
-        var userId = json(register(email, VALID_PASSWORD)).get("id").asString();
+        var email = generateUniqueEmail();
+        var userId = parseJson(register(email, VALID_PASSWORD)).get("id").asString();
         awaitRecord(userId);
 
         assertThat(register(email, VALID_PASSWORD).statusCode()).isEqualTo(409);
 
-        assertThat(recordsFor(email, Duration.ofSeconds(3))).hasSize(1);
+        assertThat(collectRecordsFor(email, Duration.ofSeconds(3))).hasSize(1);
     }
 
     private ConsumerRecord<String, String> awaitRecord(String userId) {
-        try (var consumer = newConsumer()) {
+        try (var consumer = createConsumer()) {
             var deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
             while (System.nanoTime() < deadline) {
                 for (var record : consumer.poll(Duration.ofMillis(500))) {
@@ -65,9 +65,10 @@ class UserRegisteredIntegrationTests extends AuthApiTestSupport {
         throw new AssertionError("UserRegistered non reçu pour " + userId);
     }
 
-    private List<ConsumerRecord<String, String>> recordsFor(String email, Duration duration) {
+    private List<ConsumerRecord<String, String>> collectRecordsFor(
+            String email, Duration duration) {
         var found = new java.util.ArrayList<ConsumerRecord<String, String>>();
-        try (var consumer = newConsumer()) {
+        try (var consumer = createConsumer()) {
             var deadline = System.nanoTime() + duration.toNanos();
             while (System.nanoTime() < deadline) {
                 for (var record : consumer.poll(Duration.ofMillis(500))) {
@@ -80,7 +81,7 @@ class UserRegisteredIntegrationTests extends AuthApiTestSupport {
         return found;
     }
 
-    private KafkaConsumer<String, String> newConsumer() {
+    private KafkaConsumer<String, String> createConsumer() {
         var consumer =
                 new KafkaConsumer<>(
                         Map.<String, Object>of(

@@ -17,7 +17,7 @@ public class InvalidRefreshTokenException extends RuntimeException {
      * Un autre onglet vient de faire tourner le jeton : la session reste valide et le navigateur
      * détient déjà le nouveau cookie, qu'il ne faut surtout pas effacer.
      */
-    public static InvalidRefreshTokenException concurrentRotation() {
+    public static InvalidRefreshTokenException createForConcurrentRotation() {
         return new InvalidRefreshTokenException(false);
     }
 

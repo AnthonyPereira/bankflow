@@ -23,7 +23,7 @@ class AdminAccountSeederTests {
 
     @Test
     void creeLeCompteAdministrateurAvecUnMotDePasseHache() {
-        seeder("Admin@BankFlow.local", STRONG_PASSWORD).run(null);
+        createSeeder("Admin@BankFlow.local", STRONG_PASSWORD).run(null);
 
         var saved = ArgumentCaptor.forClass(User.class);
         verify(users).save(saved.capture());
@@ -36,26 +36,26 @@ class AdminAccountSeederTests {
     void neModifiePasUnCompteExistant() {
         when(users.existsByEmail("admin@bankflow.local")).thenReturn(true);
 
-        seeder("admin@bankflow.local", STRONG_PASSWORD).run(null);
+        createSeeder("admin@bankflow.local", STRONG_PASSWORD).run(null);
 
         verify(users, never()).save(any());
     }
 
     @Test
     void ignoreUnMotDePasseTropFaible() {
-        seeder("admin@bankflow.local", "change-me").run(null);
+        createSeeder("admin@bankflow.local", "change-me").run(null);
 
         verify(users, never()).save(any());
     }
 
     @Test
     void neFaitRienSansConfiguration() {
-        seeder("", "").run(null);
+        createSeeder("", "").run(null);
 
         verify(users, never()).save(any());
     }
 
-    private AdminAccountSeeder seeder(String email, String password) {
+    private AdminAccountSeeder createSeeder(String email, String password) {
         return new AdminAccountSeeder(
                 users,
                 PasswordEncoderFactories.createDelegatingPasswordEncoder(),

@@ -34,14 +34,14 @@ class GatewayErrorFilter extends OncePerRequestFilter {
             if (response.isCommitted()) {
                 throw exception;
             }
-            var status = statusOf(exception);
+            var status = resolveStatus(exception);
             log.warn("Échec du relais de {} : {}", request.getRequestURI(), status, exception);
             response.resetBuffer();
-            ProblemResponses.write(request, response, status, detailOf(status));
+            ProblemResponses.write(request, response, status, describeStatus(status));
         }
     }
 
-    private static HttpStatus statusOf(Throwable exception) {
+    private static HttpStatus resolveStatus(Throwable exception) {
         for (var cause = exception; cause != null; cause = cause.getCause()) {
             if (cause instanceof HttpConnectTimeoutException
                     || cause instanceof ConnectException
@@ -55,7 +55,7 @@ class GatewayErrorFilter extends OncePerRequestFilter {
         return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
-    private static String detailOf(HttpStatus status) {
+    private static String describeStatus(HttpStatus status) {
         return switch (status) {
             case SERVICE_UNAVAILABLE -> "Le service demandé est momentanément indisponible.";
             case GATEWAY_TIMEOUT -> "Le service demandé n'a pas répondu à temps.";

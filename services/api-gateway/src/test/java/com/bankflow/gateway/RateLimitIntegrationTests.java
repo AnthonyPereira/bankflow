@@ -38,7 +38,7 @@ class RateLimitIntegrationTests {
     private int port;
 
     @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
+    static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add(
                 "AUTH_SERVICE_URL", () -> "http://127.0.0.1:" + DOWNSTREAM.getAddress().getPort());
     }

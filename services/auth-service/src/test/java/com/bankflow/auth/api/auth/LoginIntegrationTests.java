@@ -31,16 +31,16 @@ class LoginIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void connexionEmetUnJwtCourtSigneAvecLesBonsClaims() throws Exception {
-        var email = uniqueEmail();
-        var userId = json(register(email, VALID_PASSWORD)).get("id").asString();
+        var email = generateUniqueEmail();
+        var userId = parseJson(register(email, VALID_PASSWORD)).get("id").asString();
 
         var response = login(email, VALID_PASSWORD);
 
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(json(response).get("tokenType").asString()).isEqualTo("Bearer");
-        assertThat(json(response).get("expiresIn").asLong()).isEqualTo(900);
+        assertThat(parseJson(response).get("tokenType").asString()).isEqualTo("Bearer");
+        assertThat(parseJson(response).get("expiresIn").asLong()).isEqualTo(900);
 
-        var jwt = jwtDecoder.decode(accessToken(response));
+        var jwt = jwtDecoder.decode(extractAccessToken(response));
         assertThat(jwt.getSubject()).isEqualTo(userId);
         assertThat(jwt.getClaimAsString("role")).isEqualTo("ROLE_CLIENT");
         assertThat(jwt.getAudience()).containsExactly("bankflow-api");
@@ -52,73 +52,75 @@ class LoginIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void mauvaisMotDePasseEtCompteInconnuRepondentDeFaconIdentique() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
 
         var wrongPassword = login(email, "mauvais-mot-de-passe");
-        var unknownAccount = login(uniqueEmail(), VALID_PASSWORD);
+        var unknownAccount = login(generateUniqueEmail(), VALID_PASSWORD);
 
         assertThat(wrongPassword.statusCode()).isEqualTo(401);
         assertThat(unknownAccount.statusCode()).isEqualTo(401);
-        assertThat(json(wrongPassword).get("detail")).isEqualTo(json(unknownAccount).get("detail"));
+        assertThat(parseJson(wrongPassword).get("detail"))
+                .isEqualTo(parseJson(unknownAccount).get("detail"));
     }
 
     @Test
     void meRenvoieLUtilisateurConnecte() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
-        var token = accessToken(login(email, VALID_PASSWORD));
+        var token = extractAccessToken(login(email, VALID_PASSWORD));
 
-        var response = send(request("/auth/me").header("Authorization", "Bearer " + token));
+        var response = send(buildRequest("/auth/me").header("Authorization", "Bearer " + token));
 
         assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(json(response).get("email").asString()).isEqualTo(email);
+        assertThat(parseJson(response).get("email").asString()).isEqualTo(email);
     }
 
     @Test
     void meRefuseLaSessionDUnCompteDesactiveOuSupprime() throws Exception {
-        var disabled = uniqueEmail();
-        var deleted = uniqueEmail();
+        var disabled = generateUniqueEmail();
+        var deleted = generateUniqueEmail();
         register(disabled, VALID_PASSWORD);
         register(deleted, VALID_PASSWORD);
-        var disabledToken = accessToken(login(disabled, VALID_PASSWORD));
-        var deletedToken = accessToken(login(deleted, VALID_PASSWORD));
+        var disabledToken = extractAccessToken(login(disabled, VALID_PASSWORD));
+        var deletedToken = extractAccessToken(login(deleted, VALID_PASSWORD));
         jdbcTemplate.update("UPDATE users SET enabled = FALSE WHERE email = ?", disabled);
         jdbcTemplate.update("DELETE FROM users WHERE email = ?", deleted);
 
         for (var token : List.of(disabledToken, deletedToken)) {
-            var response = send(request("/auth/me").header("Authorization", "Bearer " + token));
+            var response =
+                    send(buildRequest("/auth/me").header("Authorization", "Bearer " + token));
 
             assertThat(response.statusCode()).isEqualTo(401);
-            assertThat(json(response).get("detail").asString())
+            assertThat(parseJson(response).get("detail").asString())
                     .isEqualTo("Session invalide. Veuillez vous reconnecter.");
         }
     }
 
     @Test
     void meRefuseUnAppelSansJwtOuAvecUnJwtFalsifie() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
-        var token = accessToken(login(email, VALID_PASSWORD));
+        var token = extractAccessToken(login(email, VALID_PASSWORD));
         var tampered = token.substring(0, token.length() - 6) + "AAAAAA";
 
-        assertThat(send(request("/auth/me")).statusCode()).isEqualTo(401);
+        assertThat(send(buildRequest("/auth/me")).statusCode()).isEqualTo(401);
         assertThat(
-                        send(request("/auth/me").header("Authorization", "Bearer " + tampered))
+                        send(buildRequest("/auth/me").header("Authorization", "Bearer " + tampered))
                                 .statusCode())
                 .isEqualTo(401);
     }
 
     @Test
     void jwksPublieUniquementLaClePubliqueEtPermetDeVerifierLeJwt() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
-        var token = accessToken(login(email, VALID_PASSWORD));
+        var token = extractAccessToken(login(email, VALID_PASSWORD));
 
-        var response = send(request("/.well-known/jwks.json"));
+        var response = send(buildRequest("/.well-known/jwks.json"));
 
         assertThat(response.statusCode()).isEqualTo(200);
-        var key = json(response).get("keys").get(0);
+        var key = parseJson(response).get("keys").get(0);
         assertThat(key.get("kty").asString()).isEqualTo("RSA");
         assertThat(key.has("d")).isFalse();
 
@@ -131,7 +133,7 @@ class LoginIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void leCompteEstVerrouilleApresCinqEchecsMemeAvecLeBonMotDePasse() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
         failLogin(email, 5);
 
@@ -140,7 +142,7 @@ class LoginIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void leCompteRedevientAccessibleQuandLeVerrouExpire() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
         failLogin(email, 5);
         jdbcTemplate.update(
@@ -148,24 +150,24 @@ class LoginIntegrationTests extends AuthApiTestSupport {
                 email);
 
         assertThat(login(email, VALID_PASSWORD).statusCode()).isEqualTo(200);
-        assertThat(attemptsOf(email)).isZero();
+        assertThat(countFailedAttempts(email)).isZero();
     }
 
     @Test
     void uneConnexionReussieRemetLeCompteurDEchecsAZero() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
         failLogin(email, 3);
-        assertThat(attemptsOf(email)).isEqualTo(3);
+        assertThat(countFailedAttempts(email)).isEqualTo(3);
 
         login(email, VALID_PASSWORD);
 
-        assertThat(attemptsOf(email)).isZero();
+        assertThat(countFailedAttempts(email)).isZero();
     }
 
     @Test
     void desTentativesSimultaneesNeDepassentPasLeNombreDEssaisAutorises() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
         var start = new CountDownLatch(1);
         var attempts = new ArrayList<Future<Integer>>();
@@ -185,8 +187,8 @@ class LoginIntegrationTests extends AuthApiTestSupport {
         }
 
         // Seules les cinq premières tentatives ont vérifié le vrai mot de passe
-        assertThat(attemptsOf(email)).isEqualTo(5);
-        assertThat(lockedUntilOf(email)).isAfter(Instant.now());
+        assertThat(countFailedAttempts(email)).isEqualTo(5);
+        assertThat(readLockedUntil(email)).isAfter(Instant.now());
         assertThat(login(email, VALID_PASSWORD).statusCode()).isEqualTo(401);
     }
 
@@ -205,7 +207,7 @@ class LoginIntegrationTests extends AuthApiTestSupport {
         }
     }
 
-    private Instant lockedUntilOf(String email) {
+    private Instant readLockedUntil(String email) {
         return jdbcTemplate
                 .queryForObject(
                         "SELECT locked_until FROM users WHERE email = ?", Timestamp.class, email)
@@ -218,16 +220,16 @@ class LoginIntegrationTests extends AuthApiTestSupport {
         }
     }
 
-    private int attemptsOf(String email) {
+    private int countFailedAttempts(String email) {
         return jdbcTemplate.queryForObject(
                 "SELECT failed_login_attempts FROM users WHERE email = ?", Integer.class, email);
     }
 
     private HttpResponse<String> login(String email, String password) throws Exception {
-        return postJson("/auth/login", credentials(email, password));
+        return postJson("/auth/login", buildCredentials(email, password));
     }
 
-    private static String accessToken(HttpResponse<String> response) {
-        return json(response).get("accessToken").asString();
+    private static String extractAccessToken(HttpResponse<String> response) {
+        return parseJson(response).get("accessToken").asString();
     }
 }

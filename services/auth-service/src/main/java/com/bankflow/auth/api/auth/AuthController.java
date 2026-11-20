@@ -58,14 +58,14 @@ class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     UserResponse register(@Valid @RequestBody RegisterRequest request) {
-        return userMapper.toResponse(
+        return userMapper.mapToResponse(
                 registrationService.register(request.email(), request.password()));
     }
 
     @PostMapping("/login")
     ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         var user = loginService.authenticate(request.email(), request.password());
-        return tokens(user, refreshTokenService.issue(user.getId()));
+        return buildTokenResponse(user, refreshTokenService.issue(user.getId()));
     }
 
     @PostMapping("/refresh")
@@ -75,7 +75,7 @@ class AuthController {
             throw new InvalidRefreshTokenException();
         }
         var rotation = refreshTokenService.rotate(refreshToken);
-        return tokens(rotation.user(), rotation.refreshToken());
+        return buildTokenResponse(rotation.user(), rotation.refreshToken());
     }
 
     @PostMapping("/logout")
@@ -90,16 +90,16 @@ class AuthController {
     }
 
     @GetMapping("/me")
-    UserResponse me(@AuthenticationPrincipal Jwt jwt) {
-        return userMapper.toResponse(
+    UserResponse getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
+        return userMapper.mapToResponse(
                 currentUserService.getCurrentUser(UUID.fromString(jwt.getSubject())));
     }
 
-    private ResponseEntity<TokenResponse> tokens(
+    private ResponseEntity<TokenResponse> buildTokenResponse(
             User user, RefreshTokenService.IssuedRefreshToken refreshToken) {
         var cookie = refreshCookies.create(refreshToken.value(), refreshToken.timeToLive());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie)
-                .body(TokenResponse.from(accessTokenService.issue(user)));
+                .body(TokenResponse.createFrom(accessTokenService.issue(user)));
     }
 }

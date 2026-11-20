@@ -37,7 +37,7 @@ class UserRegisteredPublisher {
         var key = event.userId().toString();
         try {
             kafkaTemplate
-                    .send(TOPIC, key, objectMapper.writeValueAsString(envelope(event)))
+                    .send(TOPIC, key, objectMapper.writeValueAsString(buildEnvelope(event)))
                     .whenComplete((result, failure) -> {
                         if (failure != null) {
                             log.error("UserRegistered non publié pour {}", key, failure);
@@ -48,7 +48,7 @@ class UserRegisteredPublisher {
         }
     }
 
-    private static Map<String, Object> envelope(UserRegistered event) {
+    private static Map<String, Object> buildEnvelope(UserRegistered event) {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("userId", event.userId());
         payload.put("email", event.email());

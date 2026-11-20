@@ -14,8 +14,8 @@ class OpenApiConfig {
 
     private static final String BEARER = "bearer-jwt";
 
-    @Bean
-    OpenAPI authOpenApi() {
+    @Bean("authOpenApi")
+    OpenAPI createAuthOpenApi() {
         return new OpenAPI()
                 .info(
                         new Info()
