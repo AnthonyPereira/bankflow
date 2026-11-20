@@ -5,8 +5,15 @@ import static org.assertj.core.api.Assertions.within;
 
 import com.bankflow.auth.AuthApiTestSupport;
 import java.net.http.HttpResponse;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,6 +73,26 @@ class LoginIntegrationTests extends AuthApiTestSupport {
 
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(json(response).get("email").asString()).isEqualTo(email);
+    }
+
+    @Test
+    void meRefuseLaSessionDUnCompteDesactiveOuSupprime() throws Exception {
+        var disabled = uniqueEmail();
+        var deleted = uniqueEmail();
+        register(disabled, VALID_PASSWORD);
+        register(deleted, VALID_PASSWORD);
+        var disabledToken = accessToken(login(disabled, VALID_PASSWORD));
+        var deletedToken = accessToken(login(deleted, VALID_PASSWORD));
+        jdbcTemplate.update("UPDATE users SET enabled = FALSE WHERE email = ?", disabled);
+        jdbcTemplate.update("DELETE FROM users WHERE email = ?", deleted);
+
+        for (var token : List.of(disabledToken, deletedToken)) {
+            var response = send(request("/auth/me").header("Authorization", "Bearer " + token));
+
+            assertThat(response.statusCode()).isEqualTo(401);
+            assertThat(json(response).get("detail").asString())
+                    .isEqualTo("Session invalide. Veuillez vous reconnecter.");
+        }
     }
 
     @Test
@@ -134,6 +161,55 @@ class LoginIntegrationTests extends AuthApiTestSupport {
         login(email, VALID_PASSWORD);
 
         assertThat(attemptsOf(email)).isZero();
+    }
+
+    @Test
+    void desTentativesSimultaneesNeDepassentPasLeNombreDEssaisAutorises() throws Exception {
+        var email = uniqueEmail();
+        register(email, VALID_PASSWORD);
+        var start = new CountDownLatch(1);
+        var attempts = new ArrayList<Future<Integer>>();
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int attempt = 0; attempt < 10; attempt++) {
+                attempts.add(
+                        executor.submit(() -> {
+                            start.await();
+                            return login(email, "mauvais-mot-de-passe").statusCode();
+                        }));
+            }
+            start.countDown();
+            for (var attempt : attempts) {
+                assertThat(attempt.get(60, TimeUnit.SECONDS)).isEqualTo(401);
+            }
+        }
+
+        // Seules les cinq premières tentatives ont vérifié le vrai mot de passe
+        assertThat(attemptsOf(email)).isEqualTo(5);
+        assertThat(lockedUntilOf(email)).isAfter(Instant.now());
+        assertThat(login(email, VALID_PASSWORD).statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void unCompteDeDemonstrationEstVerrouilleCommeLesAutres() throws Exception {
+        var email = "demo.client@bankflow.local";
+        try {
+            failLogin(email, 5);
+
+            assertThat(login(email, "demo-client-bankflow").statusCode()).isEqualTo(401);
+        } finally {
+            jdbcTemplate.update(
+                    "UPDATE users SET failed_login_attempts = 0, locked_until = NULL"
+                            + " WHERE email = ?",
+                    email);
+        }
+    }
+
+    private Instant lockedUntilOf(String email) {
+        return jdbcTemplate
+                .queryForObject(
+                        "SELECT locked_until FROM users WHERE email = ?", Timestamp.class, email)
+                .toInstant();
     }
 
     private void failLogin(String email, int times) throws Exception {

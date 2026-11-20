@@ -4,14 +4,13 @@ import com.bankflow.auth.api.auth.dto.LoginRequest;
 import com.bankflow.auth.api.auth.dto.RegisterRequest;
 import com.bankflow.auth.api.auth.dto.TokenResponse;
 import com.bankflow.auth.api.auth.dto.UserResponse;
-import com.bankflow.auth.application.login.InvalidCredentialsException;
 import com.bankflow.auth.application.login.LoginService;
 import com.bankflow.auth.application.registration.RegistrationService;
 import com.bankflow.auth.application.token.AccessTokenService;
 import com.bankflow.auth.application.token.InvalidRefreshTokenException;
 import com.bankflow.auth.application.token.RefreshTokenService;
+import com.bankflow.auth.application.user.CurrentUserService;
 import com.bankflow.auth.domain.user.User;
-import com.bankflow.auth.domain.user.UserRepository;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +35,7 @@ class AuthController {
     private final AccessTokenService accessTokenService;
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookies refreshCookies;
-    private final UserRepository users;
+    private final CurrentUserService currentUserService;
     private final UserMapper userMapper;
 
     AuthController(
@@ -45,14 +44,14 @@ class AuthController {
             AccessTokenService accessTokenService,
             RefreshTokenService refreshTokenService,
             RefreshCookies refreshCookies,
-            UserRepository users,
+            CurrentUserService currentUserService,
             UserMapper userMapper) {
         this.registrationService = registrationService;
         this.loginService = loginService;
         this.accessTokenService = accessTokenService;
         this.refreshTokenService = refreshTokenService;
         this.refreshCookies = refreshCookies;
-        this.users = users;
+        this.currentUserService = currentUserService;
         this.userMapper = userMapper;
     }
 
@@ -92,9 +91,8 @@ class AuthController {
 
     @GetMapping("/me")
     UserResponse me(@AuthenticationPrincipal Jwt jwt) {
-        return users.findById(UUID.fromString(jwt.getSubject()))
-                .map(userMapper::toResponse)
-                .orElseThrow(InvalidCredentialsException::new);
+        return userMapper.toResponse(
+                currentUserService.getCurrentUser(UUID.fromString(jwt.getSubject())));
     }
 
     private ResponseEntity<TokenResponse> tokens(
