@@ -1,6 +1,7 @@
 package com.bankflow.auth.application.demo;
 
 import com.bankflow.auth.domain.user.Role;
+import com.bankflow.auth.domain.user.User;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -35,5 +36,14 @@ public class DemoAccounts {
     /** Liste vide quand l'affichage et la création des comptes de démonstration sont coupés. */
     public List<DemoAccount> list() {
         return enabled ? ACCOUNTS : List.of();
+    }
+
+    /**
+     * Les adresses des comptes de démonstration restent réservées même quand la démonstration est
+     * coupée : personne ne peut s'en emparer en s'inscrivant avant le seeder.
+     */
+    public boolean isDemoEmail(String email) {
+        var normalized = User.normalizeEmail(email);
+        return ACCOUNTS.stream().anyMatch(account -> account.email().equals(normalized));
     }
 }

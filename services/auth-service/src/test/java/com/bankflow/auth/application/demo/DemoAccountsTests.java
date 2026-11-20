@@ -17,4 +17,15 @@ class DemoAccountsTests {
     void laListeEstMasqueeQuandLaDemonstrationEstCoupee() {
         assertThat(new DemoAccounts(false).list()).isEmpty();
     }
+
+    @Test
+    void lesAdressesDeDemonstrationSontReconnuesQuelQueSoitLeDrapeau() {
+        for (var enabled : new boolean[] {true, false}) {
+            var accounts = new DemoAccounts(enabled);
+
+            assertThat(accounts.isDemoEmail("demo.client@bankflow.local")).isTrue();
+            assertThat(accounts.isDemoEmail(" Demo.Admin@BankFlow.local ")).isTrue();
+            assertThat(accounts.isDemoEmail("client@bankflow.local")).isFalse();
+        }
+    }
 }

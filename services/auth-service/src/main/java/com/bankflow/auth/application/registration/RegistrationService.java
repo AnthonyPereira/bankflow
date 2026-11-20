@@ -1,5 +1,6 @@
 package com.bankflow.auth.application.registration;
 
+import com.bankflow.auth.application.demo.DemoAccounts;
 import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRegistered;
@@ -19,21 +20,28 @@ public class RegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final DemoAccounts demoAccounts;
 
     RegistrationService(
             UserRepository users,
             PasswordEncoder passwordEncoder,
             ApplicationEventPublisher events,
-            Clock clock) {
+            Clock clock,
+            DemoAccounts demoAccounts) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.events = events;
         this.clock = clock;
+        this.demoAccounts = demoAccounts;
     }
 
+    /**
+     * Une adresse de compte de démonstration est refusée comme une adresse déjà utilisée, même
+     * quand ce compte n'existe pas encore : la réponse ne révèle rien de plus.
+     */
     @Transactional
     public User register(String email, String password) {
-        if (users.existsByEmail(User.normalizeEmail(email))) {
+        if (demoAccounts.isDemoEmail(email) || users.existsByEmail(User.normalizeEmail(email))) {
             throw new EmailAlreadyUsedException();
         }
         var now = clock.instant();
