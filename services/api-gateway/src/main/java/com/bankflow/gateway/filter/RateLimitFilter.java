@@ -27,8 +27,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.UriUtils;
 
 /**
- * Limite par adresse IP le débit des routes sensibles. Les compteurs restent en mémoire, ce qui
- * suffit pour une instance unique de la Gateway (ADR-001, section 2.3).
+ * Limite par adresse IP le débit des routes sensibles (par préfixe /64 en IPv6, voir {@link
+ * ClientAddressKeys}). Les compteurs restent en mémoire, ce qui suffit pour une instance unique de
+ * la Gateway (ADR-001, section 2.3).
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
@@ -72,8 +73,8 @@ class RateLimitFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        var bucket =
-                buckets.get(path + '|' + request.getRemoteAddr(), key -> createBucket(perMinute));
+        var client = ClientAddressKeys.resolveKey(request.getRemoteAddr());
+        var bucket = buckets.get(path + '|' + client, key -> createBucket(perMinute));
         var probe = bucket.tryConsumeAndReturnRemaining(1);
         if (probe.isConsumed()) {
             chain.doFilter(request, response);
