@@ -62,6 +62,13 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
     - les images de base sont épinglées par digest ;
     - nginx ajoute HSTS et ne croit `CF-Connecting-IP` que depuis un proxy de confiance ;
     - les checkouts de la CI n'utilisent plus `persist-credentials`.
+- Corrections issues de la revue globale avant mise en ligne :
+  - **Jetons** : une clé de signature éphémère reçoit un `kid` unique, pour que la Gateway recharge le JWKS après un redémarrage de l'Auth Service. Un jeton expiré joint à une route publique (connexion, refresh, déconnexion) n'est plus refusé, ni par la Gateway ni par l'Auth Service.
+  - **Refresh token** : le délai de grâce de 10 s ne vaut plus qu'après une rotation, pas après une déconnexion ou une révocation pour vol. Les jetons révoqués sont gardés tant que leur session peut durer, pour détecter leur réutilisation.
+  - **Inscription** : les erreurs remontent sur leur champ (mot de passe de plus de 72 octets, adresse trop longue une fois normalisée) ; seul un email en double donne 409.
+  - **Gateway** : le quota par IP compte un préfixe /64 en IPv6 ; un service injoignable ne remplit plus les logs de piles d'appels.
+  - **Frontend** : les guards attendent un refresh en cours ; la déconnexion est propagée aux autres onglets et signale un échec du serveur ; plusieurs 401 simultanés ne redirigent qu'une fois ; accessibilité du menu (lien d'évitement, focus, `aria-expanded`).
+  - **Infra** : Dependabot ne propose plus de montée majeure des images (une PostgreSQL 19 aurait démarré sur une base vide) ; healthcheck Kafka allégé ; images locales alignées sur la prod ; empreinte SHA-256 vérifiée pour Maven ; `/actuator/prometheus` n'est plus exposé.
 
 ### Limites connues
 
