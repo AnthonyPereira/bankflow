@@ -1,25 +1,24 @@
 package com.bankflow.auth.api.auth.dto;
 
-import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import java.nio.charset.StandardCharsets;
 
+/**
+ * La longueur de l'adresse est vérifiée telle qu'elle sera enregistrée, et le mot de passe en
+ * octets : BCrypt ne prend en compte que ses 72 premiers octets.
+ */
 public record RegisterRequest(
         @NotBlank(message = "L'adresse email est obligatoire.")
                 @Email(message = "L'adresse email est invalide.")
-                @Size(max = 254, message = "L'adresse email est trop longue.")
+                @NormalizedEmailSize(max = 254, message = "L'adresse email est trop longue.")
                 String email,
         @NotBlank(message = "Le mot de passe est obligatoire.")
                 @Size(min = 12, message = "Le mot de passe doit contenir au moins 12 caractères.")
+                @MaxUtf8Bytes(
+                        value = 72,
+                        message = "Le mot de passe ne doit pas dépasser 72 octets.")
                 String password) {
-
-    /** BCrypt ne prend en compte que les 72 premiers octets d'un mot de passe. */
-    @AssertTrue(message = "Le mot de passe ne doit pas dépasser 72 octets.")
-    boolean isPasswordWithinBcryptLimit() {
-        return password == null || password.getBytes(StandardCharsets.UTF_8).length <= 72;
-    }
 
     /** Évite d'écrire le mot de passe dans les logs. */
     @Override
