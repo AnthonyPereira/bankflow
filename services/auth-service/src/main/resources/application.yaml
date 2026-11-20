@@ -61,7 +61,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        # Pas de prometheus en 0.1.0 : protégé par JWT, il ne pourrait pas être scrapé
+        include: health,info
   endpoint:
     health:
       probes:
