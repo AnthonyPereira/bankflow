@@ -1,13 +1,48 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { createFakeJwt } from '../../testing/fake-jwt';
+import { SILENT_ERRORS } from '../http/api';
+import { authGuard, guestGuard } from './auth.guards';
 import { AuthService } from './auth.service';
 
 const CREDENTIALS = { email: 'a@bankflow.test', password: 'un-mot-de-passe-solide' };
 const UNAUTHORIZED = { status: 401, statusText: 'Unauthorized' };
 const REFRESH_URL = '/api/auth/refresh';
+
+@Component({ template: '' })
+class StubPage {}
+
+/** Les vraies règles de navigation : seuls les composants sont simulés. */
+const ROUTES = [
+  { path: 'connexion', canActivate: [guestGuard], component: StubPage },
+  { path: 'inscription', canActivate: [guestGuard], component: StubPage },
+  { path: 'tableau-de-bord', canActivate: [authGuard], component: StubPage },
+];
+
+/** `BroadcastChannel` simulé : un message part vers les autres canaux du même nom, jamais vers soi. */
+class FakeBroadcastChannel {
+  static readonly instances: FakeBroadcastChannel[] = [];
+  onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
+  isClosed = false;
+
+  constructor(readonly name: string) {
+    FakeBroadcastChannel.instances.push(this);
+  }
+
+  postMessage(data: unknown): void {
+    FakeBroadcastChannel.instances
+      .filter((other) => other !== this && other.name === this.name && !other.isClosed)
+      .forEach((other) => other.onmessage?.({ data } as MessageEvent<unknown>));
+  }
+
+  close(): void {
+    this.isClosed = true;
+  }
+}
 
 /** Verrou Web Locks simulé : les demandes passent l'une après l'autre, comme entre onglets. */
 function createFakeLockManager() {
@@ -29,8 +64,10 @@ describe('AuthService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
+    FakeBroadcastChannel.instances.length = 0;
+    vi.stubGlobal('BroadcastChannel', FakeBroadcastChannel);
     TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter(ROUTES)],
     });
     auth = TestBed.inject(AuthService);
     http = TestBed.inject(HttpTestingController);
@@ -38,6 +75,7 @@ describe('AuthService', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
     Reflect.deleteProperty(navigator, 'locks');
     http.verify();
   });
@@ -91,16 +129,100 @@ describe('AuthService', () => {
     expect(auth.isAuthenticated()).toBe(false);
   });
 
-  it('ferme la session locale même si la déconnexion échoue', async () => {
-    const login = firstValueFrom(auth.login(CREDENTIALS));
+  it('demande les informations du compte sans message global en cas d’erreur', () => {
+    auth.fetchCurrentUser().subscribe();
+
+    const request = http.expectOne('/api/auth/me').request;
+
+    expect(request.context.get(SILENT_ERRORS)).toBe(true);
+    http.match('/api/auth/me').forEach((pending) => pending.flush({}));
+  });
+
+  it('renvoie une liste vide si les comptes de démonstration sont indisponibles', async () => {
+    const accounts = firstValueFrom(auth.fetchDemoAccounts());
+
+    http.expectOne('/api/auth/demo-accounts').flush(null, { status: 503, statusText: 'Error' });
+
+    await expect(accounts).resolves.toEqual([]);
+  });
+
+  async function login(service: AuthService = auth): Promise<void> {
+    const pending = firstValueFrom(service.login(CREDENTIALS));
     http.expectOne('/api/auth/login').flush({ accessToken: createFakeJwt() });
-    await login;
+    await pending;
+  }
+
+  it('confirme la déconnexion acceptée par le serveur', async () => {
+    await login();
+
+    const logout = firstValueFrom(auth.logout());
+    http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+
+    await expect(logout).resolves.toBe(true);
+    expect(auth.isAuthenticated()).toBe(false);
+  });
+
+  it('ferme la session locale même si la déconnexion échoue, sans la confirmer', async () => {
+    await login();
 
     const logout = firstValueFrom(auth.logout());
     http.expectOne('/api/auth/logout').flush(null, { status: 500, statusText: 'Error' });
-    await logout;
 
+    await expect(logout).resolves.toBe(false);
     expect(auth.isAuthenticated()).toBe(false);
+  });
+
+  describe('entre onglets', () => {
+    it('ferme la session des autres onglets et les renvoie vers la connexion', async () => {
+      const otherTab = TestBed.runInInjectionContext(() => new AuthService());
+      await login();
+      await login(otherTab);
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+      const logout = firstValueFrom(auth.logout());
+      http.expectOne('/api/auth/logout').flush(null, { status: 500, statusText: 'Error' });
+      await logout;
+
+      expect(otherTab.isAuthenticated()).toBe(false);
+      expect(navigate).toHaveBeenCalledWith('/connexion');
+    });
+
+    it('ignore les messages inconnus', async () => {
+      const otherTab = TestBed.runInInjectionContext(() => new AuthService());
+      await login(otherTab);
+
+      new FakeBroadcastChannel('bankflow-auth').postMessage('autre-chose');
+
+      expect(otherTab.isAuthenticated()).toBe(true);
+    });
+
+    it('ne quitte pas la page d’inscription d’un visiteur', async () => {
+      const router = TestBed.inject(Router);
+      await router.navigateByUrl('/inscription');
+      const navigate = vi.spyOn(router, 'navigateByUrl');
+
+      new FakeBroadcastChannel('bankflow-auth').postMessage('logout');
+
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('ferme le canal avec l’application', () => {
+      TestBed.resetTestingModule();
+
+      expect(FakeBroadcastChannel.instances[0].isClosed).toBe(true);
+    });
+
+    it('fonctionne sans BroadcastChannel', async () => {
+      vi.stubGlobal('BroadcastChannel', undefined);
+      const isolatedTab = TestBed.runInInjectionContext(() => new AuthService());
+      await login(isolatedTab);
+
+      const logout = firstValueFrom(isolatedTab.logout());
+      http.expectOne('/api/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
+
+      await expect(logout).resolves.toBe(true);
+      expect(isolatedTab.isAuthenticated()).toBe(false);
+    });
   });
 
   describe('sans Web Locks', () => {
@@ -120,15 +242,15 @@ describe('AuthService', () => {
       expect(auth.isAuthenticated()).toBe(true);
     });
 
-    it('ferme la session si le refresh reste refusé', async () => {
+    it('échoue si le refresh reste refusé', async () => {
       vi.useFakeTimers();
       const refresh = firstValueFrom(auth.refresh()).catch((error: unknown) => error);
 
       http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
       await vi.advanceTimersByTimeAsync(300);
       http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
-      await refresh;
 
+      expect(await refresh).toMatchObject({ status: 401 });
       expect(auth.isAuthenticated()).toBe(false);
     });
   });
@@ -186,30 +308,68 @@ describe('AuthService', () => {
       expect(await second).toBe(createFakeJwt());
     });
 
-    it('garde la session obtenue après le délai de restauration si un autre onglet tarde', async () => {
+    /** Un autre onglet garde le verrou : la restauration abandonne au bout de 5 s. */
+    async function restoreWhileOtherTabHoldsLock(): Promise<() => void> {
       let releaseOtherTab!: () => void;
       void locks.request(
         'bankflow-refresh',
         {},
         () => new Promise<void>((release) => (releaseOtherTab = release)),
       );
-
-      // L'application démarre sans attendre plus de 5 s l'autre onglet.
       const restore = auth.restoreSession();
       await vi.advanceTimersByTimeAsync(5000);
       await expect(restore).resolves.toBeUndefined();
       expect(auth.isAuthenticated()).toBe(false);
       http.expectNone(REFRESH_URL);
+      return releaseOtherTab;
+    }
 
-      // Une navigation pendant l'attente rejoint le même refresh, toujours en attente du verrou.
-      const navigation = firstValueFrom(auth.refresh());
+    it('fait attendre la navigation initiale jusqu’à la fin du refresh en cours', async () => {
+      const releaseOtherTab = await restoreWhileOtherTabHoldsLock();
+      const router = TestBed.inject(Router);
+
+      // Le guard ne tranche pas pendant que le refresh attend le verrou.
+      const navigation = router.navigateByUrl('/tableau-de-bord');
+      await vi.advanceTimersByTimeAsync(1000);
       releaseOtherTab();
       await vi.advanceTimersByTimeAsync(0);
       http.expectOne(REFRESH_URL).flush({ accessToken: createFakeJwt() });
 
-      expect(await navigation).toBe(createFakeJwt());
-      expect(auth.isAuthenticated()).toBe(true);
+      await expect(navigation).resolves.toBe(true);
+      expect(router.url).toBe('/tableau-de-bord');
       expect(auth.getAccessToken()).toBe(createFakeJwt());
+    });
+
+    it('quitte la connexion pour la page demandée quand le refresh aboutit trop tard', async () => {
+      const releaseOtherTab = await restoreWhileOtherTabHoldsLock();
+      const router = TestBed.inject(Router);
+
+      // Le guard finit par renoncer : le visiteur arrive sur la connexion.
+      void router.navigateByUrl('/tableau-de-bord');
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(router.url).toBe('/connexion?returnUrl=%2Ftableau-de-bord');
+
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne(REFRESH_URL).flush({ accessToken: createFakeJwt() });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(auth.isAuthenticated()).toBe(true);
+      expect(router.url).toBe('/tableau-de-bord');
+    });
+
+    it('ignore une page de retour externe après un refresh tardif', async () => {
+      const releaseOtherTab = await restoreWhileOtherTabHoldsLock();
+      const router = TestBed.inject(Router);
+      void router.navigateByUrl('/connexion?returnUrl=%2F%2Fsite-externe.example');
+      await vi.advanceTimersByTimeAsync(5000);
+
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne(REFRESH_URL).flush({ accessToken: createFakeJwt() });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(router.url).toBe('/tableau-de-bord');
     });
   });
 });

@@ -9,7 +9,12 @@ import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { DemoAccount } from '../../../core/auth/auth.models';
-import { Login, LoginNavigationState } from './login';
+import {
+  INVALID_CREDENTIALS_MESSAGE,
+  Login,
+  LoginNavigationState,
+  UNEXPECTED_ERROR_MESSAGE,
+} from './login';
 
 const EMAIL = 'a@bankflow.test';
 const PASSWORD = 'un-mot-de-passe-solide';
@@ -21,7 +26,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 describe('Login', () => {
   const auth = { login: vi.fn(), fetchDemoAccounts: vi.fn() };
 
-  async function setup(returnUrl?: string, demoAccounts: DemoAccount[] = []) {
+  async function setup(returnUrl?: string | string[], demoAccounts: DemoAccount[] = []) {
     auth.login.mockReset();
     auth.fetchDemoAccounts.mockReturnValue(of(demoAccounts));
     await render(Login, {
@@ -71,8 +76,12 @@ describe('Login', () => {
     expect(navigate).toHaveBeenCalledWith('/administration');
   });
 
-  it('ignore une adresse de retour externe', async () => {
-    const { navigate, user } = await setup('//site-externe.example');
+  it.each([
+    ['externe', '//site-externe.example'],
+    ['avec antislash', '/\\site-externe.example'],
+    ['répétée', ['/administration', '/tableau-de-bord']],
+  ])('ignore une adresse de retour %s', async (_cas, returnUrl) => {
+    const { navigate, user } = await setup(returnUrl);
     auth.login.mockReturnValue(of(undefined));
 
     await fillAndSubmit(user);
@@ -80,16 +89,39 @@ describe('Login', () => {
     expect(navigate).toHaveBeenCalledWith('/tableau-de-bord');
   });
 
-  it('signale des identifiants incorrects', async () => {
+  it('signale des identifiants incorrects sans révéler un verrouillage', async () => {
     const { navigate, user } = await setup();
     auth.login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
 
     await fillAndSubmit(user);
 
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Adresse email ou mot de passe incorrect.',
+    expect((await screen.findByRole('alert')).textContent?.trim()).toBe(
+      INVALID_CREDENTIALS_MESSAGE,
+    );
+    expect(INVALID_CREDENTIALS_MESSAGE).toBe(
+      'Adresse email ou mot de passe incorrect. Après plusieurs échecs, le compte est bloqué quelques minutes.',
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('affiche un message générique pour une erreur qui ne vient pas du serveur', async () => {
+    const { navigate, user } = await setup();
+    auth.login.mockReturnValue(throwError(() => new Error('jeton indécodable')));
+
+    await fillAndSubmit(user);
+
+    expect((await screen.findByRole('alert')).textContent).toContain(UNEXPECTED_ERROR_MESSAGE);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("laisse l'intercepteur annoncer les autres erreurs du serveur", async () => {
+    const { user } = await setup();
+    auth.login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+
+    await fillAndSubmit(user);
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toBeTruthy();
   });
 
   it('permet d’afficher le mot de passe', async () => {

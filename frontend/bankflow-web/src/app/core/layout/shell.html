@@ -1,6 +1,17 @@
+<a class="skip-link" href="#contenu-principal" (click)="skipToContent($event)">
+  Aller au contenu
+</a>
+
 <mat-toolbar class="toolbar">
   @if (isCompact()) {
-    <button matIconButton type="button" aria-label="Ouvrir le menu" (click)="isMenuOpen.set(true)">
+    <button
+      matIconButton
+      type="button"
+      aria-label="Ouvrir le menu"
+      aria-controls="navigation-principale"
+      [attr.aria-expanded]="isMenuOpen()"
+      (click)="isMenuOpen.set(true)"
+    >
       <mat-icon aria-hidden="true" svgIcon="menu" />
     </button>
   }
@@ -17,6 +28,7 @@
 
 <mat-sidenav-container class="container">
   <mat-sidenav
+    id="navigation-principale"
     class="nav"
     [mode]="isCompact() ? 'over' : 'side'"
     [opened]="isNavOpened()"
@@ -52,7 +64,7 @@
   </mat-sidenav>
 
   <mat-sidenav-content>
-    <main class="content">
+    <main #main id="contenu-principal" class="content" tabindex="-1">
       <router-outlet />
     </main>
   </mat-sidenav-content>

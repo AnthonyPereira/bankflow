@@ -80,7 +80,16 @@
           }
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverageInclude": ["src/**/*.ts"],
+            "coverageExclude": [
+              "src/**/*.spec.ts",
+              "src/main.ts",
+              "src/environments/**",
+              "src/app/testing/**"
+            ]
+          }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
