@@ -3,6 +3,7 @@ package com.bankflow.auth.api.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bankflow.auth.AuthApiTestSupport;
+import com.bankflow.auth.application.token.RefreshTokenService;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ class RefreshTokenIntegrationTests extends AuthApiTestSupport {
     private static final String COOKIE = "bankflow_refresh";
 
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private RefreshTokenService refreshTokenService;
 
     @Test
     void laConnexionPoseUnCookieHttpOnlyStrictEtNeStockeQueLEmpreinte() throws Exception {
@@ -88,6 +90,56 @@ class RefreshTokenIntegrationTests extends AuthApiTestSupport {
     }
 
     @Test
+    void uneSessionOuverteIlYAPlusDeTrenteJoursEstRefuseeEtSonCookieEfface() throws Exception {
+        var email = uniqueEmail();
+        var login = registerAndLogin(email);
+        var rotated = refresh(cookieValue(login));
+        // Le jeton courant reste valable : seule la date d'ouverture de la session a vieilli
+        jdbcTemplate.update(
+                "UPDATE refresh_tokens SET family_created_at = now() - interval '31 days'"
+                        + " WHERE user_id = (SELECT id FROM users WHERE email = ?)",
+                email);
+
+        var refused = refresh(cookieValue(rotated));
+
+        assertThat(refused.statusCode()).isEqualTo(401);
+        assertThat(setCookie(refused)).contains("Max-Age=0");
+    }
+
+    @Test
+    void uneRotationConserveLaDateDOuvertureDeLaSession() throws Exception {
+        var email = uniqueEmail();
+        var login = registerAndLogin(email);
+
+        refresh(cookieValue(refresh(cookieValue(login))));
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT count(DISTINCT family_created_at) FROM refresh_tokens"
+                                        + " WHERE user_id = (SELECT id FROM users WHERE email = ?)",
+                                Integer.class,
+                                email))
+                .isEqualTo(1);
+    }
+
+    @Test
+    void laPurgeSupprimeUniquementLesJetonsExpires() throws Exception {
+        var expiredEmail = uniqueEmail();
+        var activeEmail = uniqueEmail();
+        registerAndLogin(expiredEmail);
+        registerAndLogin(activeEmail);
+        jdbcTemplate.update(
+                "UPDATE refresh_tokens SET expires_at = now() - interval '1 minute'"
+                        + " WHERE user_id = (SELECT id FROM users WHERE email = ?)",
+                expiredEmail);
+
+        refreshTokenService.purgeExpired();
+
+        assertThat(tokensOf(expiredEmail)).isZero();
+        assertThat(tokensOf(activeEmail)).isEqualTo(1);
+    }
+
+    @Test
     void unCompteDesactiveNePeutPlusRafraichirSaSession() throws Exception {
         var email = uniqueEmail();
         var login = registerAndLogin(email);
@@ -119,6 +171,14 @@ class RefreshTokenIntegrationTests extends AuthApiTestSupport {
     private HttpResponse<String> registerAndLogin(String email) throws Exception {
         register(email, VALID_PASSWORD);
         return postJson("/auth/login", credentials(email, VALID_PASSWORD));
+    }
+
+    private int tokensOf(String email) {
+        return jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM refresh_tokens"
+                        + " WHERE user_id = (SELECT id FROM users WHERE email = ?)",
+                Integer.class,
+                email);
     }
 
     private HttpResponse<String> refresh(String token) throws Exception {
