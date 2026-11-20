@@ -46,7 +46,7 @@ class SecurityIntegrationTests {
     private int port;
 
     @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
+    static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add(
                 "JWK_SET_URI",
                 () -> "http://127.0.0.1:" + JWKS.getAddress().getPort() + "/jwks.json");
@@ -73,18 +73,18 @@ class SecurityIntegrationTests {
 
     @Test
     void unJwtValideEstAccepte() throws Exception {
-        assertThat(get("/ressource", token(ISSUER, AUDIENCE)).statusCode()).isEqualTo(404);
+        assertThat(get("/ressource", createToken(ISSUER, AUDIENCE)).statusCode()).isEqualTo(404);
     }
 
     @Test
     void unJwtDUnAutreEmetteurEstRefuse() throws Exception {
-        assertThat(get("/ressource", token("https://pirate.example", AUDIENCE)).statusCode())
+        assertThat(get("/ressource", createToken("https://pirate.example", AUDIENCE)).statusCode())
                 .isEqualTo(401);
     }
 
     @Test
     void unJwtDestineAUneAutreApiEstRefuse() throws Exception {
-        assertThat(get("/ressource", token(ISSUER, "autre-api")).statusCode()).isEqualTo(401);
+        assertThat(get("/ressource", createToken(ISSUER, "autre-api")).statusCode()).isEqualTo(401);
     }
 
     private HttpResponse<String> get(String path, String token) throws Exception {
@@ -95,7 +95,7 @@ class SecurityIntegrationTests {
         return client.send(request.build(), HttpResponse.BodyHandlers.ofString());
     }
 
-    private static String token(String issuer, String audience) throws Exception {
+    private static String createToken(String issuer, String audience) throws Exception {
         var claims =
                 new JWTClaimsSet.Builder()
                         .subject("6f1c2d84-7a51-4e0b-9a36-0a7d5c1e9f22")
