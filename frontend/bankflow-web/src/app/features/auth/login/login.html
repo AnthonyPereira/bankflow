@@ -65,7 +65,7 @@
         <tbody>
           @for (account of demoAccounts(); track account.email) {
             <tr>
-              <td>{{ roleLabel(account.role) }}</td>
+              <td>{{ getRoleLabel(account.role) }}</td>
               <td class="credentials">
                 <span>{{ account.email }}</span>
                 <code>{{ account.password }}</code>
@@ -74,7 +74,7 @@
                 <button
                   matButton
                   type="button"
-                  [attr.aria-label]="'Utiliser le compte ' + roleLabel(account.role)"
+                  [attr.aria-label]="'Utiliser le compte ' + getRoleLabel(account.role)"
                   (click)="useAccount(account)"
                 >
                   Utiliser

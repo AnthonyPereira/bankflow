@@ -25,13 +25,13 @@ export const errorInterceptor: HttpInterceptorFn = (request, next) => {
         if (error.status === 401) {
           if (!isPublicAuthRequest(request.url)) {
             auth.clearSession();
-            notifications.error('Votre session a expiré. Veuillez vous reconnecter.');
+            notifications.showError('Votre session a expiré. Veuillez vous reconnecter.');
             void router.navigate(['/connexion'], { queryParams: { returnUrl: router.url } });
           }
         } else {
           const message = error.status >= 500 ? SERVER_ERROR_MESSAGE : MESSAGES[error.status];
           if (message) {
-            notifications.error(message);
+            notifications.showError(message);
           }
         }
       }

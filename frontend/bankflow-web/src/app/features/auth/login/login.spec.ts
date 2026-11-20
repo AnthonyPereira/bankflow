@@ -19,11 +19,11 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 ];
 
 describe('Login', () => {
-  const auth = { login: vi.fn(), demoAccounts: vi.fn() };
+  const auth = { login: vi.fn(), fetchDemoAccounts: vi.fn() };
 
   async function setup(returnUrl?: string, demoAccounts: DemoAccount[] = []) {
     auth.login.mockReset();
-    auth.demoAccounts.mockReturnValue(of(demoAccounts));
+    auth.fetchDemoAccounts.mockReturnValue(of(demoAccounts));
     await render(Login, {
       inputs: returnUrl ? { returnUrl } : {},
       providers: [
@@ -128,7 +128,7 @@ describe('Login', () => {
   });
 
   it("annonce le compte créé et préremplit l'email après l'inscription", async () => {
-    auth.demoAccounts.mockReturnValue(of([]));
+    auth.fetchDemoAccounts.mockReturnValue(of([]));
     TestBed.configureTestingModule({
       providers: [
         importProvidersFrom(MatIconTestingModule),

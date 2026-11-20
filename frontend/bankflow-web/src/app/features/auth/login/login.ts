@@ -55,9 +55,9 @@ export class Login {
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly passwordVisible = signal(false);
-  protected readonly demoAccounts = toSignal(this.auth.demoAccounts(), { initialValue: [] });
+  protected readonly demoAccounts = toSignal(this.auth.fetchDemoAccounts(), { initialValue: [] });
 
-  protected roleLabel(role: Role): string {
+  protected getRoleLabel(role: Role): string {
     return ROLE_LABELS[role];
   }
 
@@ -79,7 +79,7 @@ export class Login {
       .login(this.form.getRawValue())
       .pipe(finalize(() => this.submitting.set(false)))
       .subscribe({
-        next: () => void this.router.navigateByUrl(this.destination()),
+        next: () => void this.router.navigateByUrl(this.resolveDestination()),
         error: (error: HttpErrorResponse) => {
           if (error.status === 401) {
             this.errorMessage.set('Adresse email ou mot de passe incorrect.');
@@ -89,7 +89,7 @@ export class Login {
   }
 
   /** Seul un chemin interne est accepté, pour ne jamais rediriger vers un autre site. */
-  private destination(): string {
+  private resolveDestination(): string {
     const url = this.returnUrl();
     return url?.startsWith('/') && !url.startsWith('//') ? url : DEFAULT_DESTINATION;
   }

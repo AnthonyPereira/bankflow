@@ -14,11 +14,11 @@ const USER: User = {
 };
 
 describe('Dashboard', () => {
-  function setup(currentUser: AuthService['currentUser']) {
+  function setup(fetchCurrentUser: AuthService['fetchCurrentUser']) {
     return render(Dashboard, {
       providers: [
         importProvidersFrom(MatIconTestingModule),
-        { provide: AuthService, useValue: { currentUser } },
+        { provide: AuthService, useValue: { fetchCurrentUser } },
       ],
     });
   }

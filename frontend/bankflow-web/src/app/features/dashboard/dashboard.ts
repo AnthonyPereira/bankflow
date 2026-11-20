@@ -37,8 +37,8 @@ export class Dashboard {
   private readonly auth = inject(AuthService);
 
   protected readonly upcomingSections = UPCOMING_SECTIONS;
-  protected readonly user = rxResource({ stream: () => this.auth.currentUser() });
-  protected readonly roleLabel = computed(() => {
+  protected readonly user = rxResource({ stream: () => this.auth.fetchCurrentUser() });
+  protected readonly getRoleLabel = computed(() => {
     const role = this.user.value()?.role;
     return role ? ROLE_LABELS[role] : '';
   });

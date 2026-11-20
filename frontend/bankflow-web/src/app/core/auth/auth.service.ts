@@ -40,7 +40,7 @@ export class AuthService {
   private readonly session = signal<Session | null>(null);
   private refreshInFlight: Observable<string> | null = null;
 
-  readonly accessToken = computed(() => this.session()?.accessToken ?? null);
+  readonly getAccessToken = computed(() => this.session()?.accessToken ?? null);
   readonly isAuthenticated = computed(() => this.session() !== null);
   readonly isAdmin = computed(() => this.session()?.role === 'ROLE_ADMIN');
 
@@ -57,13 +57,13 @@ export class AuthService {
   }
 
   /** Comptes de démonstration. Une erreur donne une liste vide : la connexion reste possible. */
-  demoAccounts(): Observable<DemoAccount[]> {
+  fetchDemoAccounts(): Observable<DemoAccount[]> {
     return this.http
-      .get<DemoAccount[]>(`${AUTH_URL}/demo-accounts`, { context: silent() })
+      .get<DemoAccount[]>(`${AUTH_URL}/demo-accounts`, { context: createSilentContext() })
       .pipe(catchError(() => of([])));
   }
 
-  currentUser(): Observable<User> {
+  fetchCurrentUser(): Observable<User> {
     return this.http.get<User>(`${AUTH_URL}/me`);
   }
 
@@ -102,12 +102,14 @@ export class AuthService {
 
   /** La session locale se termine toujours, même si le serveur ne répond pas. */
   logout(): Observable<void> {
-    return this.http.post<void>(`${AUTH_URL}/logout`, null, { context: silent() }).pipe(
-      catchError(() => of(undefined)),
-      finalize(() => {
-        this.clearSession();
-      }),
-    );
+    return this.http
+      .post<void>(`${AUTH_URL}/logout`, null, { context: createSilentContext() })
+      .pipe(
+        catchError(() => of(undefined)),
+        finalize(() => {
+          this.clearSession();
+        }),
+      );
   }
 
   clearSession(): void {
@@ -134,7 +136,7 @@ export class AuthService {
    */
   private requestRefresh(): Observable<TokenResponse> {
     const request = this.http.post<TokenResponse>(`${AUTH_URL}/refresh`, null, {
-      context: silent(),
+      context: createSilentContext(),
     });
     const locks = getLockManager();
     if (locks) {
@@ -150,7 +152,7 @@ export class AuthService {
   }
 }
 
-function silent(): HttpContext {
+function createSilentContext(): HttpContext {
   return new HttpContext().set(SILENT_ERRORS, true);
 }
 

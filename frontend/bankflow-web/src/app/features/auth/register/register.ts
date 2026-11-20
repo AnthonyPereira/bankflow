@@ -21,7 +21,7 @@ const PASSWORD_MIN_LENGTH = 12;
 const PASSWORD_MAX_BYTES = 72;
 
 /** BCrypt ignore tout ce qui dépasse 72 octets : le backend refuse donc ces mots de passe. */
-function maxBytes(control: AbstractControl<string>): ValidationErrors | null {
+function validateMaxBytes(control: AbstractControl<string>): ValidationErrors | null {
   const tooLong = new TextEncoder().encode(control.value).length > PASSWORD_MAX_BYTES;
   return tooLong ? { maxBytes: true } : null;
 }
@@ -47,7 +47,10 @@ export class Register {
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
-    password: ['', [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH), maxBytes]],
+    password: [
+      '',
+      [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH), validateMaxBytes],
+    ],
   });
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);

@@ -3,15 +3,15 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { fakeJwt } from '../../testing/fake-jwt';
+import { createFakeJwt } from '../../testing/fake-jwt';
 import { authInterceptor } from '../auth/auth.interceptor';
 import { AuthService } from '../auth/auth.service';
 import { NotificationUiService } from '../notifications/notification-ui.service';
 import { correlationIdInterceptor } from './correlation-id.interceptor';
 import { errorInterceptor } from './error.interceptor';
 
-const OLD_TOKEN = fakeJwt('ROLE_CLIENT', 'ancien');
-const NEW_TOKEN = fakeJwt('ROLE_CLIENT', 'nouveau');
+const OLD_TOKEN = createFakeJwt('ROLE_CLIENT', 'ancien');
+const NEW_TOKEN = createFakeJwt('ROLE_CLIENT', 'nouveau');
 const UNAUTHORIZED = { status: 401, statusText: 'Unauthorized' };
 
 describe('intercepteurs HTTP', () => {
@@ -19,10 +19,10 @@ describe('intercepteurs HTTP', () => {
   let http: HttpTestingController;
   let auth: AuthService;
   let router: Router;
-  const notifications = { error: vi.fn(), info: vi.fn() };
+  const notifications = { showError: vi.fn(), showInfo: vi.fn() };
 
   beforeEach(async () => {
-    notifications.error.mockClear();
+    notifications.showError.mockClear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -78,7 +78,7 @@ describe('intercepteurs HTTP', () => {
 
     expect(replay.request.headers.get('Authorization')).toBe(`Bearer ${NEW_TOKEN}`);
     await expect(response).resolves.toEqual({ ok: true });
-    expect(notifications.error).not.toHaveBeenCalled();
+    expect(notifications.showError).not.toHaveBeenCalled();
   });
 
   it('renvoie vers la connexion quand la session ne peut plus être renouvelée', async () => {
@@ -94,7 +94,7 @@ describe('intercepteurs HTTP', () => {
 
     expect(auth.isAuthenticated()).toBe(false);
     expect(navigate).toHaveBeenCalledWith(['/connexion'], { queryParams: { returnUrl: '/' } });
-    expect(notifications.error).toHaveBeenCalledTimes(1);
+    expect(notifications.showError).toHaveBeenCalledTimes(1);
   });
 
   it('laisse le formulaire traiter un mot de passe incorrect', async () => {
@@ -107,7 +107,7 @@ describe('intercepteurs HTTP', () => {
     await login;
 
     expect(navigate).not.toHaveBeenCalled();
-    expect(notifications.error).not.toHaveBeenCalled();
+    expect(notifications.showError).not.toHaveBeenCalled();
     expect(auth.isAuthenticated()).toBe(true);
   });
 
@@ -121,7 +121,7 @@ describe('intercepteurs HTTP', () => {
     http.expectOne('/api/accounts').flush(null, { status, statusText: 'Erreur' });
     await response;
 
-    expect(notifications.error).toHaveBeenCalledWith(message);
+    expect(notifications.showError).toHaveBeenCalledWith(message);
   });
 
   it('laisse les erreurs métier aux écrans', async () => {
@@ -130,6 +130,6 @@ describe('intercepteurs HTTP', () => {
     http.expectOne('/api/accounts').flush(null, { status: 409, statusText: 'Conflict' });
     await response;
 
-    expect(notifications.error).not.toHaveBeenCalled();
+    expect(notifications.showError).not.toHaveBeenCalled();
   });
 });

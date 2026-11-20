@@ -5,7 +5,7 @@ import { vi } from 'vitest';
 import { registerIcons } from './register-icons';
 
 describe('registerIcons', () => {
-  function resolver() {
+  function getResolver() {
     const addSvgIconResolver = vi.fn();
     TestBed.configureTestingModule({
       providers: [{ provide: MatIconRegistry, useValue: { addSvgIconResolver } }],
@@ -15,10 +15,10 @@ describe('registerIcons', () => {
   }
 
   it('résout une icône du dossier local', () => {
-    expect(String(resolver()('home'))).toContain('icons/home.svg');
+    expect(String(getResolver()('home'))).toContain('icons/home.svg');
   });
 
   it.each(['../secret', 'https://exemple.test/a', 'a/b', 'Maj'])('refuse le nom %s', (name) => {
-    expect(resolver()(name)).toBeNull();
+    expect(getResolver()(name)).toBeNull();
   });
 });
