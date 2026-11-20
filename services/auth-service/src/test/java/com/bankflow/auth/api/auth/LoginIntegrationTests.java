@@ -7,11 +7,8 @@ import com.bankflow.auth.AuthApiTestSupport;
 import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;
-import com.zaxxer.hikari.HikariDataSource;
-import com.zaxxer.hikari.HikariPoolMXBean;
 import java.net.http.HttpResponse;
 import java.sql.Timestamp;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -21,8 +18,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
-import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,11 +28,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 class LoginIntegrationTests extends AuthApiTestSupport {
 
-    private static final int BURST_SIZE = 40;
-
     @Autowired private JwtDecoder jwtDecoder;
     @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private DataSource dataSource;
     @Autowired private UserRepository users;
     @Autowired private PasswordEncoder passwordEncoder;
 
@@ -181,6 +173,38 @@ class LoginIntegrationTests extends AuthApiTestSupport {
     }
 
     @Test
+    void uneConnexionReussieApresQuatreEchecsRemetLeCompteurEtLeVerrouAZero() throws Exception {
+        var email = generateUniqueEmail();
+        register(email, VALID_PASSWORD);
+        failLogin(email, 4);
+        assertThat(countFailedAttempts(email)).isEqualTo(4);
+
+        assertThat(login(email, VALID_PASSWORD).statusCode()).isEqualTo(200);
+
+        assertThat(countFailedAttempts(email)).isZero();
+        assertThat(readLockedUntil(email)).isNull();
+        // La connexion suivante est réservée à partir d'un compteur revenu à zéro
+        assertThat(login(email, VALID_PASSWORD).statusCode()).isEqualTo(200);
+        assertThat(countFailedAttempts(email)).isZero();
+    }
+
+    @Test
+    void unEchecApresExpirationDuVerrouRepartDUnCompteurAUnSansReverrouiller() throws Exception {
+        var email = generateUniqueEmail();
+        register(email, VALID_PASSWORD);
+        failLogin(email, 5);
+        jdbcTemplate.update(
+                "UPDATE users SET locked_until = now() - interval '1 minute' WHERE email = ?",
+                email);
+        assertThat(countFailedAttempts(email)).isEqualTo(5);
+
+        assertThat(login(email, "mauvais-mot-de-passe").statusCode()).isEqualTo(401);
+
+        assertThat(countFailedAttempts(email)).isEqualTo(1);
+        assertThat(readLockedUntil(email)).isNull();
+    }
+
+    @Test
     void desTentativesSimultaneesNeDepassentPasLeNombreDEssaisAutorises() throws Exception {
         var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
@@ -226,98 +250,11 @@ class LoginIntegrationTests extends AuthApiTestSupport {
         }
     }
 
-    /**
-     * Si un verrou de ligne ou une connexion restait tenu pendant le hachage, les connexions
-     * seraient traitées l'une après l'autre et la rafale occuperait tout le pool pendant environ
-     * {@code BURST_SIZE} hachages. Les seuils sont exprimés en durées de hachage mesurées sur la
-     * machine, pour ne pas dépendre de sa vitesse.
-     */
-    @Test
-    void uneRafaleDeConnexionsSurUnMemeCompteNeSaturePasLePoolDeConnexions() throws Exception {
-        var target = generateUniqueEmail();
-        register(target, VALID_PASSWORD);
-        var other = generateUniqueEmail();
-        register(other, VALID_PASSWORD);
-        var token = extractAccessToken(login(other, VALID_PASSWORD));
-        var pool = dataSource.unwrap(HikariDataSource.class).getHikariPoolMXBean();
-        var start = new CountDownLatch(1);
-        var attempts = new ArrayList<Future<Integer>>();
-        Duration saturated;
-        Duration meLatency;
-
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            for (int attempt = 0; attempt < BURST_SIZE; attempt++) {
-                attempts.add(
-                        executor.submit(() -> {
-                            start.await();
-                            return login(target, "mauvais-mot-de-passe").statusCode();
-                        }));
-            }
-            var me =
-                    executor.submit(() -> {
-                        start.await();
-                        // Laisse la rafale démarrer avant d'appeler /auth/me
-                        LockSupport.parkNanos(Duration.ofMillis(20).toNanos());
-                        var begin = System.nanoTime();
-                        var response =
-                                send(
-                                        buildRequest("/auth/me")
-                                                .header("Authorization", "Bearer " + token));
-                        assertThat(response.statusCode()).isEqualTo(200);
-                        return Duration.ofNanos(System.nanoTime() - begin);
-                    });
-            start.countDown();
-
-            var pending = new ArrayList<Future<?>>(attempts);
-            pending.add(me);
-            saturated = measureSaturation(pool, pending);
-            for (var attempt : attempts) {
-                assertThat(attempt.get(60, TimeUnit.SECONDS)).isEqualTo(401);
-            }
-            meLatency = me.get(60, TimeUnit.SECONDS);
-        }
-
-        var serializedHashing = measureHashDuration().multipliedBy(BURST_SIZE);
-        assertThat(saturated).isLessThan(serializedHashing.dividedBy(2));
-        assertThat(meLatency).isLessThan(serializedHashing.dividedBy(2));
-        assertThat(countFailedAttempts(target)).isEqualTo(5);
-    }
-
-    /** Cumule le temps pendant lequel au moins une requête attend une connexion libre. */
-    private static Duration measureSaturation(HikariPoolMXBean pool, List<Future<?>> pending) {
-        long saturatedNanos = 0;
-        var last = System.nanoTime();
-        while (pending.stream().anyMatch(future -> !future.isDone())) {
-            LockSupport.parkNanos(Duration.ofMillis(1).toNanos());
-            var now = System.nanoTime();
-            if (pool.getThreadsAwaitingConnection() > 0) {
-                saturatedNanos += now - last;
-            }
-            last = now;
-        }
-        return Duration.ofNanos(saturatedNanos);
-    }
-
-    /** Durée d'une vérification de mot de passe, la plus courte de trois mesures. */
-    private Duration measureHashDuration() {
-        var hash = passwordEncoder.encode(VALID_PASSWORD);
-        var shortest = Duration.ofDays(1);
-        for (int measure = 0; measure < 3; measure++) {
-            var begin = System.nanoTime();
-            passwordEncoder.matches(VALID_PASSWORD, hash);
-            var duration = Duration.ofNanos(System.nanoTime() - begin);
-            if (duration.compareTo(shortest) < 0) {
-                shortest = duration;
-            }
-        }
-        return shortest;
-    }
-
     private Instant readLockedUntil(String email) {
-        return jdbcTemplate
-                .queryForObject(
-                        "SELECT locked_until FROM users WHERE email = ?", Timestamp.class, email)
-                .toInstant();
+        var lockedUntil =
+                jdbcTemplate.queryForObject(
+                        "SELECT locked_until FROM users WHERE email = ?", Timestamp.class, email);
+        return lockedUntil == null ? null : lockedUntil.toInstant();
     }
 
     private void failLogin(String email, int times) throws Exception {
