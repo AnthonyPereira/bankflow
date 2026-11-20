@@ -113,7 +113,7 @@ Un changement incompatible (d'API ou de contrat d'événement) est signalé par 
 
 ## 5. Code
 
-- **Java** : packages `api`, `application`, `domain`, `infrastructure` ; montants en `BigDecimal` uniquement.
+- **Java** : packages `api`, `application`, `domain`, `infrastructure`, puis un sous-package par fonctionnalité (voir `services/README.md`) ; montants en `BigDecimal` uniquement.
 - **Formatage Java** : Spotless avec google-java-format, style AOSP (4 espaces, 100 colonnes). `./mvnw verify` échoue si le code n'est pas formaté, et `./mvnw spotless:apply` corrige automatiquement.
 - **Angular** : `@Service()` avec `inject()`, composants standalone, formatage ESLint et Prettier.
 - **Encodage et fins de ligne** : UTF-8 et LF (voir `.editorconfig` et `.gitattributes`).

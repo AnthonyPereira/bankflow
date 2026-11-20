@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.bankflow.auth.domain.UserRegistered;
+import com.bankflow.auth.domain.user.UserRegistered;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
