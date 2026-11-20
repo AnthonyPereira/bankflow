@@ -35,3 +35,16 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+
+  # Images de base épinglées par digest : Dependabot met à jour le tag et le digest ensemble
+  - package-ecosystem: docker
+    directories:
+      - /infra/docker
+      - /infra/postgres
+      - /infra/kafka
+      - /frontend/bankflow-web
+    target-branch: develop
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
