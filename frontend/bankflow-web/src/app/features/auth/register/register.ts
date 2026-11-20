@@ -22,8 +22,8 @@ const PASSWORD_MAX_BYTES = 72;
 
 /** BCrypt ignore tout ce qui dépasse 72 octets : le backend refuse donc ces mots de passe. */
 function validateMaxBytes(control: AbstractControl<string>): ValidationErrors | null {
-  const tooLong = new TextEncoder().encode(control.value).length > PASSWORD_MAX_BYTES;
-  return tooLong ? { maxBytes: true } : null;
+  const isTooLong = new TextEncoder().encode(control.value).length > PASSWORD_MAX_BYTES;
+  return isTooLong ? { maxBytes: true } : null;
 }
 
 @Component({
@@ -80,8 +80,10 @@ export class Register {
       )
       .subscribe({
         next: () => void this.router.navigateByUrl('/tableau-de-bord'),
-        error: (error: HttpErrorResponse) => {
-          if (error.status === 409) {
+        error: (error: unknown) => {
+          if (!(error instanceof HttpErrorResponse)) {
+            this.errorMessage.set('Une erreur inattendue est survenue. Réessayez.');
+          } else if (error.status === 409) {
             this.errorMessage.set('Un compte existe déjà avec cette adresse email.');
           } else if (error.status === 400) {
             this.errorMessage.set('Vérifiez les informations saisies.');

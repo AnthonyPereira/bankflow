@@ -9,10 +9,13 @@ import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
+import { resolveReturnUrl } from '../../../core/auth/return-url';
 import { DemoAccount, Role, ROLE_LABELS } from '../../../core/auth/auth.models';
 import { AuthCard } from '../auth-card/auth-card';
 
-const DEFAULT_DESTINATION = '/tableau-de-bord';
+export const INVALID_CREDENTIALS_MESSAGE =
+  'Adresse email ou mot de passe incorrect. Après plusieurs échecs, le compte est bloqué quelques minutes.';
+export const UNEXPECTED_ERROR_MESSAGE = 'Une erreur inattendue est survenue. Réessayez.';
 
 /** État de navigation transmis par l'inscription quand la connexion automatique a échoué. */
 export interface LoginNavigationState {
@@ -38,8 +41,8 @@ export class Login {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  /** Page demandée avant la redirection vers la connexion. */
-  readonly returnUrl = input<string>();
+  /** Page demandée avant la redirection vers la connexion. Un paramètre répété donne un tableau. */
+  readonly returnUrl = input<string | string[]>();
 
   private readonly registeredEmail = readRegisteredEmail(this.router);
 
@@ -81,19 +84,16 @@ export class Login {
       .login(this.form.getRawValue())
       .pipe(finalize(() => this.isSubmitting.set(false)))
       .subscribe({
-        next: () => void this.router.navigateByUrl(this.resolveDestination()),
-        error: (error: HttpErrorResponse) => {
-          if (error.status === 401) {
-            this.errorMessage.set('Adresse email ou mot de passe incorrect.');
+        next: () => void this.router.navigateByUrl(resolveReturnUrl(this.returnUrl())),
+        error: (error: unknown) => {
+          // Le message reste le même pour un compte verrouillé : le backend ne distingue pas les cas.
+          if (!(error instanceof HttpErrorResponse)) {
+            this.errorMessage.set(UNEXPECTED_ERROR_MESSAGE);
+          } else if (error.status === 401) {
+            this.errorMessage.set(INVALID_CREDENTIALS_MESSAGE);
           }
         },
       });
-  }
-
-  /** Seul un chemin interne est accepté, pour ne jamais rediriger vers un autre site. */
-  private resolveDestination(): string {
-    const url = this.returnUrl();
-    return url?.startsWith('/') && !url.startsWith('//') ? url : DEFAULT_DESTINATION;
   }
 }
 
