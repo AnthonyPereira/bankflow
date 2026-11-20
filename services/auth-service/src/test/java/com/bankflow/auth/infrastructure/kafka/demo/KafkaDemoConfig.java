@@ -6,7 +6,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.kafka.config.TopicBuilder;
 
-/** Démonstration Kafka de BF-003, active uniquement avec le profil {@code kafka-demo}. */
+/**
+ * Démonstration Kafka de BF-003, active uniquement avec le profil {@code kafka-demo}. Elle vit dans
+ * les sources de test pour ne pas être livrée dans l'artefact de production.
+ */
 @Configuration(proxyBeanMethods = false)
 @Profile("kafka-demo")
 class KafkaDemoConfig {
