@@ -22,7 +22,7 @@ import {
   Role,
   TokenResponse,
   User,
-} from '../../shared/models/auth.models';
+} from './auth.models';
 import { SILENT_ERRORS } from '../http/api';
 
 interface Session {

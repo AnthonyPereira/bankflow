@@ -7,7 +7,7 @@ import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { DemoAccount } from '../../../shared/models/auth.models';
+import { DemoAccount } from '../../../core/auth/auth.models';
 import { Login } from './login';
 
 const EMAIL = 'a@bankflow.test';

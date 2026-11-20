@@ -9,7 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { DemoAccount, Role } from '../../../shared/models/auth.models';
+import { DemoAccount, Role } from '../../../core/auth/auth.models';
 import { AuthCard } from '../auth-card/auth-card';
 
 const DEFAULT_DESTINATION = '/tableau-de-bord';

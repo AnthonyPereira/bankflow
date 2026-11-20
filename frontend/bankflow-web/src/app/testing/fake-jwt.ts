@@ -1,4 +1,4 @@
-import { Role } from '../shared/models/auth.models';
+import { Role } from '../core/auth/auth.models';
 
 /** Construit un JWT lisible pour les tests. Sa signature n'est jamais vérifiée côté frontend. */
 export function fakeJwt(role: Role = 'ROLE_CLIENT', id = 'utilisateur'): string {

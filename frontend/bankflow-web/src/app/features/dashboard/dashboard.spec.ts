@@ -3,7 +3,7 @@ import { MatIconTestingModule } from '@angular/material/icon/testing';
 import { render, screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { User } from '../../shared/models/auth.models';
+import { User } from '../../core/auth/auth.models';
 import { Dashboard } from './dashboard';
 
 const USER: User = {
