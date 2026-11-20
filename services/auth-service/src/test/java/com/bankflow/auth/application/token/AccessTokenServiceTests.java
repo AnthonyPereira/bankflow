@@ -38,9 +38,9 @@ class AccessTokenServiceTests {
     void leJwtEmisEstValideEtPorteLIdentiteDeLUtilisateur() throws Exception {
         var user = User.register("a@bankflow.test", "{noop}x", Role.ROLE_ADMIN, Instant.now());
 
-        var token = serviceAt(Instant.now()).issue(user);
+        var token = createServiceAt(Instant.now()).issue(user);
 
-        var jwt = decoder().decode(token.value());
+        var jwt = createDecoder().decode(token.value());
         assertThat(jwt.getSubject()).isEqualTo(user.getId().toString());
         assertThat(jwt.getClaimAsString("role")).isEqualTo("ROLE_ADMIN");
         assertThat(token.expiresInSeconds()).isEqualTo(900);
@@ -50,19 +50,19 @@ class AccessTokenServiceTests {
     void unJwtExpireEstRejete() throws Exception {
         var user = User.register("b@bankflow.test", "{noop}x", Role.ROLE_CLIENT, Instant.now());
 
-        var token = serviceAt(Instant.now().minus(Duration.ofHours(1))).issue(user);
+        var token = createServiceAt(Instant.now().minus(Duration.ofHours(1))).issue(user);
 
-        assertThatThrownBy(() -> decoder().decode(token.value()))
+        assertThatThrownBy(() -> createDecoder().decode(token.value()))
                 .isInstanceOf(JwtValidationException.class)
                 .hasMessageContaining("expired");
     }
 
-    private static AccessTokenService serviceAt(Instant now) {
+    private static AccessTokenService createServiceAt(Instant now) {
         var encoder = new NimbusJwtEncoder(new ImmutableJWKSet<>(new JWKSet(key)));
         return new AccessTokenService(encoder, PROPERTIES, Clock.fixed(now, ZoneOffset.UTC));
     }
 
-    private static NimbusJwtDecoder decoder() throws Exception {
+    private static NimbusJwtDecoder createDecoder() throws Exception {
         var decoder = NimbusJwtDecoder.withPublicKey(key.toRSAPublicKey()).build();
         decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(ISSUER));
         return decoder;

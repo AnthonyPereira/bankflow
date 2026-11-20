@@ -72,7 +72,7 @@ public class RefreshTokenService {
 
         if (token.isRevoked()) {
             if (!token.isReuseSuspectedAt(now, reuseGrace)) {
-                throw InvalidRefreshTokenException.concurrentRotation();
+                throw InvalidRefreshTokenException.createForConcurrentRotation();
             }
             tokens.revokeFamily(token.getFamilyId(), now);
             throw new InvalidRefreshTokenException();

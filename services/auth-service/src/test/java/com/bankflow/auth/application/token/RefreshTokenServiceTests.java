@@ -51,7 +51,7 @@ class RefreshTokenServiceTests {
                 .thenAnswer(
                         invocation -> Optional.ofNullable(byHash.get(invocation.getArgument(0))));
         when(users.findById(user.getId())).thenReturn(Optional.of(user));
-        service = service(MAX_SESSION_AGE);
+        service = createService(MAX_SESSION_AGE);
     }
 
     @Test
@@ -99,7 +99,7 @@ class RefreshTokenServiceTests {
 
         // La durée maximale a été réduite depuis : le jeton n'a pas expiré mais la session si
         clock.set(LOGIN.plus(Duration.ofDays(11)));
-        var shorterSessions = service(Duration.ofDays(10));
+        var shorterSessions = createService(Duration.ofDays(10));
 
         assertThatThrownBy(() -> shorterSessions.rotate(rotated.value()))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -116,7 +116,7 @@ class RefreshTokenServiceTests {
         assertThat(byHash.get(hash(second.value())).getFamilyCreatedAt()).isEqualTo(LOGIN);
     }
 
-    private RefreshTokenService service(Duration maxSessionAge) {
+    private RefreshTokenService createService(Duration maxSessionAge) {
         return new RefreshTokenService(
                 tokens, users, clock, TTL, Duration.ofSeconds(10), maxSessionAge);
     }

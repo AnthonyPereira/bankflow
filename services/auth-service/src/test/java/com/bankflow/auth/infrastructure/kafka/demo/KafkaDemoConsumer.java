@@ -24,13 +24,13 @@ public class KafkaDemoConsumer {
     }
 
     @KafkaListener(topics = KafkaDemoConfig.TOPIC, groupId = "auth-service-demo")
-    void onMessage(String value) {
+    void consumeMessage(String value) {
         var envelope = objectMapper.readValue(value, DemoEnvelope.class);
         received.add(envelope);
         log.info("Événement de démonstration reçu : {}", envelope.eventId());
     }
 
-    public List<DemoEnvelope> received() {
+    public List<DemoEnvelope> getReceived() {
         return List.copyOf(received);
     }
 }

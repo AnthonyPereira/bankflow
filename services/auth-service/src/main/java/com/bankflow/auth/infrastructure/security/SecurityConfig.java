@@ -28,8 +28,8 @@ class SecurityConfig {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Bean("securityFilterChain")
+    SecurityFilterChain createSecurityFilterChain(HttpSecurity http) throws Exception {
         AuthenticationEntryPoint unauthorized =
                 (request, response, exception) -> {
                     response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
@@ -73,7 +73,7 @@ class SecurityConfig {
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->
-                        oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(roleConverter()))
+                        oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(createRoleConverter()))
                                 .authenticationEntryPoint(unauthorized)
                                 .accessDeniedHandler(forbidden))
                 .exceptionHandling(exceptions ->
@@ -84,7 +84,7 @@ class SecurityConfig {
     }
 
     /** Le claim {@code role} contient déjà le préfixe ROLE_ attendu par Spring Security. */
-    private static JwtAuthenticationConverter roleConverter() {
+    private static JwtAuthenticationConverter createRoleConverter() {
         var authorities = new JwtGrantedAuthoritiesConverter();
         authorities.setAuthoritiesClaimName("role");
         authorities.setAuthorityPrefix("");

@@ -29,7 +29,7 @@ class KafkaDemoIntegrationTests {
 
         await().atMost(Duration.ofSeconds(30))
                 .untilAsserted(() ->
-                        assertThat(consumer.received())
+                        assertThat(consumer.getReceived())
                                 .anySatisfy(event -> {
                                     assertThat(event.payload()).containsEntry("message", message);
                                     assertThat(event.eventId()).isNotNull();

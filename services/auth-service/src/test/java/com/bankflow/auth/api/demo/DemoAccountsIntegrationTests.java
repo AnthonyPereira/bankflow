@@ -13,10 +13,10 @@ class DemoAccountsIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void listeLesComptesDeDemonstrationSansAuthentification() throws Exception {
-        var response = send(request("/auth/demo-accounts").GET());
+        var response = send(buildRequest("/auth/demo-accounts").GET());
 
         assertThat(response.statusCode()).isEqualTo(200);
-        var accounts = json(response);
+        var accounts = parseJson(response);
         assertThat(accounts).hasSize(2);
         assertThat(accounts.get(0).get("email").asString()).isEqualTo("demo.client@bankflow.local");
         assertThat(accounts.get(0).get("role").asString()).isEqualTo("ROLE_CLIENT");
@@ -34,11 +34,11 @@ class DemoAccountsIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void chaqueCompteAfficheePermetDeSeConnecter() throws Exception {
-        for (var account : json(send(request("/auth/demo-accounts").GET()))) {
+        for (var account : parseJson(send(buildRequest("/auth/demo-accounts").GET()))) {
             var login =
                     postJson(
                             "/auth/login",
-                            credentials(
+                            buildCredentials(
                                     account.get("email").asString(),
                                     account.get("password").asString()));
 

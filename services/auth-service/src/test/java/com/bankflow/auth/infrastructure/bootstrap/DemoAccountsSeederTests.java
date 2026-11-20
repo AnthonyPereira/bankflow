@@ -24,7 +24,7 @@ class DemoAccountsSeederTests {
 
     @Test
     void creeLeClientEtLAdministrateurDeDemonstration() {
-        seeder(true).run(null);
+        createSeeder(true).run(null);
 
         var saved = ArgumentCaptor.forClass(User.class);
         verify(users, times(2)).save(saved.capture());
@@ -45,19 +45,19 @@ class DemoAccountsSeederTests {
     void neModifiePasUnCompteExistant() {
         when(users.existsByEmail(any())).thenReturn(true);
 
-        seeder(true).run(null);
+        createSeeder(true).run(null);
 
         verify(users, never()).save(any());
     }
 
     @Test
     void neCreeRienQuandLaDemonstrationEstDesactivee() {
-        seeder(false).run(null);
+        createSeeder(false).run(null);
 
         verify(users, never()).save(any());
     }
 
-    private DemoAccountsSeeder seeder(boolean enabled) {
+    private DemoAccountsSeeder createSeeder(boolean enabled) {
         return new DemoAccountsSeeder(
                 new DemoAccounts(enabled),
                 users,

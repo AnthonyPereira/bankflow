@@ -27,19 +27,19 @@ public abstract class AuthApiTestSupport {
     @Value("${local.server.port}")
     private int port;
 
-    protected static String uniqueEmail() {
+    protected static String generateUniqueEmail() {
         return "utilisateur-" + UUID.randomUUID() + "@bankflow.test";
     }
 
-    protected static JsonNode json(HttpResponse<String> response) {
+    protected static JsonNode parseJson(HttpResponse<String> response) {
         return JSON.readTree(response.body());
     }
 
-    protected static String credentials(String email, String password) {
+    protected static String buildCredentials(String email, String password) {
         return JSON.writeValueAsString(java.util.Map.of("email", email, "password", password));
     }
 
-    protected HttpRequest.Builder request(String path) {
+    protected HttpRequest.Builder buildRequest(String path) {
         return HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path));
     }
 
@@ -49,12 +49,12 @@ public abstract class AuthApiTestSupport {
 
     protected HttpResponse<String> postJson(String path, String body) throws Exception {
         return send(
-                request(path)
+                buildRequest(path)
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(body)));
     }
 
     protected HttpResponse<String> register(String email, String password) throws Exception {
-        return postJson("/auth/register", credentials(email, password));
+        return postJson("/auth/register", buildCredentials(email, password));
     }
 }

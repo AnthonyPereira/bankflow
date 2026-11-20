@@ -18,13 +18,13 @@ class RegisterIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void inscriptionCreeUnClientAvecUnMotDePasseHache() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
 
         var response = register(email, VALID_PASSWORD);
 
         assertThat(response.statusCode()).isEqualTo(201);
-        assertThat(json(response).get("email").asString()).isEqualTo(email);
-        assertThat(json(response).get("role").asString()).isEqualTo("ROLE_CLIENT");
+        assertThat(parseJson(response).get("email").asString()).isEqualTo(email);
+        assertThat(parseJson(response).get("role").asString()).isEqualTo("ROLE_CLIENT");
         assertThat(response.body()).doesNotContain("password", VALID_PASSWORD);
 
         User stored = users.findByEmail(email).orElseThrow();
@@ -35,7 +35,7 @@ class RegisterIntegrationTests extends AuthApiTestSupport {
 
     @Test
     void unEmailDupliqueEstRefuseQuelleQueSoitSaCasse() throws Exception {
-        var email = uniqueEmail();
+        var email = generateUniqueEmail();
         register(email, VALID_PASSWORD);
 
         var response = register(email.toUpperCase(Locale.ROOT), VALID_PASSWORD);
@@ -50,20 +50,20 @@ class RegisterIntegrationTests extends AuthApiTestSupport {
         var response = register("pas-un-email", VALID_PASSWORD);
 
         assertThat(response.statusCode()).isEqualTo(400);
-        assertThat(json(response).get("errors").has("email")).isTrue();
+        assertThat(parseJson(response).get("errors").has("email")).isTrue();
     }
 
     @Test
     void unMotDePasseTropCourtEstRefuse() throws Exception {
-        var response = register(uniqueEmail(), "trop-court");
+        var response = register(generateUniqueEmail(), "trop-court");
 
         assertThat(response.statusCode()).isEqualTo(400);
-        assertThat(json(response).get("errors").has("password")).isTrue();
+        assertThat(parseJson(response).get("errors").has("password")).isTrue();
     }
 
     @Test
     void unMotDePasseDePlusDe72OctetsEstRefuse() throws Exception {
-        var response = register(uniqueEmail(), "é".repeat(37));
+        var response = register(generateUniqueEmail(), "é".repeat(37));
 
         assertThat(response.statusCode()).isEqualTo(400);
     }

@@ -21,7 +21,7 @@ final class RsaKeyLoader {
     private RsaKeyLoader() {}
 
     /** Lit une clé privée PKCS#8 encodée en Base64 et en déduit la clé publique. */
-    static RSAKey fromBase64(String encodedPrivateKey, String keyId) {
+    static RSAKey loadFromBase64(String encodedPrivateKey, String keyId) {
         try {
             var keyFactory = KeyFactory.getInstance("RSA");
             var der = Base64.getDecoder().decode(encodedPrivateKey.strip());

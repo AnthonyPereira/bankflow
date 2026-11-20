@@ -18,14 +18,14 @@ class RefreshCookies {
     }
 
     String create(String value, Duration timeToLive) {
-        return base(value).maxAge(timeToLive).build().toString();
+        return buildBaseCookie(value).maxAge(timeToLive).build().toString();
     }
 
     String clear() {
-        return base("").maxAge(Duration.ZERO).build().toString();
+        return buildBaseCookie("").maxAge(Duration.ZERO).build().toString();
     }
 
-    private ResponseCookie.ResponseCookieBuilder base(String value) {
+    private ResponseCookie.ResponseCookieBuilder buildBaseCookie(String value) {
         return ResponseCookie.from(NAME, value)
                 .httpOnly(true)
                 .secure(secure)
