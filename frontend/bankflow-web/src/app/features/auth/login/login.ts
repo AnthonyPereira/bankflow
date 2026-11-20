@@ -14,6 +14,11 @@ import { AuthCard } from '../auth-card/auth-card';
 
 const DEFAULT_DESTINATION = '/tableau-de-bord';
 
+/** État de navigation transmis par l'inscription quand la connexion automatique a échoué. */
+export interface LoginNavigationState {
+  registeredEmail: string;
+}
+
 @Component({
   selector: 'app-login',
   imports: [
@@ -36,10 +41,17 @@ export class Login {
   /** Page demandée avant la redirection vers la connexion. */
   readonly returnUrl = input<string>();
 
+  private readonly registeredEmail = readRegisteredEmail(this.router);
+
   protected readonly form = inject(NonNullableFormBuilder).group({
-    email: ['', [Validators.required, Validators.email]],
+    email: [this.registeredEmail ?? '', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+  protected readonly infoMessage = signal(
+    this.registeredEmail
+      ? 'Votre compte a été créé. Connectez-vous pour accéder à votre espace.'
+      : null,
+  );
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly passwordVisible = signal(false);
@@ -61,6 +73,7 @@ export class Login {
       return;
     }
     this.submitting.set(true);
+    this.infoMessage.set(null);
     this.errorMessage.set(null);
     this.auth
       .login(this.form.getRawValue())
@@ -80,4 +93,10 @@ export class Login {
     const url = this.returnUrl();
     return url?.startsWith('/') && !url.startsWith('//') ? url : DEFAULT_DESTINATION;
   }
+}
+
+/** L'état de navigation n'existe que pendant la navigation qui construit le composant. */
+function readRegisteredEmail(router: Router): string | null {
+  const email: unknown = router.currentNavigation()?.extras.state?.['registeredEmail'];
+  return typeof email === 'string' ? email : null;
 }

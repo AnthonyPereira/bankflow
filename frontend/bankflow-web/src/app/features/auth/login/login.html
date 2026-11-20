@@ -1,5 +1,8 @@
 <app-auth-card heading="Connexion" intro="Accédez à votre espace BankFlow.">
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (infoMessage(); as message) {
+      <p class="form-info" role="status">{{ message }}</p>
+    }
     @if (errorMessage(); as message) {
       <p class="form-error" role="alert">{{ message }}</p>
     }

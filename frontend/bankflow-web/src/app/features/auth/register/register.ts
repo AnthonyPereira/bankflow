@@ -12,9 +12,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
-import { finalize, switchMap } from 'rxjs';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AuthCard } from '../auth-card/auth-card';
+import type { LoginNavigationState } from '../login/login';
 
 const PASSWORD_MIN_LENGTH = 12;
 const PASSWORD_MAX_BYTES = 72;
@@ -63,7 +64,15 @@ export class Register {
     this.auth
       .register(credentials)
       .pipe(
-        switchMap(() => this.auth.login(credentials)),
+        switchMap(() =>
+          this.auth.login(credentials).pipe(
+            // Le compte est créé : un nouvel essai d'inscription échouerait, place à la connexion.
+            catchError(() => {
+              this.redirectToLogin(credentials.email);
+              return EMPTY;
+            }),
+          ),
+        ),
         finalize(() => this.submitting.set(false)),
       )
       .subscribe({
@@ -76,5 +85,11 @@ export class Register {
           }
         },
       });
+  }
+
+  /** L'email passe par l'état de navigation, et non par l'URL, pour ne pas finir dans les logs. */
+  private redirectToLogin(email: string): void {
+    const state: LoginNavigationState = { registeredEmail: email };
+    void this.router.navigateByUrl('/connexion', { state });
   }
 }
