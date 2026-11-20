@@ -38,7 +38,8 @@ public class AccessTokenService {
                         .issuedAt(now)
                         .expiresAt(now.plus(properties.accessTokenTtl()))
                         .build();
-        var header = JwsHeader.with(SignatureAlgorithm.RS256).keyId(properties.keyId()).build();
+        // L'encodeur ajoute le kid de la clé de signature, éphémère ou fournie
+        var header = JwsHeader.with(SignatureAlgorithm.RS256).build();
         var token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims));
         return new AccessToken(token.getTokenValue(), properties.accessTokenTtl().toSeconds());
     }

@@ -47,12 +47,13 @@ public class LoginService {
      * la même façon et dans un temps comparable, grâce au hachage leurre.
      */
     public User authenticate(String email, String password) {
+        // Une seule lecture de l'horloge : le verrou est jugé à l'instant où il est posé
+        var now = clock.instant();
         var user = users.findByEmail(User.normalizeEmail(email)).orElse(null);
-        if (user == null || !user.isEnabled() || user.isLockedAt(clock.instant())) {
+        if (user == null || !user.isEnabled() || user.isLockedAt(now)) {
             throw createRejectionAfterDecoyHash(password);
         }
 
-        var now = clock.instant();
         // La tentative est comptée avant la vérification : un échec n'a plus rien à écrire
         var reserved =
                 users.reserveLoginAttempt(user.getId(), now, maxAttempts, now.plus(lockDuration));
@@ -63,7 +64,7 @@ public class LoginService {
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
-        users.resetFailedLogins(user.getId(), clock.instant());
+        users.resetFailedLogins(user.getId(), now);
         return user;
     }
 

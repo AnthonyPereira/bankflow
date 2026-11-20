@@ -2,6 +2,7 @@ package com.bankflow.auth.application.token;
 
 import com.bankflow.auth.domain.token.RefreshToken;
 import com.bankflow.auth.domain.token.RefreshTokenRepository;
+import com.bankflow.auth.domain.token.RevocationReason;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;
 import java.nio.charset.StandardCharsets;
@@ -71,10 +72,14 @@ public class RefreshTokenService {
                         .orElseThrow(InvalidRefreshTokenException::new);
 
         if (token.isRevoked()) {
-            if (!token.isReuseSuspectedAt(now, reuseGrace)) {
+            // Un autre onglet vient de faire tourner ce jeton et la session reste ouverte
+            if (token.isInRotationGraceAt(now, reuseGrace)
+                    && tokens.existsByFamilyIdAndRevokedAtIsNull(token.getFamilyId())) {
                 throw InvalidRefreshTokenException.createForConcurrentRotation();
             }
-            tokens.revokeFamily(token.getFamilyId(), now);
+            // Jeton remplacé présenté trop tard : vol possible. Après une déconnexion ou une
+            // révocation, la famille l'est déjà et la requête est simplement refusée.
+            tokens.revokeFamily(token.getFamilyId(), now, RevocationReason.REUSE_DETECTED);
             throw new InvalidRefreshTokenException();
         }
         // Les rotations ne prolongent pas une session au-delà de sa durée de vie absolue
@@ -83,11 +88,11 @@ public class RefreshTokenService {
         }
         var user = users.findById(token.getUserId()).filter(User::isEnabled).orElse(null);
         if (user == null) {
-            tokens.revokeFamily(token.getFamilyId(), now);
+            tokens.revokeFamily(token.getFamilyId(), now, RevocationReason.ACCOUNT_DISABLED);
             throw new InvalidRefreshTokenException();
         }
 
-        token.revoke(now);
+        token.revokeForRotation(now);
         return new Rotation(
                 user,
                 issueInFamily(user.getId(), token.getFamilyId(), token.getFamilyCreatedAt(), now));
@@ -97,14 +102,21 @@ public class RefreshTokenService {
     @Transactional
     public void revoke(String rawToken) {
         tokens.findByTokenHash(hash(rawToken))
-                .ifPresent(token -> tokens.revokeFamily(token.getFamilyId(), clock.instant()));
+                .ifPresent(token ->
+                        tokens.revokeFamily(
+                                token.getFamilyId(), clock.instant(), RevocationReason.LOGOUT));
     }
 
-    /** Les jetons expirés ne servent plus : ils sont supprimés une fois par jour. */
+    /**
+     * Supprime une fois par jour les jetons qui ne servent plus. Les jetons révoqués sont gardés
+     * jusqu'à la fin de leur session (30 jours) et non jusqu'à leur expiration (7 jours) : leur
+     * réutilisation doit révoquer la famille tant qu'elle peut être active.
+     */
     @Scheduled(cron = "${bankflow.refresh.purge-cron}")
     @Transactional
     public void purgeExpired() {
-        tokens.deleteExpiredBefore(clock.instant());
+        var now = clock.instant();
+        tokens.deleteObsolete(now, now.minus(maxSessionAge));
     }
 
     /** Le jeton n'expire jamais après la fin de la session : le cookie suit la même échéance. */

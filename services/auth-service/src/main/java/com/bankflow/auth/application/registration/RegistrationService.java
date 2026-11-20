@@ -6,6 +6,7 @@ import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRegistered;
 import com.bankflow.auth.domain.user.UserRepository;
 import java.time.Clock;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Inscrit un nouvel utilisateur avec le rôle client. */
 @Service
 public class RegistrationService {
+
+    private static final String EMAIL_UNIQUE_CONSTRAINT = "uk_users_email";
 
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
@@ -50,9 +53,24 @@ public class RegistrationService {
             // saveAndFlush révèle ici un doublon créé par une inscription simultanée
             users.saveAndFlush(user);
         } catch (DataIntegrityViolationException exception) {
-            throw new EmailAlreadyUsedException();
+            // Toute autre violation (colonne trop longue, contrainte CHECK…) reste une erreur
+            if (isEmailUniquenessViolation(exception)) {
+                throw new EmailAlreadyUsedException();
+            }
+            throw exception;
         }
         events.publishEvent(new UserRegistered(user.getId(), user.getEmail(), now));
         return user;
+    }
+
+    /** Contrainte {@code uk_users_email} de la migration V2. */
+    private static boolean isEmailUniquenessViolation(DataIntegrityViolationException exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation
+                    && EMAIL_UNIQUE_CONSTRAINT.equalsIgnoreCase(violation.getConstraintName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

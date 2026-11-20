@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class UserTests {
 
@@ -37,12 +39,32 @@ class UserTests {
     }
 
     @Test
-    void unCompteDeDemonstrationGardeSonRoleSansPrivilegeParticulier() {
-        var user =
+    void unCompteDeDemonstrationGardeLeRoleDemande() {
+        var admin =
                 User.registerDemo(
                         "demo.admin@bankflow.local", "{bcrypt}x", Role.ROLE_ADMIN, CREATED);
+        var client =
+                User.registerDemo(
+                        "demo.client@bankflow.local", "{bcrypt}x", Role.ROLE_CLIENT, CREATED);
 
-        assertThat(user.getRole()).isEqualTo(Role.ROLE_ADMIN);
-        assertThat(user.isLockedAt(LATER)).isFalse();
+        assertThat(admin.getRole()).isEqualTo(Role.ROLE_ADMIN);
+        assertThat(client.getRole()).isEqualTo(Role.ROLE_CLIENT);
+    }
+
+    /** Aucun privilège particulier : le verrou temporaire s'applique comme à tout compte. */
+    @Test
+    void unCompteDeDemonstrationVerrouilleEstTraiteCommeUnCompteOrdinaire() {
+        var demo =
+                User.registerDemo(
+                        "demo.admin@bankflow.local", "{bcrypt}x", Role.ROLE_ADMIN, CREATED);
+        var ordinary = User.register("admin@bankflow.test", "{bcrypt}x", Role.ROLE_ADMIN, CREATED);
+        for (var user : List.of(demo, ordinary)) {
+            ReflectionTestUtils.setField(user, "lockedUntil", LATER);
+        }
+
+        for (var user : List.of(demo, ordinary)) {
+            assertThat(user.isLockedAt(CREATED)).isTrue();
+            assertThat(user.isLockedAt(LATER)).isFalse();
+        }
     }
 }

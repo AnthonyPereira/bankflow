@@ -55,6 +55,13 @@ class LoginIntegrationTests extends AuthApiTestSupport {
         assertThat(jwt.getExpiresAt())
                 .isCloseTo(Instant.now().plusSeconds(900), within(30, ChronoUnit.SECONDS));
         assertThat(jwt.getClaims().keySet()).doesNotContain("email", "password");
+        assertThat(jwt.getId()).isNotBlank();
+
+        // Le kid du jeton désigne une clé publiée : la Gateway la retrouve dans le JWKS
+        var kid = (String) jwt.getHeaders().get("kid");
+        var jwks = parseJson(send(buildRequest("/.well-known/jwks.json"))).get("keys");
+        assertThat(kid).startsWith("bankflow-1-");
+        assertThat(jwks.valueStream().map(key -> key.get("kid").asString())).containsExactly(kid);
     }
 
     @Test
