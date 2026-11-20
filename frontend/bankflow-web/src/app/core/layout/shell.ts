@@ -39,11 +39,11 @@ export class Shell {
       .pipe(map((state) => state.matches)),
     { initialValue: false },
   );
-  protected readonly menuOpen = signal(false);
-  protected readonly isNavOpened = computed(() => !this.isCompact() || this.menuOpen());
+  protected readonly isMenuOpen = signal(false);
+  protected readonly isNavOpened = computed(() => !this.isCompact() || this.isMenuOpen());
 
   protected closeMenu(): void {
-    this.menuOpen.set(false);
+    this.isMenuOpen.set(false);
   }
 
   protected logout(): void {
