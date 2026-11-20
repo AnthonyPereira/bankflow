@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import java.util.List;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -27,6 +28,12 @@ class JwtConfig {
 
     private static final Logger log = LoggerFactory.getLogger(JwtConfig.class);
 
+    /**
+     * Une clé éphémère reçoit un {@code kid} unique : après un redémarrage, la Gateway et les
+     * autres services voient un {@code kid} inconnu et rechargent le JWKS, au lieu de refuser les
+     * nouveaux jetons avec l'ancienne clé gardée en cache. Une clé fournie garde le {@code kid}
+     * configuré.
+     */
     @Bean("jwtSigningKey")
     RSAKey createJwtSigningKey(JwtProperties properties, Environment environment) {
         if (properties.privateKey() != null && !properties.privateKey().isBlank()) {
@@ -36,7 +43,7 @@ class JwtConfig {
             throw new IllegalStateException("JWT_PRIVATE_KEY est obligatoire avec prod-sim.");
         }
         log.warn("JWT_PRIVATE_KEY est vide : une clé éphémère est générée pour ce démarrage.");
-        return RsaKeyLoader.generate(properties.keyId());
+        return RsaKeyLoader.generate(properties.keyId() + "-" + UUID.randomUUID());
     }
 
     @Bean("jwtEncoder")

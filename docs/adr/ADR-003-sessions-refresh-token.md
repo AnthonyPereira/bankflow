@@ -54,6 +54,10 @@ Sans borne, chaque rotation repartirait sur 7 jours : un utilisateur (ou un vole
 
 La clé privée RSA est fournie par la variable `JWT_PRIVATE_KEY`. Elle est obligatoire avec le profil `prod-sim`. En développement et en test, une clé éphémère est générée au démarrage si la variable est vide.
 
+- Une clé fournie est publiée sous le `kid` configuré (`JWT_KEY_ID`, `bankflow-1` par défaut).
+- Une clé éphémère reçoit un `kid` unique à chaque démarrage (`<JWT_KEY_ID>-<UUID>`). La Gateway et les services gardent le JWKS en cache et ne le rechargent que pour un `kid` inconnu : avec un `kid` fixe, ils refuseraient tous les nouveaux jetons après un redémarrage, jusqu'à l'expiration de leur cache.
+- Chaque access token porte dans son en-tête le `kid` de la clé qui l'a signé.
+
 ## 3. Alternatives écartées
 
 | Alternative | Raison du rejet |
@@ -76,4 +80,4 @@ La clé privée RSA est fournie par la variable `JWT_PRIVATE_KEY`. Elle est obli
 - Un vol de refresh token non détecté donne accès au compte jusqu'à 30 jours au plus.
 - Un utilisateur actif doit se reconnecter au moins tous les 30 jours.
 - La table des refresh tokens grandit : les jetons expirés sont purgés chaque nuit (`bankflow.refresh.purge-cron`).
-- Un redémarrage avec une clé éphémère invalide les access tokens en cours, ce qui reste acceptable hors `prod-sim`.
+- Un redémarrage avec une clé éphémère invalide les access tokens en cours, ce qui reste acceptable hors `prod-sim`. Grâce au `kid` unique, les jetons émis après le redémarrage sont acceptés dès que la Gateway a rechargé le JWKS.
