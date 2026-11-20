@@ -65,7 +65,7 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 
 ## État d'avancement (2026-11-20)
 
-**MVP 1 (`0.1.0`)** : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005 et BF-016 sont terminés sur `develop`.
+**MVP 1 publiée en `0.1.0`** (tag `v0.1.0`, fusionnée dans `main` le 2026-11-20, voir [CHANGELOG](CHANGELOG.md)) : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005 et BF-016 sont terminés.
 
 Les dernières étapes, toutes fusionnées dans `develop` avec une CI verte :
 - **#35** : Spring Boot 4.2.0 et Spring Cloud 2026.0.0 en GA (BF-001-01 terminé).
@@ -76,6 +76,6 @@ Les secrets `DEPLOY_DISPATCH_TOKEN` (bankflow) et `GHCR_PULL_TOKEN` (deploy-plat
 
 ### Prochaines étapes
 
-1. **Release `0.1.0`**. L'utilisateur relit d'abord l'historique. Ensuite : `release/0.1.0` depuis `develop`, montée de version (pom.xml, package.json), CHANGELOG, fusion dans `main` (ce qui déclenche la mise en ligne), tag `v0.1.0`, puis report dans `develop`. Il faudra vérifier en ligne que seuls le front et `/api` répondent (BF-023-16).
+1. **Après la release `0.1.0`** : vérifier en ligne que seuls le front et `/api` répondent, puis cocher BF-023-16.
 2. **Option proposée** : exclure les comptes de démo du verrouillage après 5 échecs de connexion, puisque n'importe qui peut aujourd'hui les bloquer 15 minutes.
 3. **MVP 2 (`0.2.0`)** : BF-006 (Customer Service), puis BF-007 à BF-009 (comptes, dépôts et retraits, virements), puis BF-017 (écrans Angular).
