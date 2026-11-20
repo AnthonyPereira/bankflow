@@ -1,15 +1,25 @@
 package com.bankflow.auth.api.demo;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bankflow.auth.AuthApiTestSupport;
+import com.bankflow.auth.domain.user.Role;
+import com.bankflow.auth.domain.user.User;
+import com.bankflow.auth.domain.user.UserRepository;
+import java.time.Instant;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 class DemoAccountsIntegrationTests extends AuthApiTestSupport {
 
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private UserRepository users;
+    @Autowired private PasswordEncoder passwordEncoder;
 
     @Test
     void listeLesComptesDeDemonstrationSansAuthentification() throws Exception {
@@ -27,9 +37,38 @@ class DemoAccountsIntegrationTests extends AuthApiTestSupport {
     void lesComptesDeDemonstrationSontMarquesCommeTelsEnBase() {
         var demo =
                 jdbcTemplate.queryForList(
-                        "SELECT email FROM users WHERE demo ORDER BY email", String.class);
+                        // Les tests créent aussi leurs propres comptes de démonstration
+                        "SELECT email FROM users WHERE demo AND email LIKE '%@bankflow.local'"
+                                + " ORDER BY email",
+                        String.class);
 
         assertThat(demo).containsExactly("demo.admin@bankflow.local", "demo.client@bankflow.local");
+    }
+
+    @Test
+    void laBaseRefuseDeDesactiverUnCompteDeDemonstration() {
+        var email = "demo-" + UUID.randomUUID() + "@bankflow.test";
+        users.save(
+                User.registerDemo(
+                        email,
+                        passwordEncoder.encode("un-mot-de-passe-solide"),
+                        Role.ROLE_CLIENT,
+                        Instant.now()));
+        try {
+            assertThatThrownBy(() ->
+                            jdbcTemplate.update(
+                                    "UPDATE users SET enabled = FALSE WHERE email = ?", email))
+                    .isInstanceOf(DataIntegrityViolationException.class)
+                    .hasMessageContaining("users_demo_always_enabled");
+            assertThat(
+                            jdbcTemplate.queryForObject(
+                                    "SELECT enabled FROM users WHERE email = ?",
+                                    Boolean.class,
+                                    email))
+                    .isTrue();
+        } finally {
+            jdbcTemplate.update("DELETE FROM users WHERE email = ?", email);
+        }
     }
 
     @Test

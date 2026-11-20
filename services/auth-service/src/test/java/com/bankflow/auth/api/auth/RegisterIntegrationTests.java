@@ -6,6 +6,7 @@ import com.bankflow.auth.AuthApiTestSupport;
 import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;
+import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,21 @@ class RegisterIntegrationTests extends AuthApiTestSupport {
         assertThat(response.statusCode()).isEqualTo(409);
         assertThat(response.headers().firstValue("Content-Type").orElseThrow())
                 .contains("application/problem+json");
+    }
+
+    @Test
+    void uneAdresseDeDemonstrationEstRefuseeCommeUnEmailDejaUtilise() throws Exception {
+        var email = generateUniqueEmail();
+        register(email, VALID_PASSWORD);
+        var duplicate = register(email, VALID_PASSWORD);
+
+        for (var demo : List.of("demo.client@bankflow.local", "Demo.Admin@BankFlow.local")) {
+            var response = register(demo, VALID_PASSWORD);
+
+            assertThat(response.statusCode()).isEqualTo(409);
+            assertThat(parseJson(response).get("detail"))
+                    .isEqualTo(parseJson(duplicate).get("detail"));
+        }
     }
 
     @Test
