@@ -60,6 +60,8 @@ bankflow:
   refresh:
     ttl: P7D
     reuse-grace: PT10S
+    # Durée de vie absolue d'une session : au-delà, il faut se reconnecter malgré les rotations
+    max-session-age: P30D
     cookie-secure: ${REFRESH_COOKIE_SECURE:true}
     purge-cron: "0 30 3 * * *"
 

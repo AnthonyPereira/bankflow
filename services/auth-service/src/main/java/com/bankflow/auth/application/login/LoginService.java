@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Vérifie les identifiants et verrouille temporairement un compte après trop d'échecs. */
 @Service
@@ -34,10 +35,16 @@ public class LoginService {
         this.decoyHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
-    /** Chaque échec écrit son compteur dans sa propre transaction, qui survit à l'exception. */
+    /**
+     * La ligne de l'utilisateur reste verrouillée entre la lecture du compteur et son écriture. Des
+     * tentatives simultanées ne peuvent donc pas dépasser le nombre d'essais autorisé. Le compteur
+     * d'échecs doit être validé malgré l'exception levée ensuite, d'où {@code noRollbackFor}.
+     */
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public User authenticate(String email, String password) {
+        var user = users.findByEmailForUpdate(User.normalizeEmail(email)).orElse(null);
+        // L'heure est lue après l'attente éventuelle du verrou
         var now = clock.instant();
-        var user = users.findByEmail(User.normalizeEmail(email)).orElse(null);
 
         if (user == null || !user.isEnabled() || user.isLockedAt(now)) {
             // Le hachage inutile égalise le temps de réponse : il ne révèle pas si le compte existe

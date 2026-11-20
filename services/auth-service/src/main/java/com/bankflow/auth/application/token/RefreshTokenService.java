@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
@@ -33,6 +34,7 @@ public class RefreshTokenService {
     private final Clock clock;
     private final Duration timeToLive;
     private final Duration reuseGrace;
+    private final Duration maxSessionAge;
     private final SecureRandom random = new SecureRandom();
 
     RefreshTokenService(
@@ -40,18 +42,21 @@ public class RefreshTokenService {
             UserRepository users,
             Clock clock,
             @Value("${bankflow.refresh.ttl}") Duration timeToLive,
-            @Value("${bankflow.refresh.reuse-grace}") Duration reuseGrace) {
+            @Value("${bankflow.refresh.reuse-grace}") Duration reuseGrace,
+            @Value("${bankflow.refresh.max-session-age}") Duration maxSessionAge) {
         this.tokens = tokens;
         this.users = users;
         this.clock = clock;
         this.timeToLive = timeToLive;
         this.reuseGrace = reuseGrace;
+        this.maxSessionAge = maxSessionAge;
     }
 
     /** Ouvre une nouvelle famille de jetons à la connexion. */
     @Transactional
     public IssuedRefreshToken issue(UUID userId) {
-        return issueInFamily(userId, UUID.randomUUID());
+        var now = clock.instant();
+        return issueInFamily(userId, UUID.randomUUID(), now, now);
     }
 
     /**
@@ -72,7 +77,8 @@ public class RefreshTokenService {
             tokens.revokeFamily(token.getFamilyId(), now);
             throw new InvalidRefreshTokenException();
         }
-        if (token.isExpiredAt(now)) {
+        // Les rotations ne prolongent pas une session au-delà de sa durée de vie absolue
+        if (token.isExpiredAt(now) || token.isSessionExpiredAt(now, maxSessionAge)) {
             throw new InvalidRefreshTokenException();
         }
         var user = users.findById(token.getUserId()).filter(User::isEnabled).orElse(null);
@@ -82,7 +88,9 @@ public class RefreshTokenService {
         }
 
         token.revoke(now);
-        return new Rotation(user, issueInFamily(user.getId(), token.getFamilyId()));
+        return new Rotation(
+                user,
+                issueInFamily(user.getId(), token.getFamilyId(), token.getFamilyCreatedAt(), now));
     }
 
     /** Termine la session associée au jeton. Un jeton inconnu est ignoré. */
@@ -99,13 +107,21 @@ public class RefreshTokenService {
         tokens.deleteExpiredBefore(clock.instant());
     }
 
-    private IssuedRefreshToken issueInFamily(UUID userId, UUID familyId) {
+    /** Le jeton n'expire jamais après la fin de la session : le cookie suit la même échéance. */
+    private IssuedRefreshToken issueInFamily(
+            UUID userId, UUID familyId, Instant familyCreatedAt, Instant now) {
         var bytes = new byte[TOKEN_BYTES];
         random.nextBytes(bytes);
         var rawToken = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        var now = clock.instant();
-        tokens.save(new RefreshToken(userId, familyId, hash(rawToken), now.plus(timeToLive), now));
-        return new IssuedRefreshToken(rawToken, timeToLive);
+        var sessionEnd = familyCreatedAt.plus(maxSessionAge);
+        var expiresAt = now.plus(timeToLive);
+        if (expiresAt.isAfter(sessionEnd)) {
+            expiresAt = sessionEnd;
+        }
+        tokens.save(
+                new RefreshToken(
+                        userId, familyId, familyCreatedAt, hash(rawToken), expiresAt, now));
+        return new IssuedRefreshToken(rawToken, Duration.between(now, expiresAt));
     }
 
     private static String hash(String rawToken) {

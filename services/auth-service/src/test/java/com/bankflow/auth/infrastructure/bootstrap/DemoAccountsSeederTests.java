@@ -34,7 +34,11 @@ class DemoAccountsSeederTests {
                         tuple("demo.client@bankflow.local", Role.ROLE_CLIENT),
                         tuple("demo.admin@bankflow.local", Role.ROLE_ADMIN));
         assertThat(saved.getAllValues())
-                .allSatisfy(user -> assertThat(user.getPasswordHash()).startsWith("{bcrypt}"));
+                .allSatisfy(user -> {
+                    assertThat(user.getPasswordHash()).startsWith("{bcrypt}");
+                    assertThat(user.isDemo()).isTrue();
+                    assertThat(user.isEnabled()).isTrue();
+                });
     }
 
     @Test
