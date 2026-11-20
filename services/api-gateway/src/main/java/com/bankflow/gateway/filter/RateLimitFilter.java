@@ -9,9 +9,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -19,7 +21,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.UriUtils;
 
 /**
  * Limite par adresse IP le débit des routes sensibles. Les compteurs restent en mémoire, ce qui
@@ -28,6 +32,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 class RateLimitFilter extends OncePerRequestFilter {
+
+    private static final Pattern PATH_PARAMETERS = Pattern.compile(";[^/]*");
+    private static final Pattern REPEATED_SLASHES = Pattern.compile("/{2,}");
 
     private final Map<String, Long> limitsPerMinute;
 
@@ -85,8 +92,18 @@ class RateLimitFilter extends OncePerRequestFilter {
                 .build();
     }
 
+    /**
+     * Ramène le chemin à la forme que comprendra le service en aval. Sans cela, {@code
+     * /api/auth/%6Cogin} aurait son propre compteur alors que l'Auth Service le décode en {@code
+     * /auth/login}. Ce filtre passe avant le pare-feu de Spring Security : il ne peut donc pas
+     * compter sur lui pour écarter les chemins non normalisés.
+     */
     private static String normalizedPath(HttpServletRequest request) {
-        var path = request.getRequestURI();
+        var raw = request.getRequestURI().substring(request.getContextPath().length());
+        // Les paramètres de segment (;x=1) sont retirés avant le décodage, comme le fait Spring MVC
+        var withoutParameters = PATH_PARAMETERS.matcher(raw).replaceAll("");
+        var decoded = UriUtils.decode(withoutParameters, StandardCharsets.UTF_8);
+        var path = StringUtils.cleanPath(REPEATED_SLASHES.matcher(decoded).replaceAll("/"));
         return path.length() > 1 && path.endsWith("/")
                 ? path.substring(0, path.length() - 1)
                 : path;

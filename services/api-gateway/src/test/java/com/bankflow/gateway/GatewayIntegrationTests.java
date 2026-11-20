@@ -117,6 +117,32 @@ class GatewayIntegrationTests {
     }
 
     @Test
+    void unCheminEncodeNeRendPasPubliqueUneRouteProtegee() throws Exception {
+        var requests =
+                List.of(
+                        get("/api/%61ccounts"),
+                        get("/api/auth/demo-accounts/../../accounts"),
+                        get("/api/auth/demo-accounts/%2E%2E/%2E%2E/accounts"),
+                        post("/api/auth/login/..%2F..%2Faccounts"),
+                        post("/api/auth/login;/../../accounts"),
+                        post("/api/auth//../accounts"));
+        for (var request : requests) {
+            var response = send(request);
+
+            assertThat(response.statusCode()).isIn(400, 401);
+            assertThat(LAST_REQUEST.get()).isNull();
+        }
+    }
+
+    @Test
+    void uneRoutePubliqueEncodeeResteReconnueCommePublique() throws Exception {
+        var response = send(get("/api/auth/demo-account%73"));
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(LAST_REQUEST.get().path()).isEqualTo("/auth/demo-accounts");
+    }
+
+    @Test
     void jwtExpireEstRejete() throws Exception {
         var expired = token(SIGNING_KEY, ISSUER, AUDIENCE, Instant.now().minusSeconds(600));
 
