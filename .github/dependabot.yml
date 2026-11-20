@@ -36,7 +36,12 @@ updates:
     commit-message:
       prefix: ci
 
-  # Images de base épinglées par digest : Dependabot met à jour le tag et le digest ensemble
+  # Images de base épinglées par digest : Dependabot met à jour le tag et le digest ensemble.
+  # Les versions majeures sont ignorées et se montent à la main, après lecture des notes de
+  # version : depuis PostgreSQL 18, PGDATA dépend de la version majeure (/var/lib/postgresql/18),
+  # une 19 démarrerait donc sur une base vide en production au lieu de migrer les données ; une
+  # montée majeure de node, eclipse-temurin (JDK 27 imposé par ADR-001), apache/kafka (format des
+  # métadonnées KRaft) ou nginx demande aussi une vérification manuelle.
   - package-ecosystem: docker
     directories:
       - /infra/docker
@@ -46,5 +51,20 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    commit-message:
+      prefix: build
+
+  # Images du docker-compose.yml local, alignées sur celles de la production (même règle)
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: build
