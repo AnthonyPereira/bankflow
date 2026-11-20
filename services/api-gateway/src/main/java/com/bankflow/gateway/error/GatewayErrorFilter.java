@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,7 @@ class GatewayErrorFilter extends OncePerRequestFilter {
     private final Clock clock;
     private final AtomicLong nextUnavailableWarn = new AtomicLong(Long.MIN_VALUE);
 
+    @Autowired
     GatewayErrorFilter() {
         this(Clock.systemUTC());
     }
