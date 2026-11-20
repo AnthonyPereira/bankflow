@@ -7,6 +7,22 @@ import { AuthService } from './auth.service';
 
 const CREDENTIALS = { email: 'a@bankflow.test', password: 'un-mot-de-passe-solide' };
 const UNAUTHORIZED = { status: 401, statusText: 'Unauthorized' };
+const REFRESH_URL = '/api/auth/refresh';
+
+/** Verrou Web Locks simulé : les demandes passent l'une après l'autre, comme entre onglets. */
+function createFakeLockManager() {
+  let queue = Promise.resolve();
+  const request = vi.fn((_name: string, _options: LockOptions, callback: () => Promise<void>) => {
+    const granted = queue.then(() => callback());
+    queue = granted.catch(() => undefined);
+    return granted;
+  });
+  return { request };
+}
+
+function setLockManager(locks: unknown): void {
+  Object.defineProperty(navigator, 'locks', { value: locks, configurable: true });
+}
 
 describe('AuthService', () => {
   let auth: AuthService;
@@ -22,6 +38,7 @@ describe('AuthService', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    Reflect.deleteProperty(navigator, 'locks');
     http.verify();
   });
 
@@ -65,30 +82,6 @@ describe('AuthService', () => {
     expect(await second).toBe(fakeJwt());
   });
 
-  it('retente une fois un refresh refusé à cause d’un autre onglet', async () => {
-    vi.useFakeTimers();
-    const refresh = firstValueFrom(auth.refresh());
-
-    http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
-    await vi.advanceTimersByTimeAsync(300);
-    http.expectOne('/api/auth/refresh').flush({ accessToken: fakeJwt() });
-
-    expect(await refresh).toBe(fakeJwt());
-    expect(auth.isAuthenticated()).toBe(true);
-  });
-
-  it('ferme la session si le refresh reste refusé', async () => {
-    vi.useFakeTimers();
-    const refresh = firstValueFrom(auth.refresh()).catch((error: unknown) => error);
-
-    http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
-    await vi.advanceTimersByTimeAsync(300);
-    http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
-    await refresh;
-
-    expect(auth.isAuthenticated()).toBe(false);
-  });
-
   it('démarre sans session quand aucune session ne peut être restaurée', async () => {
     const restore = auth.restoreSession();
 
@@ -108,5 +101,89 @@ describe('AuthService', () => {
     await logout;
 
     expect(auth.isAuthenticated()).toBe(false);
+  });
+
+  describe('sans Web Locks', () => {
+    beforeEach(() => {
+      setLockManager(undefined);
+    });
+
+    it('retente une fois un refresh refusé à cause d’un autre onglet', async () => {
+      vi.useFakeTimers();
+      const refresh = firstValueFrom(auth.refresh());
+
+      http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
+      await vi.advanceTimersByTimeAsync(300);
+      http.expectOne('/api/auth/refresh').flush({ accessToken: fakeJwt() });
+
+      expect(await refresh).toBe(fakeJwt());
+      expect(auth.isAuthenticated()).toBe(true);
+    });
+
+    it('ferme la session si le refresh reste refusé', async () => {
+      vi.useFakeTimers();
+      const refresh = firstValueFrom(auth.refresh()).catch((error: unknown) => error);
+
+      http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
+      await vi.advanceTimersByTimeAsync(300);
+      http.expectOne('/api/auth/refresh').flush(null, UNAUTHORIZED);
+      await refresh;
+
+      expect(auth.isAuthenticated()).toBe(false);
+    });
+  });
+
+  describe('avec Web Locks', () => {
+    let locks: ReturnType<typeof createFakeLockManager>;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      locks = createFakeLockManager();
+      setLockManager(locks);
+    });
+
+    it("ne fait qu'un appel pour un visiteur sans session", async () => {
+      const restore = auth.restoreSession();
+      await vi.advanceTimersByTimeAsync(0);
+
+      http.expectOne(REFRESH_URL).flush(null, UNAUTHORIZED);
+      await expect(restore).resolves.toBeUndefined();
+      await vi.advanceTimersByTimeAsync(1000);
+
+      http.expectNone(REFRESH_URL);
+      expect(locks.request).toHaveBeenCalledTimes(1);
+      expect(locks.request.mock.calls[0][0]).toBe('bankflow-refresh');
+      expect(auth.isAuthenticated()).toBe(false);
+    });
+
+    it('fait passer les onglets chacun à son tour, avec le cookie renouvelé', async () => {
+      const otherTab = TestBed.runInInjectionContext(() => new AuthService());
+      const first = firstValueFrom(auth.refresh());
+      const second = firstValueFrom(otherTab.refresh());
+      await vi.advanceTimersByTimeAsync(0);
+
+      // Le second onglet attend que le premier ait reçu son nouveau cookie.
+      http.expectOne(REFRESH_URL).flush({ accessToken: fakeJwt('ROLE_CLIENT', 'onglet-1') });
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne(REFRESH_URL).flush({ accessToken: fakeJwt('ROLE_CLIENT', 'onglet-2') });
+
+      expect(await first).toBe(fakeJwt('ROLE_CLIENT', 'onglet-1'));
+      expect(await second).toBe(fakeJwt('ROLE_CLIENT', 'onglet-2'));
+      expect(otherTab.isAuthenticated()).toBe(true);
+    });
+
+    it('libère le verrou quand le refresh échoue', async () => {
+      const otherTab = TestBed.runInInjectionContext(() => new AuthService());
+      const first = firstValueFrom(auth.refresh()).catch((error: unknown) => error);
+      const second = firstValueFrom(otherTab.refresh());
+      await vi.advanceTimersByTimeAsync(0);
+
+      http.expectOne(REFRESH_URL).flush(null, { status: 503, statusText: 'Unavailable' });
+      await first;
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne(REFRESH_URL).flush({ accessToken: fakeJwt() });
+
+      expect(await second).toBe(fakeJwt());
+    });
   });
 });
