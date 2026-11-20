@@ -52,9 +52,9 @@ export class Register {
       [Validators.required, Validators.minLength(PASSWORD_MIN_LENGTH), validateMaxBytes],
     ],
   });
-  protected readonly submitting = signal(false);
+  protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly passwordVisible = signal(false);
+  protected readonly isPasswordVisible = signal(false);
 
   protected submit(): void {
     if (this.form.invalid) {
@@ -62,7 +62,7 @@ export class Register {
       return;
     }
     const credentials = this.form.getRawValue();
-    this.submitting.set(true);
+    this.isSubmitting.set(true);
     this.errorMessage.set(null);
     this.auth
       .register(credentials)
@@ -76,7 +76,7 @@ export class Register {
             }),
           ),
         ),
-        finalize(() => this.submitting.set(false)),
+        finalize(() => this.isSubmitting.set(false)),
       )
       .subscribe({
         next: () => void this.router.navigateByUrl('/tableau-de-bord'),

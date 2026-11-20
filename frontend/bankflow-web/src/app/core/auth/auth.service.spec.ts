@@ -185,5 +185,31 @@ describe('AuthService', () => {
 
       expect(await second).toBe(createFakeJwt());
     });
+
+    it('garde la session obtenue après le délai de restauration si un autre onglet tarde', async () => {
+      let releaseOtherTab!: () => void;
+      void locks.request(
+        'bankflow-refresh',
+        {},
+        () => new Promise<void>((release) => (releaseOtherTab = release)),
+      );
+
+      // L'application démarre sans attendre plus de 5 s l'autre onglet.
+      const restore = auth.restoreSession();
+      await vi.advanceTimersByTimeAsync(5000);
+      await expect(restore).resolves.toBeUndefined();
+      expect(auth.isAuthenticated()).toBe(false);
+      http.expectNone(REFRESH_URL);
+
+      // Une navigation pendant l'attente rejoint le même refresh, toujours en attente du verrou.
+      const navigation = firstValueFrom(auth.refresh());
+      releaseOtherTab();
+      await vi.advanceTimersByTimeAsync(0);
+      http.expectOne(REFRESH_URL).flush({ accessToken: createFakeJwt() });
+
+      expect(await navigation).toBe(createFakeJwt());
+      expect(auth.isAuthenticated()).toBe(true);
+      expect(auth.getAccessToken()).toBe(createFakeJwt());
+    });
   });
 });

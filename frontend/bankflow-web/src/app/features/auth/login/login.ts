@@ -52,10 +52,12 @@ export class Login {
       ? 'Votre compte a été créé. Connectez-vous pour accéder à votre espace.'
       : null,
   );
-  protected readonly submitting = signal(false);
+  protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly passwordVisible = signal(false);
-  protected readonly demoAccounts = toSignal(this.auth.fetchDemoAccounts(), { initialValue: [] });
+  protected readonly isPasswordVisible = signal(false);
+  protected readonly getDemoAccounts = toSignal(this.auth.fetchDemoAccounts(), {
+    initialValue: [],
+  });
 
   protected getRoleLabel(role: Role): string {
     return ROLE_LABELS[role];
@@ -72,12 +74,12 @@ export class Login {
       this.form.markAllAsTouched();
       return;
     }
-    this.submitting.set(true);
+    this.isSubmitting.set(true);
     this.infoMessage.set(null);
     this.errorMessage.set(null);
     this.auth
       .login(this.form.getRawValue())
-      .pipe(finalize(() => this.submitting.set(false)))
+      .pipe(finalize(() => this.isSubmitting.set(false)))
       .subscribe({
         next: () => void this.router.navigateByUrl(this.resolveDestination()),
         error: (error: HttpErrorResponse) => {
