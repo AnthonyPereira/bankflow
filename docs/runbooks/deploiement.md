@@ -6,7 +6,7 @@ BankFlow est publié sur `https://bankflow.anthonypereira.dpdns.org`. Chaque fus
 
 - **Toute la CI doit réussir**, y compris le job `sonarqube` : il attend la Quality Gate SonarCloud (`sonar.qualitygate.wait=true`) et échoue si elle est rouge. Une Quality Gate rouge ou une panne de SonarCloud sur `main` bloque donc la mise en ligne, même quand les tests sont verts (marche à suivre dans le [dépannage](#dépannage)). Ce job ne tourne que si la variable `SONAR_CI_ENABLED` vaut `true` (voir `sonarqube.md`).
 - **Le job `CI verte sur main` attend la CI du commit poussé** (40 minutes au plus) en interrogeant l'API GitHub. Si la CI échoue ou n'a pas fini à temps, le run s'arrête sans rien publier. Il n'utilise pas `workflow_run`, qui s'exécute avec les secrets dans le contexte d'un run pouvant venir d'une PR : le checkout ne récupère que le commit poussé sur `main`.
-- **Les déploiements passent l'un après l'autre** (`concurrency: deploiement`). Si plusieurs commits arrivent sur `main` coup sur coup, ils sont déployés dans l'ordre et le dernier l'emporte.
+- **Les déploiements passent l'un après l'autre** (`concurrency: deploiement`). Si plusieurs commits arrivent sur `main` coup sur coup, GitHub ne garde qu'un run en attente : les runs intermédiaires sont annulés et le dernier commit l'emporte. Comme la CI annule aussi son run précédent sur `main`, le run de déploiement d'un commit vite remplacé finit en rouge (« La CI de <sha> a échoué (cancelled) ») : c'est attendu.
 - Le lancement manuel (`workflow_dispatch`) obéit à la même règle : il attend une CI verte sur push pour le dernier commit de `main`, job `sonarqube` compris.
 
 Ce dépôt reste public : **n'y enregistrez jamais de runner**, car une PR de fork pourrait exécuter du code sur le serveur. Le compose de production se trouve dans `apps/bankflow/` du dépôt `deploy-platform`.
@@ -104,9 +104,8 @@ docker compose -p bankflow exec -T postgres pg_dump -U bankflow_admin auth_db > 
 | `à définir dans ~/apps/bankflow/.env` | Secret manquant, voir l'étape 4 |
 | `denied` sur `ghcr.io` | Secret `GHCR_PULL_TOKEN` absent ou expiré |
 | `demande de mise en ligne` échoue | Secret `DEPLOY_DISPATCH_TOKEN` absent ou expiré |
-| `Déploiement` ne démarre pas après une fusion | CI rouge ou annulée sur `main` : corriger, ou relancer la CI |
-| Job `sonarqube` rouge sur `main`, tests verts | Quality Gate rouge : ouvrir le lien SonarCloud du job, corriger le code par un hotfix (`CONTRIBUTING.md`) ; la CI du correctif relance le déploiement |
-| Job `sonarqube` en erreur ou en délai dépassé sans Quality Gate | Panne de SonarCloud : consulter la page de statut de SonarCloud, puis relancer le job depuis le run de CI (Re-run failed jobs) ; une fois la CI verte, le déploiement part seul, ou par lancement manuel |
+| Job `sonarqube` rouge sur `main`, tests verts | Quality Gate rouge : ouvrir le lien SonarCloud du job, corriger le code par un hotfix (`CONTRIBUTING.md`) ; la fusion du correctif relance le déploiement |
+| Job `sonarqube` en erreur ou en délai dépassé sans Quality Gate | Panne de SonarCloud : consulter la page de statut de SonarCloud, puis relancer le job depuis le run de CI (Re-run failed jobs). Une fois la CI verte, relancer aussi `Déploiement` (Re-run ou lancement manuel) : son job `CI verte sur main` a déjà échoué et ne repart pas seul |
 | `La CI de <sha> a échoué` | Le commit de `main` n'a pas de CI verte (job `sonarqube` compris) : la rendre verte, puis relancer `Déploiement` |
 | `La CI de <sha> n'est pas terminée après 40 minutes` | CI bloquée ou très lente : vérifier le run de CI, puis relancer `Déploiement` une fois qu'elle est verte |
 | Adresse en 404 | Le conteneur `frontend` n'est pas sur le réseau `web` |

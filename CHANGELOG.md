@@ -49,10 +49,10 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 - Les alertes de sécurité remontées par SonarQube sont traitées. #33
 - Corrections issues de la revue de code de la release :
   - **Gateway** : la limite de débit s'applique au chemin décodé et normalisé. Un chemin encodé comme `/api/auth/%6Cogin` contournait la limite de la connexion, de l'inscription et des virements.
-  - **Connexion** : le compteur d'échecs est verrouillé en base (`SELECT … FOR UPDATE`), si bien que des tentatives simultanées ne dépassent plus les 5 essais autorisés.
+  - **Connexion** : chaque tentative est réservée par un `UPDATE` atomique avant la vérification du mot de passe. Des tentatives simultanées ne dépassent donc plus les 5 essais autorisés, et aucun verrou n'est tenu pendant le hachage.
   - **Sessions** : une session dure au plus 30 jours (`bankflow.refresh.max-session-age`), même si elle est renouvelée en continu ([ADR-003](docs/adr/ADR-003-sessions-refresh-token.md) §2.4).
   - **`/auth/me`** : la route refuse la session d'un compte supprimé ou désactivé, avec un message adapté.
-  - **Comptes de démonstration** : ils suivent les mêmes règles que les autres comptes, mais ne peuvent jamais être désactivés définitivement.
+  - **Comptes de démonstration** : ils suivent les mêmes règles que les autres comptes, mais ne peuvent jamais être désactivés définitivement (règle du domaine, contrainte en base `users_demo_always_enabled`, 409). Leurs adresses sont réservées : personne ne peut s'inscrire avec.
   - **Frontend** :
     - un visiteur anonyme ne fait plus qu'un appel de refresh au démarrage, grâce à un verrou partagé entre onglets ;
     - si l'inscription réussit mais que la connexion automatique échoue, l'utilisateur est renvoyé vers la page de connexion ;

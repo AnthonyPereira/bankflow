@@ -38,7 +38,8 @@ jobs:
           [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::SHA invalide"; exit 1; }
           url="repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&event=push&branch=main"
           for _ in $(seq 1 80); do
-            etat="$(gh api "$url" --jq '.workflow_runs | sort_by(.created_at) | last | "\(.status // "")/\(.conclusion // "")"')"
+            # Une erreur passagère de l'API ne doit pas faire échouer l'attente
+            etat="$(gh api "$url" --jq '.workflow_runs | sort_by(.created_at) | last | "\(.status // "")/\(.conclusion // "")"')" || etat=""
             case "$etat" in
               completed/success)
                 echo "version=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
