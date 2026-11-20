@@ -32,7 +32,11 @@ class IdentityHeadersFilter extends OncePerRequestFilter {
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication instanceof JwtAuthenticationToken token) {
-            wrapped.set(USER_ID_HEADER, token.getToken().getSubject());
+            // getSubject est @Nullable : un null ferait échouer le ConcurrentHashMap des en-têtes
+            var subject = token.getToken().getSubject();
+            if (subject != null) {
+                wrapped.set(USER_ID_HEADER, subject);
+            }
             var role = token.getToken().getClaimAsString("role");
             if (role != null) {
                 wrapped.set(USER_ROLE_HEADER, role);
