@@ -41,6 +41,23 @@ describe('Accounts', () => {
     return { http, container, user: userEvent.setup() };
   }
 
+  it('titre la page « Mes comptes » pour un client', async () => {
+    await setup(page([ACCOUNT]));
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Mes comptes' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Vos comptes' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Ouvrir un compte' })).toBeTruthy();
+  });
+
+  it('titre la page « Tous les comptes » pour un administrateur', async () => {
+    await setup(page([ACCOUNT]), true);
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Tous les comptes' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Comptes des clients' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Ouvrir un compte à votre nom' })).toBeTruthy();
+    expect(screen.queryByText('Mes comptes')).toBeNull();
+  });
+
   it('affiche les comptes avec IBAN groupé, solde formaté et libellé par défaut', async () => {
     await setup(page([ACCOUNT, { ...ACCOUNT, id: 'a2', label: 'Vacances', status: 'CLOSED' }]));
 

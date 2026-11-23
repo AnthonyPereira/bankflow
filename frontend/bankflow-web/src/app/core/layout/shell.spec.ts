@@ -59,6 +59,17 @@ describe('Shell', () => {
     expect(screen.getByRole('link', { name: 'Administration' })).toBeTruthy();
   });
 
+  it('nomme le menu des comptes selon le rôle', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Mes comptes' })).toBeTruthy();
+  });
+
+  it('nomme le menu « Tous les comptes » pour un administrateur', async () => {
+    await setup({ isAdmin: true });
+    expect(screen.getByRole('link', { name: 'Tous les comptes' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Mes comptes' })).toBeNull();
+  });
+
   it('déconnecte puis renvoie vers la connexion', async () => {
     const { router, user } = await setup();
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
