@@ -132,25 +132,7 @@ class TransferApiIntegrationTests extends BankingApiTestSupport {
                 .containsExactlyInAnyOrder(
                         "CUSTOMER_ACCOUNT:DEBIT:" + source.accountId(),
                         "CUSTOMER_ACCOUNT:CREDIT:" + destination.accountId());
-        assertInvariants(source.accountId());
-        assertInvariants(destination.accountId());
-    }
-
-    /** Solde = crédits − débits du compte ; sur toute la base, débits = crédits. */
-    private void assertInvariants(String accountId) {
-        var fromEntries =
-                jdbc.queryForObject(
-                        "SELECT COALESCE(SUM(CASE direction WHEN 'CREDIT' THEN amount ELSE -amount"
-                                + " END), 0) FROM ledger_entries WHERE account_id = ?::uuid",
-                        BigDecimal.class,
-                        accountId);
-        assertThat(balanceOf(accountId)).isEqualByComparingTo(fromEntries);
-        var gap =
-                jdbc.queryForObject(
-                        "SELECT COALESCE(SUM(CASE direction WHEN 'CREDIT' THEN amount ELSE -amount"
-                                + " END), 0) FROM ledger_entries",
-                        BigDecimal.class);
-        assertThat(gap).isEqualByComparingTo("0");
+        assertLedgerInvariants(jdbc, source.accountId(), destination.accountId());
     }
 
     @Test
@@ -392,5 +374,111 @@ class TransferApiIntegrationTests extends BankingApiTestSupport {
         var deposit = sourceHistory.get("content").get(1);
         assertThat(deposit.get("type").asString()).isEqualTo("DEPOSIT");
         assertThat(deposit.get("counterpartyIban").isNull()).isTrue();
+    }
+
+    @Test
+    void sansJetonLesRoutesDeVirementRepondent401() throws Exception {
+        var post =
+                send(
+                        "POST",
+                        "/transfers",
+                        null,
+                        "{\"sourceAccountId\":\"" + UUID.randomUUID() + "\"}",
+                        Map.of("Idempotency-Key", "k"));
+        var get = send("GET", "/transfers/" + UUID.randomUUID(), null, null);
+
+        assertThat(post.statusCode()).isEqualTo(401);
+        assertThat(get.statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    void unClientSuspenduAvecUnIbanInconnuRecoitUn404AvantLe403() throws Exception {
+        var suspended = createHolder("EUR", "100.00");
+        jdbc.update(
+                "UPDATE customer_refs SET status = 'SUSPENDED' WHERE user_id = ?",
+                suspended.userId());
+
+        var response =
+                transfer(
+                        suspended.token(),
+                        suspended.accountId(),
+                        "FR7699999000010000000000000",
+                        "1.00",
+                        "ordre-1");
+
+        assertThat(response.statusCode()).isEqualTo(404);
+        assertThat(codeOf(response)).isEqualTo("DESTINATION_ACCOUNT_NOT_FOUND");
+    }
+
+    @Test
+    void unAdminNePeutPasVirerDepuisLeCompteDUnClientSuspendu() throws Exception {
+        var suspended = createHolder("EUR", "100.00");
+        var destination = createHolder("EUR", null);
+        jdbc.update(
+                "UPDATE customer_refs SET status = 'SUSPENDED' WHERE user_id = ?",
+                suspended.userId());
+
+        var response =
+                transfer(
+                        createToken(UUID.randomUUID(), ADMIN),
+                        suspended.accountId(),
+                        destination.iban(),
+                        "10.00",
+                        "admin-suspendu");
+
+        assertThat(response.statusCode()).isEqualTo(403);
+        assertThat(codeOf(response)).isEqualTo("CUSTOMER_SUSPENDED");
+        assertThat(balanceOf(suspended.accountId())).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void laMemeCleEnvoyeeParDeuxActeursDonneDeuxVirementsDistincts() throws Exception {
+        var source = createHolder("EUR", "100.00");
+        var destination = createHolder("EUR", null);
+        var adminToken = createToken(UUID.randomUUID(), ADMIN);
+
+        var byClient =
+                transfer(
+                        source.token(),
+                        source.accountId(),
+                        destination.iban(),
+                        "10.00",
+                        "partagee");
+        var byAdmin =
+                transfer(adminToken, source.accountId(), destination.iban(), "10.00", "partagee");
+
+        assertThat(byClient.statusCode()).isEqualTo(201);
+        assertThat(byAdmin.statusCode()).isEqualTo(201);
+        assertThat(byAdmin.headers().firstValue("Idempotent-Replayed")).isEmpty();
+        assertThat(parseJson(byAdmin).get("id").asString())
+                .isNotEqualTo(parseJson(byClient).get("id").asString());
+        assertThat(countTransfersFrom(source.accountId())).isEqualTo(2);
+        assertThat(balanceOf(source.accountId())).isEqualByComparingTo("80.00");
+    }
+
+    @Test
+    void unVirementEntreDeuxComptesDuMemeClientMontreLaSourceAuTitulaire() throws Exception {
+        var first = createHolder("EUR", "100.00");
+        var secondAccount =
+                parseJson(send("POST", "/accounts", first.token(), "{\"currency\":\"EUR\"}"));
+
+        var response =
+                transfer(
+                        first.token(),
+                        first.accountId(),
+                        secondAccount.get("accountNumber").asString(),
+                        "25.00",
+                        "interne");
+        var read =
+                send(
+                        "GET",
+                        "/transfers/" + parseJson(response).get("id").asString(),
+                        first.token(),
+                        null);
+
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(parseJson(read).get("sourceAccountId").asString()).isEqualTo(first.accountId());
+        assertThat(parseJson(read).get("destinationAccountId").asString())
+                .isEqualTo(secondAccount.get("id").asString());
     }
 }

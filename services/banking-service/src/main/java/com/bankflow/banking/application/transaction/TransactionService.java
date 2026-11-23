@@ -109,7 +109,7 @@ public class TransactionService {
                                         tx,
                                         compensatedBy.get(tx.getId()),
                                         compensatedTypes.get(tx.getCompensatesTransactionId()))
-                                .withCounterpartyIban(counterparties.get(tx.getId())))
+                                .copyWithCounterpartyIban(counterparties.get(tx.getId())))
                 .toList();
     }
 

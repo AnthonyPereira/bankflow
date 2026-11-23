@@ -18,9 +18,11 @@ import com.bankflow.banking.domain.transfer.Transfer;
 import com.bankflow.banking.domain.transfer.TransferRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,19 +130,17 @@ public class TransferService {
         var transfer = transfers.findById(transferId).orElseThrow(TransferNotFoundException::new);
         var source = accounts.findById(transfer.getSourceAccountId()).orElseThrow();
         var destination = accounts.findById(transfer.getDestinationAccountId()).orElseThrow();
-        var sourceVisible = actor.isAdmin() || isOwner(actor, source);
-        if (!sourceVisible && !isOwner(actor, destination)) {
+        var ownerId = customerRefs.findByUserId(actor.userId()).map(CustomerRef::getCustomerId);
+        var sourceVisible = actor.isAdmin() || isOwner(ownerId, source);
+        if (!sourceVisible && !isOwner(ownerId, destination)) {
             throw new TransferNotFoundException();
         }
         return new TransferView(
                 transfer, source.getAccountNumber(), destination.getAccountNumber(), sourceVisible);
     }
 
-    private boolean isOwner(Actor actor, Account account) {
-        return customerRefs
-                .findByUserId(actor.userId())
-                .map(ref -> ref.getCustomerId().equals(account.getCustomerId()))
-                .orElse(false);
+    private static boolean isOwner(Optional<UUID> ownerId, Account account) {
+        return ownerId.map(id -> id.equals(account.getCustomerId())).orElse(false);
     }
 
     /**
@@ -169,7 +169,7 @@ public class TransferService {
             TransactionType type,
             LedgerDirection direction,
             Actor actor,
-            java.time.Instant now) {
+            Instant now) {
         var leg =
                 Transaction.createTransferLeg(
                         account.getId(),

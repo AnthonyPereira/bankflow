@@ -84,6 +84,7 @@ class TransferConcurrencyIntegrationTests extends BankingApiTestSupport {
                                 a.accountId(),
                                 b.accountId()))
                 .isEqualTo(50L);
+        assertLedgerInvariants(jdbc, a.accountId(), b.accountId());
     }
 
     @Test
@@ -107,6 +108,7 @@ class TransferConcurrencyIntegrationTests extends BankingApiTestSupport {
                                 .isEqualTo("INSUFFICIENT_FUNDS"));
         assertThat(balanceOf(source.accountId())).isEqualByComparingTo("0");
         assertThat(balanceOf(destination.accountId())).isEqualByComparingTo("100.01");
+        assertLedgerInvariants(jdbc, source.accountId(), destination.accountId());
     }
 
     private static List<HttpResponse<String>> runConcurrently(

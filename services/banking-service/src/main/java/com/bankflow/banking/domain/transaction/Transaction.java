@@ -113,6 +113,9 @@ public class Transaction implements Persistable<UUID> {
             String description,
             Actor actor,
             Instant now) {
+        if (type != TransactionType.TRANSFER_IN && type != TransactionType.TRANSFER_OUT) {
+            throw new IllegalArgumentException("Type de virement attendu : " + type);
+        }
         return new Transaction(
                 accountId, type, amount, balanceAfter, transferId, null, description, actor, now);
     }

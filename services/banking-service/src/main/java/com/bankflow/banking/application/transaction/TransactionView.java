@@ -21,7 +21,7 @@ public record TransactionView(
     }
 
     /** Ajoute l'IBAN de l'autre compte d'un virement. */
-    public TransactionView withCounterpartyIban(String iban) {
+    public TransactionView copyWithCounterpartyIban(String iban) {
         return new TransactionView(transaction, compensatedByTransactionId, direction, iban);
     }
 

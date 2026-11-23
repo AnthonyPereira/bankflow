@@ -63,6 +63,10 @@ class TransferAtomicityIntegrationTests extends BankingApiTestSupport {
                                         + " 'panne'",
                                 Long.class))
                 .isZero();
+        // Seules les écritures du dépôt initial subsistent
+        assertThat(count("ledger_entries", "account_id", sourceId)).isEqualTo(1L);
+        assertThat(count("ledger_entries", "account_id", destinationId)).isZero();
+        assertLedgerInvariants(jdbc, sourceId, destinationId);
     }
 
     private long count(String table, String column, String id) {
