@@ -194,6 +194,76 @@ describe('CustomerDetail', () => {
     http.expectNone((r) => r.method === 'POST');
   });
 
+  it('désactive l’ouverture d’un compte pour un client suspendu, avec une note', async () => {
+    await setup({ ...CUSTOMER, status: 'SUSPENDED' });
+
+    expect(
+      screen.getByText('Ce client est suspendu : réactivez-le pour lui ouvrir un compte.'),
+    ).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'Ouvrir le compte' }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect((screen.getByLabelText('Devise') as HTMLSelectElement).disabled).toBe(true);
+  });
+
+  it('affiche l’erreur d’une réactivation refusée et recharge le client', async () => {
+    const { http, user } = await setup({ ...CUSTOMER, status: 'SUSPENDED' });
+
+    await user.click(screen.getByRole('button', { name: 'Réactiver' }));
+    http
+      .expectOne(`${CUSTOMER_URL}/status`)
+      .flush(
+        { code: 'CUSTOMER_NOT_FOUND', detail: 'autre' },
+        { status: 404, statusText: 'Not Found' },
+      );
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Client introuvable.');
+    await waitFor(() => http.expectOne(CUSTOMER_URL).flush(CUSTOMER));
+    expect(await screen.findByRole('button', { name: 'Suspendre' })).toBeTruthy();
+  });
+
+  it('recharge le client après un conflit (409) sur le changement de statut', async () => {
+    const { http, user } = await setup();
+
+    await user.click(screen.getByRole('button', { name: 'Suspendre' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirmer la suspension' }));
+    http
+      .expectOne(`${CUSTOMER_URL}/status`)
+      .flush({ detail: 'Conflit' }, { status: 409, statusText: 'Conflict' });
+
+    await waitFor(() => http.expectOne(CUSTOMER_URL).flush({ ...CUSTOMER, status: 'SUSPENDED' }));
+    expect(await screen.findByRole('button', { name: 'Réactiver' })).toBeTruthy();
+  });
+
+  it('ignore la réponse d’une requête partie pour un autre client et remet l’état à zéro', async () => {
+    const { fixture } = await render(CustomerDetail, {
+      inputs: { id: 'c1' },
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne(CUSTOMER_URL).flush(CUSTOMER);
+    http.expectOne((r) => r.url === ACCOUNTS_URL).flush(accountsPage([]));
+    await screen.findByRole('heading', { level: 1, name: 'Ada Lovelace' });
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText('Libellé (facultatif)'), 'Voyage');
+    await user.click(screen.getByRole('button', { name: 'Ouvrir le compte' }));
+    const pending = http.expectOne((r) => r.method === 'POST' && r.url === ACCOUNTS_URL);
+
+    fixture.componentRef.setInput('id', 'c2');
+    fixture.detectChanges();
+    http.expectOne('/api/customers/c2').flush({ ...CUSTOMER, id: 'c2', firstName: 'Bob' });
+    http.expectOne((r) => r.method === 'GET' && r.url === ACCOUNTS_URL).flush(accountsPage([]));
+    await screen.findByRole('heading', { level: 1, name: 'Bob Lovelace' });
+
+    pending.flush({ ...ACCOUNT }, { status: 201, statusText: 'Created' });
+    await fixture.whenStable();
+
+    expect(screen.queryByText(ACCOUNT_OPENED_MESSAGE)).toBeNull();
+    expect((screen.getByLabelText('Libellé (facultatif)') as HTMLInputElement).value).toBe('');
+    http.expectNone((r) => r.method === 'GET' && r.url === ACCOUNTS_URL);
+  });
+
   it('signale un client introuvable', async () => {
     await render(CustomerDetail, {
       inputs: { id: 'c1' },

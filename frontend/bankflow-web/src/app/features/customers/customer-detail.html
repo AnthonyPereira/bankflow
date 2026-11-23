@@ -148,6 +148,9 @@
 
   <section class="panel" aria-labelledby="open-title">
     <h2 id="open-title">Ouvrir un compte pour ce client</h2>
+    @if (isSuspended()) {
+      <p class="hint">Ce client est suspendu : réactivez-le pour lui ouvrir un compte.</p>
+    }
     <form [formGroup]="form" (ngSubmit)="submitAccount()" novalidate>
       <div aria-live="polite">
         @if (successMessage(); as message) {
@@ -175,7 +178,12 @@
         }
       </mat-form-field>
 
-      <button matButton="filled" class="submit" type="submit" [disabled]="isSubmitting()">
+      <button
+        matButton="filled"
+        class="submit"
+        type="submit"
+        [disabled]="isSubmitting() || isSuspended()"
+      >
         {{ isSubmitting() ? 'Ouverture…' : 'Ouvrir le compte' }}
       </button>
     </form>
