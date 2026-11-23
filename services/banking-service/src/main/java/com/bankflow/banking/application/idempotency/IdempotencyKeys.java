@@ -18,8 +18,7 @@ public final class IdempotencyKeys {
     public static void validate(String key, boolean required) {
         if (key == null) {
             if (required) {
-                throw new InvalidIdempotencyKeyException(
-                        "L'en-tête Idempotency-Key est obligatoire.");
+                throw new InvalidIdempotencyKeyException("La clé d'idempotence est obligatoire.");
             }
             return;
         }

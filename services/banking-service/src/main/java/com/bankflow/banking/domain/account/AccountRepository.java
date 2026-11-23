@@ -43,6 +43,10 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
         long getOpenAccounts();
     }
 
+    /** Identifiant seul : ne charge pas le compte, donc ne fige pas son état avant le verrou. */
+    @Query("select a.id from Account a where a.accountNumber = :accountNumber")
+    Optional<UUID> findIdByAccountNumber(@Param("accountNumber") String accountNumber);
+
     /** Verrouille le compte pour sérialiser ses modifications (clôture, puis opérations). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Account a where a.id = :id")

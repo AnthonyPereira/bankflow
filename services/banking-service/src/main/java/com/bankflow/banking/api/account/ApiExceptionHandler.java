@@ -11,6 +11,10 @@ import com.bankflow.banking.application.idempotency.IdempotencyKeys;
 import com.bankflow.banking.application.idempotency.InvalidIdempotencyKeyException;
 import com.bankflow.banking.application.transaction.InvalidPeriodException;
 import com.bankflow.banking.application.transaction.TransactionNotFoundException;
+import com.bankflow.banking.application.transfer.DestinationAccountNotFoundException;
+import com.bankflow.banking.application.transfer.SameAccountTransferException;
+import com.bankflow.banking.application.transfer.TransferCurrencyMismatchException;
+import com.bankflow.banking.application.transfer.TransferNotFoundException;
 import com.bankflow.banking.domain.account.AccountBalanceNotZeroException;
 import com.bankflow.banking.domain.account.AccountClosedException;
 import com.bankflow.banking.domain.account.InsufficientFundsException;
@@ -99,6 +103,30 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(TransactionNotFoundException.class)
     ProblemDetail handleTransactionNotFound(TransactionNotFoundException exception) {
         return buildProblem(HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", exception);
+    }
+
+    @ExceptionHandler(DestinationAccountNotFoundException.class)
+    ProblemDetail handleDestinationAccountNotFound(DestinationAccountNotFoundException exception) {
+        return buildProblem(HttpStatus.NOT_FOUND, "DESTINATION_ACCOUNT_NOT_FOUND", exception);
+    }
+
+    @ExceptionHandler(TransferNotFoundException.class)
+    ProblemDetail handleTransferNotFound(TransferNotFoundException exception) {
+        return buildProblem(HttpStatus.NOT_FOUND, "TRANSFER_NOT_FOUND", exception);
+    }
+
+    @ExceptionHandler(TransferCurrencyMismatchException.class)
+    ProblemDetail handleTransferCurrencyMismatch(TransferCurrencyMismatchException exception) {
+        return buildProblem(HttpStatus.CONFLICT, "CURRENCY_MISMATCH", exception);
+    }
+
+    @ExceptionHandler(SameAccountTransferException.class)
+    ResponseEntity<Object> handleSameAccountTransfer(
+            SameAccountTransferException exception, WebRequest request) {
+        var errors = new LinkedHashMap<String, String>();
+        errors.put("destinationIban", exception.getMessage());
+        return buildValidationResponse(
+                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(CompensationNotAllowedException.class)

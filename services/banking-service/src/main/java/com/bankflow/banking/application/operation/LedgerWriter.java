@@ -41,4 +41,21 @@ public class LedgerWriter {
                         saved.getCreatedAt()));
         return saved;
     }
+
+    /**
+     * Enregistre un côté de virement avec son unique écriture sur le compte client : l'autre côté
+     * du virement porte l'écriture opposée, la caisse n'intervient pas.
+     */
+    public Transaction saveWithAccountEntry(
+            Transaction transaction, LedgerDirection accountDirection) {
+        var saved = transactions.save(transaction);
+        ledgerEntries.save(
+                LedgerEntry.createForCustomerAccount(
+                        saved.getId(),
+                        saved.getAccountId(),
+                        accountDirection,
+                        saved.getAmount(),
+                        saved.getCreatedAt()));
+        return saved;
+    }
 }

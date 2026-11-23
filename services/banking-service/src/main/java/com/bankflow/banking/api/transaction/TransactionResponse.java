@@ -10,7 +10,8 @@ import java.util.UUID;
 
 /**
  * Opération telle qu'exposée : jamais l'identifiant de la personne qui a agi, seulement son rôle.
- * {@code direction} est le sens pour le compte (CREDIT : il reçoit, DEBIT : il paie).
+ * {@code direction} est le sens pour le compte (CREDIT : il reçoit, DEBIT : il paie). {@code
+ * counterpartyIban} est l'IBAN de l'autre compte d'un virement, sinon null.
  */
 public record TransactionResponse(
         UUID id,
@@ -24,6 +25,7 @@ public record TransactionResponse(
         UUID compensatesTransactionId,
         UUID compensatedByTransactionId,
         String description,
+        String counterpartyIban,
         PerformedByRole performedBy,
         Instant createdAt) {
 
@@ -41,6 +43,7 @@ public record TransactionResponse(
                 transaction.getCompensatesTransactionId(),
                 view.compensatedByTransactionId(),
                 transaction.getDescription(),
+                view.counterpartyIban(),
                 transaction.getPerformedByRole(),
                 transaction.getCreatedAt());
     }
