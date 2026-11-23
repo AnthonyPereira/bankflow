@@ -11,20 +11,25 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.server.PathContainer;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.UriUtils;
+import org.springframework.web.util.pattern.PathPattern;
+import org.springframework.web.util.pattern.PathPatternParser;
 
 /**
  * Limite par adresse IP le débit des routes sensibles (par préfixe /64 en IPv6, voir {@link
@@ -38,7 +43,20 @@ class RateLimitFilter extends OncePerRequestFilter {
     private static final Pattern PATH_PARAMETERS = Pattern.compile(";[^/]*");
     private static final Pattern REPEATED_SLASHES = Pattern.compile("/{2,}");
 
+    // Toutes les opérations bancaires d'une même adresse partagent un seul compteur
+    private static final String OPERATIONS_BUCKET = "operations";
+    private static final List<PathPattern> OPERATION_PATTERNS =
+            Stream.of(
+                            "/api/accounts",
+                            "/api/accounts/*/deposits",
+                            "/api/accounts/*/withdrawals",
+                            "/api/accounts/*/close",
+                            "/api/transactions/*/compensations")
+                    .map(PathPatternParser.defaultInstance::parse)
+                    .toList();
+
     private final Map<String, Long> limitsPerMinute;
+    private final long operationsPerMinute;
 
     // Le cache borné évite qu'une rafale d'adresses différentes remplisse la mémoire
     private final Cache<String, Bucket> buckets =
@@ -50,7 +68,9 @@ class RateLimitFilter extends OncePerRequestFilter {
     RateLimitFilter(
             @Value("${bankflow.rate-limit.login-per-minute}") long login,
             @Value("${bankflow.rate-limit.register-per-minute}") long register,
-            @Value("${bankflow.rate-limit.transfers-per-minute}") long transfers) {
+            @Value("${bankflow.rate-limit.transfers-per-minute}") long transfers,
+            @Value("${bankflow.rate-limit.operations-per-minute}") long operations) {
+        this.operationsPerMinute = operations;
         this.limitsPerMinute =
                 Map.of(
                         "/api/auth/login", login,
@@ -68,13 +88,19 @@ class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
         var path = normalizePath(request);
+        var bucketName = path;
         var perMinute = limitsPerMinute.get(path);
+        if (perMinute == null && isOperation(path)) {
+            bucketName = OPERATIONS_BUCKET;
+            perMinute = operationsPerMinute;
+        }
         if (perMinute == null) {
             chain.doFilter(request, response);
             return;
         }
+        var limit = perMinute;
         var client = ClientAddressKeys.resolveKey(request.getRemoteAddr());
-        var bucket = buckets.get(path + '|' + client, key -> createBucket(perMinute));
+        var bucket = buckets.get(bucketName + '|' + client, key -> createBucket(limit));
         var probe = bucket.tryConsumeAndReturnRemaining(1);
         if (probe.isConsumed()) {
             chain.doFilter(request, response);
@@ -87,6 +113,11 @@ class RateLimitFilter extends OncePerRequestFilter {
                 response,
                 HttpStatus.TOO_MANY_REQUESTS,
                 "Trop de tentatives. Réessayez dans quelques instants.");
+    }
+
+    private static boolean isOperation(String path) {
+        var container = PathContainer.parsePath(path);
+        return OPERATION_PATTERNS.stream().anyMatch(pattern -> pattern.matches(container));
     }
 
     private static Bucket createBucket(long perMinute) {
