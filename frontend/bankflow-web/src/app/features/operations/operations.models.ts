@@ -79,8 +79,3 @@ export function canCompensate(transaction: Transaction): boolean {
     transaction.compensatedByTransactionId === null
   );
 }
-
-/** Un administrateur voit les opérations de tous les clients : le titre le dit, partout où il apparaît. */
-export function getOperationsTitle(isAdmin: boolean): string {
-  return isAdmin ? 'Toutes les opérations' : 'Mes opérations';
-}

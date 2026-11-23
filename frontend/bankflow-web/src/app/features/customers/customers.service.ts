@@ -1,8 +1,9 @@
-import { HttpClient, HttpContext, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SILENT_ERRORS } from '../../core/http/api';
+import { getRoleMessages, translateProblem } from '../../core/http/problem-details';
 import { Account, OpenAccountRequest } from '../accounts/accounts.models';
 import { Customer, CustomerSearch, CustomerStatus, PageResponse } from './customers.models';
 
@@ -11,31 +12,16 @@ const ACCOUNTS_URL = `${environment.apiUrl}/accounts`;
 /** Un client a 5 comptes ouverts au plus : une page suffit. */
 const CUSTOMER_ACCOUNTS_SIZE = 100;
 
-export const UNEXPECTED_CUSTOMER_ERROR = 'Une erreur est survenue. Réessayez plus tard.';
-
+/** Ces écrans sont ceux du conseiller : les messages parlent du client. */
 const ERROR_MESSAGES: Record<string, string> = {
   CUSTOMER_NOT_FOUND: 'Client introuvable.',
-  CUSTOMER_SUSPENDED: "Ce client est suspendu : aucune opération n'est possible.",
-  ACCOUNT_LIMIT_REACHED: 'Ce client a déjà 5 comptes ouverts.',
   DEMO_CUSTOMER_CANNOT_BE_SUSPENDED: 'Un compte de démonstration ne peut pas être suspendu.',
+  ...getRoleMessages(true),
 };
 
 /** Traduit le `code` du ProblemDetail en français, avec repli sur son `detail`. */
 export function getCustomerErrorMessage(error: unknown): string {
-  if (!(error instanceof HttpErrorResponse)) {
-    return UNEXPECTED_CUSTOMER_ERROR;
-  }
-  const body: unknown = error.error;
-  if (typeof body === 'object' && body !== null) {
-    const { code, detail } = body as { code?: unknown; detail?: unknown };
-    if (typeof code === 'string' && code in ERROR_MESSAGES) {
-      return ERROR_MESSAGES[code];
-    }
-    if (typeof detail === 'string' && detail) {
-      return detail;
-    }
-  }
-  return UNEXPECTED_CUSTOMER_ERROR;
+  return translateProblem(error, ERROR_MESSAGES);
 }
 
 /** Les erreurs sont affichées par chaque écran, pas par un message global. */

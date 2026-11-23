@@ -2,11 +2,8 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { SILENT_ERRORS } from '../../core/http/api';
-import {
-  AccountsService,
-  getAccountErrorMessage,
-  UNEXPECTED_ACCOUNT_ERROR,
-} from './accounts.service';
+import { UNEXPECTED_ERROR_MESSAGE } from '../../core/http/problem-details';
+import { AccountsService, getAccountErrorMessage } from './accounts.service';
 
 describe('AccountsService', () => {
   let service: AccountsService;
@@ -40,6 +37,20 @@ describe('AccountsService', () => {
     request.flush({});
   });
 
+  it('lit un compte et le clôture, en gérant lui-même les erreurs', () => {
+    service.getAccount('a1').subscribe();
+    const read = http.expectOne('/api/accounts/a1');
+    expect(read.request.method).toBe('GET');
+    expect(read.request.context.get(SILENT_ERRORS)).toBe(true);
+    read.flush({});
+
+    service.closeAccount('a1').subscribe();
+    const close = http.expectOne('/api/accounts/a1/close');
+    expect(close.request.method).toBe('POST');
+    expect(close.request.context.get(SILENT_ERRORS)).toBe(true);
+    close.flush({});
+  });
+
   it("ouvre un compte avec la devise et le libellé, en gérant lui-même l'erreur", () => {
     service.openAccount({ currency: 'USD', label: 'Voyage' }).subscribe();
 
@@ -61,20 +72,27 @@ describe('getAccountErrorMessage', () => {
       'CUSTOMER_NOT_READY',
       'Votre profil est en cours de création, réessayez dans quelques secondes.',
     ],
-    ['ACCOUNT_LIMIT_REACHED', 'Vous avez atteint la limite de 5 comptes ouverts.'],
-    ['CUSTOMER_SUSPENDED', 'Votre profil est suspendu : contactez un conseiller.'],
   ])('traduit %s', (code, message) => {
-    expect(getAccountErrorMessage(build({ code, detail: 'autre' }))).toBe(message);
+    expect(getAccountErrorMessage(build({ code, detail: 'autre' }), false)).toBe(message);
+  });
+
+  it.each([
+    ['ACCOUNT_LIMIT_REACHED', false, 'Vous avez atteint la limite de 5 comptes ouverts.'],
+    ['ACCOUNT_LIMIT_REACHED', true, 'Ce client a déjà 5 comptes ouverts.'],
+    ['CUSTOMER_SUSPENDED', false, 'Votre profil est suspendu : contactez un conseiller.'],
+    ['CUSTOMER_SUSPENDED', true, "Ce client est suspendu : aucune opération n'est possible."],
+  ])('traduit %s selon le rôle (administrateur : %s)', (code, isAdmin, message) => {
+    expect(getAccountErrorMessage(build({ code }), isAdmin)).toBe(message);
   });
 
   it('se replie sur le detail pour un code inconnu', () => {
-    expect(getAccountErrorMessage(build({ code: 'AUTRE', detail: 'Détail du serveur.' }))).toBe(
-      'Détail du serveur.',
-    );
+    expect(
+      getAccountErrorMessage(build({ code: 'AUTRE', detail: 'Détail du serveur.' }), false),
+    ).toBe('Détail du serveur.');
   });
 
   it('renvoie un message générique sans détail exploitable', () => {
-    expect(getAccountErrorMessage(build(null))).toBe(UNEXPECTED_ACCOUNT_ERROR);
-    expect(getAccountErrorMessage(new Error('x'))).toBe(UNEXPECTED_ACCOUNT_ERROR);
+    expect(getAccountErrorMessage(build(null), false)).toBe(UNEXPECTED_ERROR_MESSAGE);
+    expect(getAccountErrorMessage(new Error('x'), false)).toBe(UNEXPECTED_ERROR_MESSAGE);
   });
 });

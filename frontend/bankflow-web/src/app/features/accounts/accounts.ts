@@ -16,14 +16,14 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AmountPipe } from '../../core/format/amount.pipe';
-import { getRangeLabel } from '../../core/format/page-range';
+import { getAccountsTitle } from '../../core/layout/navigation-labels';
+import { Pager } from '../../core/pagination/pager';
 import {
   Account,
   CURRENCIES,
   Currency,
   DEFAULT_ACCOUNT_LABEL,
   formatIban,
-  getAccountsTitle,
   PageResponse,
 } from './accounts.models';
 import { AccountsService, getAccountErrorMessage } from './accounts.service';
@@ -40,6 +40,7 @@ const CUSTOMER_ID_PREFIX_LENGTH = 8;
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    Pager,
     ReactiveFormsModule,
     RouterLink,
   ],
@@ -84,8 +85,6 @@ export class Accounts {
     return customerId.slice(0, CUSTOMER_ID_PREFIX_LENGTH);
   }
 
-  protected readonly getRangeLabel = getRangeLabel;
-
   protected changePage(pageIndex: number): void {
     this.pageIndex.set(pageIndex);
   }
@@ -116,7 +115,8 @@ export class Accounts {
             this.pageIndex.set(0);
           }
         },
-        error: (error: unknown) => this.errorMessage.set(getAccountErrorMessage(error)),
+        error: (error: unknown) =>
+          this.errorMessage.set(getAccountErrorMessage(error, this.isAdmin())),
       });
   }
 }

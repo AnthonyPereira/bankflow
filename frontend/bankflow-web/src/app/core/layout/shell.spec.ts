@@ -96,6 +96,16 @@ describe('Shell', () => {
     expect(screen.queryByRole('link', { name: 'Mes opérations' })).toBeNull();
   });
 
+  it('propose « Mon profil » à un client', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Mon profil' }).getAttribute('href')).toBe('/profil');
+  });
+
+  it("ne propose pas « Mon profil » à l'administrateur, qui n'a pas de fiche client", async () => {
+    await setup({ isAdmin: true });
+    expect(screen.queryByRole('link', { name: 'Mon profil' })).toBeNull();
+  });
+
   it('déconnecte puis renvoie vers la connexion', async () => {
     const { router, user } = await setup();
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);

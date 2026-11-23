@@ -2,15 +2,9 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { SILENT_ERRORS } from '../../core/http/api';
-import { canCompensate, getOperationsTitle, Transaction } from './operations.models';
-import {
-  getFieldErrors,
-  getOperationErrorMessage,
-  isRetryableError,
-  NETWORK_ERROR_MESSAGE,
-  OperationsService,
-  UNEXPECTED_OPERATION_ERROR,
-} from './operations.service';
+import { canCompensate, Transaction } from './operations.models';
+import { NETWORK_ERROR_MESSAGE, UNEXPECTED_ERROR_MESSAGE } from '../../core/http/problem-details';
+import { getOperationErrorMessage, OperationsService } from './operations.service';
 
 const TRANSACTION: Transaction = {
   id: 't1',
@@ -105,55 +99,45 @@ describe('getOperationErrorMessage', () => {
   it.each([
     ['INSUFFICIENT_FUNDS', 'Le solde est insuffisant.'],
     ['ACCOUNT_CLOSED', 'Ce compte est clôturé.'],
-    ['CUSTOMER_SUSPENDED', "Ce client est suspendu : aucune opération n'est possible."],
     ['IDEMPOTENCY_KEY_REUSED', 'Cette demande a déjà été traitée différemment, recommencez.'],
     ['ALREADY_COMPENSATED', 'Cette opération a déjà été annulée.'],
     ['COMPENSATION_NOT_ALLOWED', 'Cette opération ne peut pas être annulée.'],
     ['CUSTOMER_NOT_FOUND', 'Client introuvable.'],
     ['ACCOUNT_BALANCE_NOT_ZERO', 'Le solde doit être à zéro pour clôturer le compte.'],
-    ['ACCOUNT_LIMIT_REACHED', 'Ce client a déjà 5 comptes ouverts.'],
     ['DESTINATION_ACCOUNT_NOT_FOUND', 'Aucun compte actif ne correspond à cet IBAN.'],
     ['CURRENCY_MISMATCH', 'Les deux comptes doivent avoir la même devise.'],
     ['ACCOUNT_NOT_FOUND', 'Compte introuvable.'],
   ])('traduit %s', (code, message) => {
-    expect(getOperationErrorMessage(build({ code, detail: 'autre' }))).toBe(message);
+    expect(getOperationErrorMessage(build({ code, detail: 'autre' }), false)).toBe(message);
+  });
+
+  it.each([
+    ['CUSTOMER_SUSPENDED', false, 'Votre profil est suspendu : contactez un conseiller.'],
+    ['CUSTOMER_SUSPENDED', true, "Ce client est suspendu : aucune opération n'est possible."],
+    ['ACCOUNT_LIMIT_REACHED', false, 'Vous avez atteint la limite de 5 comptes ouverts.'],
+    ['ACCOUNT_LIMIT_REACHED', true, 'Ce client a déjà 5 comptes ouverts.'],
+  ])('traduit %s selon le rôle (administrateur : %s)', (code, isAdmin, message) => {
+    expect(getOperationErrorMessage(build({ code }), isAdmin)).toBe(message);
   });
 
   it('répond « Compte introuvable. » à un 404 sans code', () => {
-    expect(getOperationErrorMessage(build(null, 404))).toBe('Compte introuvable.');
+    expect(getOperationErrorMessage(build(null, 404), false)).toBe('Compte introuvable.');
   });
 
   it('signale un serveur injoignable', () => {
-    expect(getOperationErrorMessage(build(null, 0))).toBe(NETWORK_ERROR_MESSAGE);
+    expect(getOperationErrorMessage(build(null, 0), false)).toBe(NETWORK_ERROR_MESSAGE);
   });
 
   it('se replie sur le detail puis sur un message générique', () => {
-    expect(getOperationErrorMessage(build({ code: 'AUTRE', detail: 'Détail.' }))).toBe('Détail.');
-    expect(getOperationErrorMessage(build(null, 500))).toBe(UNEXPECTED_OPERATION_ERROR);
-    expect(getOperationErrorMessage(new Error('x'))).toBe(UNEXPECTED_OPERATION_ERROR);
-  });
-
-  it('ne réessaie que sur une erreur réseau ou serveur', () => {
-    expect(isRetryableError(build(null, 0))).toBe(true);
-    expect(isRetryableError(build(null, 503))).toBe(true);
-    expect(isRetryableError(build(null, 409))).toBe(false);
-    expect(isRetryableError(new Error('x'))).toBe(false);
-  });
-
-  it('extrait les erreurs par champ', () => {
-    expect(getFieldErrors(build({ errors: { amount: 'Trop grand.', autre: 3 } }, 400))).toEqual({
-      amount: 'Trop grand.',
-    });
-    expect(getFieldErrors(build(null, 400))).toEqual({});
+    expect(getOperationErrorMessage(build({ code: 'AUTRE', detail: 'Détail.' }), false)).toBe(
+      'Détail.',
+    );
+    expect(getOperationErrorMessage(build(null, 500), false)).toBe(UNEXPECTED_ERROR_MESSAGE);
+    expect(getOperationErrorMessage(new Error('x'), false)).toBe(UNEXPECTED_ERROR_MESSAGE);
   });
 });
 
 describe('modèles des opérations', () => {
-  it('titre selon le rôle', () => {
-    expect(getOperationsTitle(false)).toBe('Mes opérations');
-    expect(getOperationsTitle(true)).toBe('Toutes les opérations');
-  });
-
   it('ne compense qu’un dépôt ou un retrait pas encore annulé', () => {
     expect(canCompensate(TRANSACTION)).toBe(true);
     expect(canCompensate({ ...TRANSACTION, type: 'WITHDRAWAL' })).toBe(true);

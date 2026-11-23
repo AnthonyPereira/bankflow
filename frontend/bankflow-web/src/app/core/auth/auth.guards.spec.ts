@@ -8,7 +8,7 @@ import {
   RouterStateSnapshot,
 } from '@angular/router';
 import { firstValueFrom, Observable, of, Subject } from 'rxjs';
-import { adminGuard, authGuard, guestGuard } from './auth.guards';
+import { adminGuard, authGuard, clientGuard, guestGuard } from './auth.guards';
 import { AuthService } from './auth.service';
 
 describe('guards', () => {
@@ -67,6 +67,23 @@ describe('guards', () => {
     expect(await run(adminGuard)).toBe(true);
   });
 
+  it('clientGuard renvoie un visiteur vers la connexion', async () => {
+    expect(await run(clientGuard)).toBe('/connexion?returnUrl=%2Fcible');
+  });
+
+  it('clientGuard renvoie un administrateur vers son tableau de bord', async () => {
+    isAuthenticated.set(true);
+    isAdmin.set(true);
+
+    expect(await run(clientGuard)).toBe('/tableau-de-bord');
+  });
+
+  it('clientGuard laisse passer un client', async () => {
+    isAuthenticated.set(true);
+
+    expect(await run(clientGuard)).toBe(true);
+  });
+
   it('guestGuard renvoie un utilisateur connecté vers son tableau de bord', async () => {
     isAuthenticated.set(true);
 
@@ -80,6 +97,7 @@ describe('guards', () => {
   it.each([
     ['authGuard', authGuard, true],
     ['adminGuard', adminGuard, '/tableau-de-bord'],
+    ['clientGuard', clientGuard, true],
     ['guestGuard', guestGuard, '/tableau-de-bord'],
   ])('%s attend la fin du refresh en cours avant de décider', async (_name, guard, expected) => {
     const refresh = new Subject<void>();

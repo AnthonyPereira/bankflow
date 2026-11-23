@@ -1,4 +1,10 @@
-<p class="back"><a routerLink="/comptes">← Retour aux comptes</a></p>
+<p class="back">
+  @if (isAdmin() && account.hasValue()) {
+    <a [routerLink]="['/administration/clients', account.value().customerId]">← Fiche du client</a>
+  } @else {
+    <a routerLink="/comptes">← Retour aux comptes</a>
+  }
+</p>
 
 @if (isNotFound()) {
   <section class="panel">
@@ -18,6 +24,14 @@
   <section class="panel" aria-labelledby="summary-title">
     <h2 id="summary-title">Détail du compte</h2>
     <dl>
+      @if (isAdmin()) {
+        <div>
+          <dt>Client</dt>
+          <dd>
+            <a [routerLink]="['/administration/clients', current.customerId]">{{ ownerName() }}</a>
+          </dd>
+        </div>
+      }
       <div>
         <dt>IBAN</dt>
         <dd class="iban">{{ formatIban(current.accountNumber) }}</dd>
@@ -44,7 +58,7 @@
 
     <div aria-live="polite">
       @if (closeMessage(); as message) {
-        <p class="form-info">{{ message }}</p>
+        <p class="form-info close-status" tabindex="-1">{{ message }}</p>
       }
     </div>
     @if (closeError(); as message) {
@@ -268,29 +282,14 @@
             </tbody>
           </table>
         </div>
-        @if (history.totalElements > pageSize) {
-          <nav class="pager" aria-label="Pagination des opérations">
-            <span class="pager-range" aria-live="polite">{{
-              getRangeLabel(pageIndex(), pageSize, history.totalElements)
-            }}</span>
-            <button
-              matButton="outlined"
-              type="button"
-              [disabled]="pageIndex() === 0"
-              (click)="changePage(pageIndex() - 1)"
-            >
-              Page précédente
-            </button>
-            <button
-              matButton="outlined"
-              type="button"
-              [disabled]="pageIndex() >= history.totalPages - 1"
-              (click)="changePage(pageIndex() + 1)"
-            >
-              Page suivante
-            </button>
-          </nav>
-        }
+        <app-pager
+          [pageIndex]="pageIndex()"
+          [pageSize]="pageSize"
+          [totalElements]="history.totalElements"
+          [totalPages]="history.totalPages"
+          label="Pagination des opérations"
+          (pageChange)="changePage($event)"
+        />
       }
     } @else {
       <mat-spinner diameter="32" aria-label="Chargement des opérations" />

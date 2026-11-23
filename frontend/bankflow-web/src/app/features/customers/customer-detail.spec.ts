@@ -95,6 +95,7 @@ describe('CustomerDetail', () => {
     request.flush({ ...CUSTOMER, status: 'SUSPENDED' });
 
     expect(await screen.findByText('Suspendu', { selector: '.badge' })).toBeTruthy();
+    expect(screen.getByText('Client suspendu.').closest('[aria-live="polite"]')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Réactiver' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Confirmer la suspension' })).toBeNull();
   });
@@ -118,6 +119,7 @@ describe('CustomerDetail', () => {
     expect(request.request.body).toEqual({ status: 'ACTIVE' });
     request.flush(CUSTOMER);
     expect(await screen.findByRole('button', { name: 'Suspendre' })).toBeTruthy();
+    expect(screen.getByText('Client réactivé.').closest('[aria-live="polite"]')).toBeTruthy();
   });
 
   it('ne permet pas de suspendre un compte de démonstration', async () => {

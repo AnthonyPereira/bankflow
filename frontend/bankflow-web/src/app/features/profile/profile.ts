@@ -1,10 +1,12 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
   inject,
+  Injector,
   signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -20,6 +22,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { finalize } from 'rxjs';
+import { getFieldErrors, translateProblem } from '../../core/http/problem-details';
 import { Customer, ProfileUpdate, STATUS_LABELS } from './profile.models';
 import { ProfileService } from './profile.service';
 
@@ -58,6 +61,7 @@ export class Profile {
   private readonly service = inject(ProfileService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   private isDestroyed = false;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private retries = 0;
@@ -102,7 +106,10 @@ export class Profile {
     this.errorMessage.set(null);
     this.service
       .updateMyProfile(this.buildUpdate())
-      .pipe(finalize(() => this.isSubmitting.set(false)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isSubmitting.set(false)),
+      )
       .subscribe({
         next: (customer) => {
           this.showCustomer(customer);
@@ -167,30 +174,28 @@ export class Profile {
 
   /** Les erreurs de validation du serveur sont rattachées à leur champ. */
   private showSaveError(error: unknown): void {
-    if (error instanceof HttpErrorResponse && error.status === 404) {
-      this.errorMessage.set(PROFILE_CREATING_MESSAGE);
+    const fieldErrors = getFieldErrors(error);
+    let firstField: ProfileField | null = null;
+    for (const field of PROFILE_FIELDS) {
+      const message = fieldErrors[field];
+      if (message) {
+        const control = this.form.controls[field];
+        control.setErrors({ server: message });
+        control.markAsTouched();
+        firstField ??= field;
+      }
+    }
+    if (firstField) {
+      const selector = `[formControlName="${firstField}"]`;
+      afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(), {
+        injector: this.injector,
+      });
       return;
     }
-    const fieldErrors: unknown = error instanceof HttpErrorResponse ? error.error?.errors : null;
-    if (fieldErrors && typeof fieldErrors === 'object') {
-      const messages = fieldErrors as Record<string, unknown>;
-      let firstField: ProfileField | null = null;
-      for (const field of PROFILE_FIELDS) {
-        const message = messages[field];
-        if (typeof message === 'string') {
-          const control = this.form.controls[field];
-          control.setErrors({ server: message });
-          control.markAsTouched();
-          firstField ??= field;
-        }
-      }
-      if (firstField) {
-        this.host.nativeElement
-          .querySelector<HTMLElement>(`[formControlName="${firstField}"]`)
-          ?.focus();
-        return;
-      }
-    }
-    this.errorMessage.set(SAVE_ERROR_MESSAGE);
+    this.errorMessage.set(
+      error instanceof HttpErrorResponse && error.status === 404
+        ? PROFILE_CREATING_MESSAGE
+        : translateProblem(error, {}, SAVE_ERROR_MESSAGE),
+    );
   }
 }
