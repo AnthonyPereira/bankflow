@@ -76,6 +76,12 @@ jobs:
           - name: auth-service
             context: services/auth-service
             dockerfile: infra/docker/spring-boot.Dockerfile
+          - name: customer-service
+            context: services/customer-service
+            dockerfile: infra/docker/spring-boot.Dockerfile
+          - name: banking-service
+            context: services/banking-service
+            dockerfile: infra/docker/spring-boot.Dockerfile
           - name: postgres
             context: infra/postgres
             dockerfile: infra/postgres/Dockerfile
