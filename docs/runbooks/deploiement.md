@@ -80,7 +80,7 @@ La matrice de `deploy.yml` publie aussi les images `customer-service` et `bankin
 
 Ordre à respecter :
 
-1. Fusionner la PR de `deploy-platform` qui ajoute les deux services au compose, **juste avant** de fusionner la release `0.2.0` dans `main`.
+1. Fusionner la PR de `deploy-platform` qui ajoute les deux services au compose, **juste avant** de fusionner la release `0.2.0` dans `main`. Le compose exige alors les images `customer-service` et `banking-service`, qui n'existent sur GHCR qu'à partir de la `0.2.0` : après cette fusion, un retour arrière vers une version antérieure (`0.1.1`) échoue au téléchargement des images. Pour revenir en arrière, il faut aussi annuler la PR de `deploy-platform`.
 2. Fusionner la release dans `main`, puis attendre la mise en ligne (ou lancer `Déploiement` dans `deploy-platform`).
 
 Variables à connaître (toutes ont une valeur par défaut, rien à ajouter au `.env` en temps normal) :
