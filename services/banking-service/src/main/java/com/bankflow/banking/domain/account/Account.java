@@ -12,8 +12,6 @@ import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /** Compte bancaire d'un client. Le solde ne change que par les opérations des lots suivants. */
 @Entity
@@ -35,7 +33,6 @@ public class Account {
     private String label;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.CHAR)
     @Column(nullable = false, updatable = false, length = 3)
     private Currency currency;
 
