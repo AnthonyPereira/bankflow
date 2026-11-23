@@ -231,6 +231,7 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/banking_db
       DB_USERNAME: banking_user
       DB_PASSWORD: ${BANKING_DB_PASSWORD:?à définir dans .env}
+      DEMO_ACCOUNTS_ENABLED: ${DEMO_ACCOUNTS_ENABLED:-true}
 
   notification-service:
     <<: *spring-service
