@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -19,16 +20,17 @@ import { getRangeLabel } from '../../core/format/page-range';
 import { AccountsService } from '../accounts/accounts.service';
 import { Account, DEFAULT_ACCOUNT_LABEL, PageResponse } from '../accounts/accounts.models';
 import {
+  getAmountSign,
   getOperationsTitle,
   Transaction,
   TRANSACTION_TYPES,
+  TRANSACTIONS_PAGE_SIZE,
   TransactionFilters,
   TransactionType,
   TYPE_LABELS,
 } from './operations.models';
 import { OperationsService } from './operations.service';
 
-export const PAGE_SIZE = 20;
 export const MAX_ACCOUNT_CHOICES = 100;
 export const INVALID_PERIOD_MESSAGE = 'La date de début doit précéder la date de fin.';
 const ID_PREFIX_LENGTH = 8;
@@ -43,6 +45,7 @@ const ID_PREFIX_LENGTH = 8;
     MatInputModule,
     MatProgressSpinnerModule,
     ReactiveFormsModule,
+    RouterLink,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './operations.html',
@@ -54,7 +57,8 @@ export class Operations {
 
   protected readonly isAdmin = inject(AuthService).isAdmin;
   protected readonly title = computed(() => getOperationsTitle(this.isAdmin()));
-  protected readonly pageSize = PAGE_SIZE;
+  protected readonly pageSize = TRANSACTIONS_PAGE_SIZE;
+  protected readonly getAmountSign = getAmountSign;
   protected readonly types = TRANSACTION_TYPES;
   protected readonly typeLabels = TYPE_LABELS;
   protected readonly defaultLabel = DEFAULT_ACCOUNT_LABEL;
@@ -88,7 +92,8 @@ export class Operations {
 
   protected readonly transactions = rxResource({
     params: () => ({ filters: this.filters(), page: this.pageIndex() }),
-    stream: ({ params }) => this.service.listTransactions(params.filters, params.page, PAGE_SIZE),
+    stream: ({ params }) =>
+      this.service.listTransactions(params.filters, params.page, TRANSACTIONS_PAGE_SIZE),
   });
 
   /** Dernière page reçue : elle reste affichée pendant le chargement de la suivante. */

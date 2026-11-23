@@ -23,6 +23,7 @@ const TRANSACTION: Transaction = {
   compensatesTransactionId: null,
   compensatedByTransactionId: null,
   description: null,
+  direction: 'CREDIT',
   performedBy: 'CLIENT',
   createdAt: '2026-11-23T10:00:00Z',
 };

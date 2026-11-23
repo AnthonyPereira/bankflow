@@ -38,6 +38,7 @@ const TRANSACTION: Transaction = {
   compensatesTransactionId: null,
   compensatedByTransactionId: null,
   description: 'Salaire',
+  direction: 'CREDIT',
   performedBy: 'CLIENT',
   createdAt: '2026-11-23T10:00:00Z',
 };
@@ -58,7 +59,7 @@ describe('AccountDetail', () => {
     } = {},
   ) {
     isAdmin.set(options.admin ?? false);
-    await render(AccountDetail, {
+    const { fixture } = await render(AccountDetail, {
       inputs: { id: 'a1' },
       providers: [
         provideHttpClient(),
@@ -73,7 +74,7 @@ describe('AccountDetail', () => {
       .expectOne((r) => r.url === '/api/transactions')
       .flush(page(options.transactions ?? [TRANSACTION], options.total));
     await screen.findByRole('heading', { level: 1, name: options.account?.label ?? 'Vacances' });
-    return { http, user: userEvent.setup() };
+    return { http, fixture, user: userEvent.setup() };
   }
 
   function getDepositField(label: string): HTMLInputElement {
@@ -260,10 +261,133 @@ describe('AccountDetail', () => {
   it('désactive la clôture tant que le solde n’est pas nul', async () => {
     await setup();
 
-    expect(
-      screen.getByRole('button', { name: 'Clôturer le compte' }).hasAttribute('disabled'),
-    ).toBe(true);
+    const user = userEvent.setup();
+    const button = screen.getByRole('button', { name: 'Clôturer le compte' });
+
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.getAttribute('aria-describedby')).toBe('close-hint');
     expect(screen.getByText('Le solde doit être à zéro pour clôturer le compte.')).toBeTruthy();
+    await user.click(button);
+    expect(screen.queryByRole('button', { name: 'Confirmer la clôture' })).toBeNull();
+  });
+
+  it('fait suivre le montant d’un signe + ou − selon le sens', async () => {
+    await setup({
+      transactions: [
+        TRANSACTION,
+        { ...TRANSACTION, id: 't2', type: 'WITHDRAWAL', direction: 'DEBIT', amount: '20.00' },
+      ],
+    });
+
+    const credit = screen.getByText(/^\+150,00\s€$/);
+    const debit = screen.getByText(/^−20,00\s€$/);
+    expect(credit.classList.contains('credit')).toBe(true);
+    expect(debit.classList.contains('debit')).toBe(true);
+  });
+
+  it('repart de zéro quand le compte affiché change', async () => {
+    const { http, user, fixture } = await setup();
+    await submitDeposit(user, '10');
+    http
+      .expectOne('/api/accounts/a1/deposits')
+      .flush({ code: 'INSUFFICIENT_FUNDS' }, { status: 409, statusText: 'Conflict' });
+    await screen.findByRole('alert');
+
+    fixture.componentRef.setInput('id', 'a2');
+    fixture.detectChanges();
+
+    const account = await vi.waitFor(() => http.expectOne('/api/accounts/a2'));
+    expect(screen.queryByRole('alert')).toBeNull();
+    account.flush({ ...ACCOUNT, id: 'a2' });
+    http.expectOne((r) => r.url === '/api/transactions').flush(page([]));
+    await screen.findByRole('heading', { level: 1, name: 'Vacances' });
+    expect(getDepositField('amount').value).toBe('');
+  });
+
+  it('demande une nouvelle clé après un refus 4xx', async () => {
+    const { http, user } = await setup();
+
+    await submitDeposit(user, '10');
+    const first = http.expectOne('/api/accounts/a1/deposits');
+    const key = first.request.headers.get('Idempotency-Key');
+    first.flush({ code: 'INSUFFICIENT_FUNDS' }, { status: 409, statusText: 'Conflict' });
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: 'Déposer' }));
+    const second = http.expectOne('/api/accounts/a1/deposits');
+    expect(second.request.headers.get('Idempotency-Key')).not.toBe(key);
+    second.flush(TRANSACTION, { status: 201, statusText: 'Created' });
+  });
+
+  it('demande une nouvelle clé après IDEMPOTENCY_KEY_REUSED', async () => {
+    const { http, user } = await setup();
+
+    await submitDeposit(user, '10');
+    const first = http.expectOne('/api/accounts/a1/deposits');
+    const key = first.request.headers.get('Idempotency-Key');
+    first.flush({ code: 'IDEMPOTENCY_KEY_REUSED' }, { status: 422, statusText: 'Unprocessable' });
+    expect((await screen.findByRole('alert')).textContent).toContain('recommencez');
+
+    await user.click(screen.getByRole('button', { name: 'Déposer' }));
+    const second = http.expectOne('/api/accounts/a1/deposits');
+    expect(second.request.headers.get('Idempotency-Key')).not.toBe(key);
+    second.flush(TRANSACTION, { status: 201, statusText: 'Created' });
+  });
+
+  it('garde la même clé après une erreur 5xx', async () => {
+    const { http, user } = await setup();
+
+    await submitDeposit(user, '10');
+    const first = http.expectOne('/api/accounts/a1/deposits');
+    const key = first.request.headers.get('Idempotency-Key');
+    first.flush(null, { status: 500, statusText: 'Server Error' });
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: 'Déposer' }));
+    const second = http.expectOne('/api/accounts/a1/deposits');
+    expect(second.request.headers.get('Idempotency-Key')).toBe(key);
+    second.flush(TRANSACTION, { status: 201, statusText: 'Created' });
+  });
+
+  it('n’envoie qu’une requête en cas de double clic', async () => {
+    const { http, user } = await setup();
+
+    await user.type(getDepositField('amount'), '10');
+    await user.dblClick(screen.getByRole('button', { name: 'Déposer' }));
+
+    http.expectOne('/api/accounts/a1/deposits').flush(TRANSACTION);
+  });
+
+  it('recharge solde et historique quand un dépôt est refusé car le compte est clôturé', async () => {
+    const { http, user } = await setup();
+
+    await submitDeposit(user, '10');
+    http
+      .expectOne('/api/accounts/a1/deposits')
+      .flush({ code: 'ACCOUNT_CLOSED' }, { status: 409, statusText: 'Conflict' });
+
+    const account = await vi.waitFor(() => http.expectOne('/api/accounts/a1'));
+    account.flush({ ...ACCOUNT, status: 'CLOSED' });
+    http.expectOne((r) => r.url === '/api/transactions').flush(page([TRANSACTION]));
+    expect(await screen.findByText('Clôturé')).toBeTruthy();
+  });
+
+  it('recharge l’écran quand une annulation est refusée car déjà annulée', async () => {
+    const { http, user } = await setup({ admin: true });
+
+    await user.click(screen.getByRole('button', { name: /Annuler l'opération/ }));
+    await user.type(await screen.findByLabelText("Motif de l'annulation"), 'Erreur de saisie');
+    await user.click(screen.getByRole('button', { name: "Confirmer l'annulation" }));
+    http
+      .expectOne('/api/transactions/t1/compensations')
+      .flush({ code: 'ALREADY_COMPENSATED' }, { status: 409, statusText: 'Conflict' });
+
+    const account = await vi.waitFor(() => http.expectOne('/api/accounts/a1'));
+    account.flush(ACCOUNT);
+    http
+      .expectOne((r) => r.url === '/api/transactions')
+      .flush(page([{ ...TRANSACTION, compensatedByTransactionId: 'c1' }]));
+    expect(await screen.findByText('Annulée')).toBeTruthy();
   });
 
   it('clôture un compte à zéro après confirmation', async () => {

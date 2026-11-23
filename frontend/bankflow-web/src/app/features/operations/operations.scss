@@ -139,3 +139,11 @@ mat-form-field {
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-small);
 }
+
+.credit {
+  color: var(--mat-sys-primary);
+}
+
+.debit {
+  color: var(--mat-sys-error);
+}

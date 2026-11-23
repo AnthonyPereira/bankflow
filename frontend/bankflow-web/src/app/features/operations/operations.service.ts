@@ -54,6 +54,13 @@ export function getOperationErrorMessage(error: unknown): string {
   return error.status === 404 ? ACCOUNT_NOT_FOUND_MESSAGE : UNEXPECTED_OPERATION_ERROR;
 }
 
+/** Code métier du ProblemDetail, `null` si l'erreur n'en porte pas. */
+export function getErrorCode(error: unknown): string | null {
+  const body: unknown = error instanceof HttpErrorResponse ? error.error : null;
+  const code = typeof body === 'object' && body !== null ? (body as { code?: unknown }).code : null;
+  return typeof code === 'string' ? code : null;
+}
+
 /** Une erreur réseau ou serveur laisse l'issue inconnue : la nouvelle tentative réutilise la clé. */
 export function isRetryableError(error: unknown): boolean {
   return error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500);

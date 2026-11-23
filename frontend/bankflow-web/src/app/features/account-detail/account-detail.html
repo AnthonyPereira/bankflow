@@ -72,8 +72,9 @@
           class="close-button"
           type="button"
           aria-describedby="close-hint"
+          disabledInteractive
           [disabled]="!isZeroBalance(current)"
-          (click)="askCloseConfirmation()"
+          (click)="askCloseConfirmation(current)"
         >
           Clôturer le compte
         </button>
@@ -191,7 +192,14 @@
                       <span class="advisor">Effectuée par un conseiller</span>
                     }
                   </td>
-                  <td class="numeric">{{ transaction.amount | amount: transaction.currency }}</td>
+                  <td
+                    class="numeric"
+                    [class.credit]="transaction.direction === 'CREDIT'"
+                    [class.debit]="transaction.direction === 'DEBIT'"
+                  >
+                    {{ getAmountSign(transaction)
+                    }}{{ transaction.amount | amount: transaction.currency }}
+                  </td>
                   <td class="numeric">
                     {{ transaction.balanceAfter | amount: transaction.currency }}
                   </td>

@@ -15,8 +15,17 @@ export interface Transaction {
   compensatesTransactionId: string | null;
   compensatedByTransactionId: string | null;
   description: string | null;
+  direction: 'CREDIT' | 'DEBIT';
   performedBy: PerformedBy;
   createdAt: string;
+}
+
+/** Taille de page des historiques d'opérations (une seule source pour les deux écrans). */
+export const TRANSACTIONS_PAGE_SIZE = 20;
+
+/** Signe affiché devant le montant : le sens vient de l'API, y compris pour une annulation. */
+export function getAmountSign(transaction: Transaction): string {
+  return transaction.direction === 'CREDIT' ? '+' : '−';
 }
 
 export interface TransactionFilters {

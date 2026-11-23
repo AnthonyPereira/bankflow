@@ -87,7 +87,13 @@
               <tr>
                 <td>{{ transaction.createdAt | dateFr }}</td>
                 <td [attr.title]="transaction.accountId">
-                  {{ getTransactionAccount(transaction) }}
+                  @if (isAdmin()) {
+                    <a [routerLink]="['/comptes', transaction.accountId]">{{
+                      getTransactionAccount(transaction)
+                    }}</a>
+                  } @else {
+                    {{ getTransactionAccount(transaction) }}
+                  }
                 </td>
                 <th scope="row">
                   {{ typeLabels[transaction.type] }}
@@ -101,7 +107,14 @@
                     <span class="advisor">Effectuée par un conseiller</span>
                   }
                 </td>
-                <td class="numeric">{{ transaction.amount | amount: transaction.currency }}</td>
+                <td
+                  class="numeric"
+                  [class.credit]="transaction.direction === 'CREDIT'"
+                  [class.debit]="transaction.direction === 'DEBIT'"
+                >
+                  {{ getAmountSign(transaction)
+                  }}{{ transaction.amount | amount: transaction.currency }}
+                </td>
                 <td class="numeric">
                   {{ transaction.balanceAfter | amount: transaction.currency }}
                 </td>

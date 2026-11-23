@@ -32,6 +32,7 @@ const TRANSACTION: Transaction = {
   compensatesTransactionId: null,
   compensatedByTransactionId: null,
   description: 'Courses',
+  direction: 'DEBIT',
   performedBy: 'CLIENT',
   createdAt: '2026-11-23T10:00:00Z',
 };
@@ -76,7 +77,16 @@ describe('Operations', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Toutes les opérations' })).toBeTruthy();
     expect(screen.queryByLabelText('Compte')).toBeNull();
     expect(await screen.findByText('Effectuée par un conseiller')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'a1' }).getAttribute('href')).toBe('/comptes/a1');
     http.expectNone((r) => r.url === '/api/accounts');
+  });
+
+  it('précède le montant du signe donné par le sens', async () => {
+    await setup(false, [TRANSACTION, { ...TRANSACTION, id: 't2', direction: 'CREDIT' }]);
+
+    expect((await screen.findAllByText(/^−20,00\s€$/))[0].classList.contains('debit')).toBe(true);
+    expect(screen.getByText(/^\+20,00\s€$/).classList.contains('credit')).toBe(true);
+    expect(screen.queryByRole('link', { name: 'Vacances' })).toBeNull();
   });
 
   it('affiche l’état vide et le nombre de résultats', async () => {

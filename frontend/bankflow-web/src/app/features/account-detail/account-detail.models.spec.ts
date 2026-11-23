@@ -1,6 +1,7 @@
 import {
   AMOUNT_DECIMALS_MESSAGE,
   AMOUNT_MAX_MESSAGE,
+  AMOUNT_NOT_A_NUMBER_MESSAGE,
   AMOUNT_POSITIVE_MESSAGE,
   parseAmount,
 } from './account-detail.models';
@@ -12,6 +13,7 @@ describe('parseAmount', () => {
     ['150.25', '150.25'],
     [' 0,01 ', '0.01'],
     ['10 000', '10000.00'],
+    ['1 000,50', '1000.50'],
     ['10000.00', '10000.00'],
     ['10,500', '10.50'],
     ['007', '7.00'],
@@ -19,10 +21,14 @@ describe('parseAmount', () => {
     expect(parseAmount(input)).toEqual({ amount: expected });
   });
 
-  it.each(['', 'abc', '-5', '0', '0,00', '1,2,3', ','])(
-    'refuse « %s » comme non positif',
+  it.each(['', '0', '0,00', '0,000', '-5'])('refuse « %s » comme non positif', (input) => {
+    expect(parseAmount(input)).toEqual({ error: AMOUNT_POSITIVE_MESSAGE });
+  });
+
+  it.each(['abc', '.5', '10.', ',', '1,2,3', '1 0 0', '10 00', '1  000', '1 000 0'])(
+    'refuse « %s » comme non numérique',
     (input) => {
-      expect(parseAmount(input)).toEqual({ error: AMOUNT_POSITIVE_MESSAGE });
+      expect(parseAmount(input)).toEqual({ error: AMOUNT_NOT_A_NUMBER_MESSAGE });
     },
   );
 

@@ -4,12 +4,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
   input,
   linkedSignal,
   signal,
+  untracked,
 } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -38,12 +40,15 @@ import {
 } from '../accounts/accounts.models';
 import {
   canCompensate,
+  getAmountSign,
   OperationRequest,
   Transaction,
+  TRANSACTIONS_PAGE_SIZE,
   TYPE_LABELS,
 } from '../operations/operations.models';
 import {
   ACCOUNT_NOT_FOUND_MESSAGE,
+  getErrorCode,
   getFieldErrors,
   getOperationErrorMessage,
   isRetryableError,
@@ -57,11 +62,16 @@ import {
 } from './account-detail.models';
 import { AccountDetailService } from './account-detail.service';
 
-export const PAGE_SIZE = 20;
 export const CLOSED_MESSAGE = 'Le compte a été clôturé.';
 export const CANCELLED_MESSAGE = "L'opération a été annulée.";
 export const REASON_MESSAGE = 'Le motif doit contenir de 10 à 200 caractères.';
 const ZERO_BALANCE = /^-?0+(\.0+)?$/;
+/** Après ces refus, l'écran affiche des données périmées : solde et historique sont rechargés. */
+const STALE_DATA_CODES: readonly string[] = [
+  'ALREADY_COMPENSATED',
+  'ACCOUNT_CLOSED',
+  'INSUFFICIENT_FUNDS',
+];
 
 type OperationKind = 'deposit' | 'withdrawal';
 
@@ -122,11 +132,13 @@ export class AccountDetail {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly builder = inject(NonNullableFormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly id = input.required<string>();
 
   protected readonly isAdmin = inject(AuthService).isAdmin;
-  protected readonly pageSize = PAGE_SIZE;
+  protected readonly pageSize = TRANSACTIONS_PAGE_SIZE;
+  protected readonly getAmountSign = getAmountSign;
   protected readonly defaultLabel = DEFAULT_ACCOUNT_LABEL;
   protected readonly typeLabels = TYPE_LABELS;
   protected readonly maxDescription = MAX_DESCRIPTION_LENGTH;
@@ -150,7 +162,11 @@ export class AccountDetail {
   protected readonly transactions = rxResource({
     params: () => ({ id: this.id(), page: this.pageIndex() }),
     stream: ({ params }) =>
-      this.operationsService.listTransactions({ accountId: params.id }, params.page, PAGE_SIZE),
+      this.operationsService.listTransactions(
+        { accountId: params.id },
+        params.page,
+        TRANSACTIONS_PAGE_SIZE,
+      ),
   });
 
   /** Dernière page reçue : elle reste affichée pendant le chargement de la suivante. */
@@ -180,6 +196,14 @@ export class AccountDetail {
   protected readonly isCompensating = signal(false);
   protected readonly compensationMessage = signal<string | null>(null);
   protected readonly compensationError = signal<string | null>(null);
+
+  constructor() {
+    // Un autre compte (même composant réutilisé par le routeur) repart d'un écran vierge.
+    effect(() => {
+      this.id();
+      untracked(() => this.resetState());
+    });
+  }
 
   protected isZeroBalance(account: Account): boolean {
     return ZERO_BALANCE.test(account.balance);
@@ -217,7 +241,10 @@ export class AccountDetail {
     draft.successMessage.set(null);
     draft.errorMessage.set(null);
     send(this.id(), request, draft.idempotencyKey)
-      .pipe(finalize(() => draft.isSubmitting.set(false)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => draft.isSubmitting.set(false)),
+      )
       .subscribe({
         next: () => {
           draft.form.reset();
@@ -230,7 +257,11 @@ export class AccountDetail {
       });
   }
 
-  protected askCloseConfirmation(): void {
+  /** Le bouton reste focalisable quand le solde n'est pas nul (aria-disabled) : le clic n'a alors aucun effet. */
+  protected askCloseConfirmation(account: Account): void {
+    if (!this.isZeroBalance(account)) {
+      return;
+    }
     this.closeMessage.set(null);
     this.closeError.set(null);
     this.isConfirmingClose.set(true);
@@ -250,7 +281,10 @@ export class AccountDetail {
     this.closeError.set(null);
     this.accountService
       .closeAccount(this.id())
-      .pipe(finalize(() => this.isClosing.set(false)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isClosing.set(false)),
+      )
       .subscribe({
         next: () => {
           this.isConfirmingClose.set(false);
@@ -294,7 +328,10 @@ export class AccountDetail {
     this.compensationError.set(null);
     this.operationsService
       .compensate(id, this.reason.value.trim())
-      .pipe(finalize(() => this.isCompensating.set(false)))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.isCompensating.set(false)),
+      )
       .subscribe({
         next: () => {
           this.compensatingId.set(null);
@@ -304,6 +341,9 @@ export class AccountDetail {
         },
         error: (error: unknown) => {
           this.compensationError.set(getOperationErrorMessage(error));
+          if (STALE_DATA_CODES.includes(getErrorCode(error) ?? '')) {
+            this.refresh();
+          }
           this.focusSelector('.reason-input');
         },
       });
@@ -321,10 +361,26 @@ export class AccountDetail {
       errorMessage: signal<string | null>(null),
     };
     // Une modification du formulaire est une nouvelle demande : elle reçoit une nouvelle clé.
-    draft.form.valueChanges.pipe(takeUntilDestroyed(inject(DestroyRef))).subscribe(() => {
+    draft.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       draft.idempotencyKey = null;
     });
     return draft;
+  }
+
+  private resetState(): void {
+    for (const draft of this.drafts) {
+      draft.form.reset();
+      draft.idempotencyKey = null;
+      draft.successMessage.set(null);
+      draft.errorMessage.set(null);
+    }
+    this.pageIndex.set(0);
+    this.compensatingId.set(null);
+    this.compensationMessage.set(null);
+    this.compensationError.set(null);
+    this.isConfirmingClose.set(false);
+    this.closeMessage.set(null);
+    this.closeError.set(null);
   }
 
   /** Solde et historique se rafraîchissent après chaque opération réussie. */
@@ -340,6 +396,13 @@ export class AccountDetail {
 
   /** Les erreurs de validation du serveur sont rattachées à leur champ, les autres affichées en haut. */
   private showOperationError(draft: OperationDraft, error: unknown): void {
+    // Un refus définitif (4xx) clôt l'intention : le nouvel envoi aura sa propre clé.
+    if (!isRetryableError(error)) {
+      draft.idempotencyKey = null;
+    }
+    if (getErrorCode(error) === 'ACCOUNT_CLOSED') {
+      this.refresh();
+    }
     const fieldErrors = getFieldErrors(error);
     let firstField: 'amount' | 'description' | null = null;
     for (const field of ['amount', 'description'] as const) {
