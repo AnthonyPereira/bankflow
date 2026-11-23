@@ -8,7 +8,7 @@ RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 COPY . .
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.31.0-alpine@sha256:3707417e3304492667a63c90ac0103465330437f9cdfaa38f8cd19f9975cbeed
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY nginx/security-headers.conf nginx/hsts.conf /etc/nginx/snippets/
 COPY --from=build /build/dist/bankflow-web/browser /usr/share/nginx/html
