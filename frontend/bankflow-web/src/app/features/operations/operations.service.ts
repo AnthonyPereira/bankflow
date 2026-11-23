@@ -90,6 +90,7 @@ export class OperationsService {
     filters: TransactionFilters,
     page: number,
     size: number,
+    isSilent = false,
   ): Observable<PageResponse<Transaction>> {
     let params = new HttpParams().set('page', page).set('size', size);
     for (const [key, value] of Object.entries(filters)) {
@@ -97,7 +98,10 @@ export class OperationsService {
         params = params.set(key, value);
       }
     }
-    return this.http.get<PageResponse<Transaction>>(TRANSACTIONS_URL, { params });
+    return this.http.get<PageResponse<Transaction>>(TRANSACTIONS_URL, {
+      params,
+      context: new HttpContext().set(SILENT_ERRORS, isSilent),
+    });
   }
 
   /** Les erreurs métier sont affichées par l'écran, pas par un message global. */

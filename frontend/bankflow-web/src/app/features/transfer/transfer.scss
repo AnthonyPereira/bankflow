@@ -85,6 +85,20 @@ dd {
   height: 48px;
 }
 
+.hint {
+  margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

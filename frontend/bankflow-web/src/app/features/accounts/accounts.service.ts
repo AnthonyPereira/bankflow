@@ -37,14 +37,20 @@ export function getAccountErrorMessage(error: unknown): string {
 export class AccountsService {
   private readonly http = inject(HttpClient);
 
-  listAccounts(page: number, size: number): Observable<PageResponse<Account>> {
+  /** `isSilent` : l'écran affiche lui-même l'erreur de ce bloc. */
+  listAccounts(page: number, size: number, isSilent = false): Observable<PageResponse<Account>> {
     const params = new HttpParams().set('page', page).set('size', size);
-    return this.http.get<PageResponse<Account>>(ACCOUNTS_URL, { params });
+    return this.http.get<PageResponse<Account>>(ACCOUNTS_URL, {
+      params,
+      context: new HttpContext().set(SILENT_ERRORS, isSilent),
+    });
   }
 
   /** Vue d'ensemble de la banque, réservée à l'administrateur. */
   getSummary(): Observable<AccountsSummary> {
-    return this.http.get<AccountsSummary>(`${ACCOUNTS_URL}/summary`);
+    return this.http.get<AccountsSummary>(`${ACCOUNTS_URL}/summary`, {
+      context: new HttpContext().set(SILENT_ERRORS, true),
+    });
   }
 
   /** Les erreurs métier (403, 409) sont affichées par l'écran, pas par un message global. */

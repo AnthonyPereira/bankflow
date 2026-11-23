@@ -8,6 +8,7 @@ import { render, screen, within } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { User } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
+import { SILENT_ERRORS } from '../../core/http/api';
 import { Account, AccountsSummary, PageResponse } from '../accounts/accounts.models';
 import { Transaction } from '../operations/operations.models';
 import { Dashboard } from './dashboard';
@@ -94,6 +95,50 @@ describe('Dashboard', () => {
 
       expect(await screen.findByText('a@bankflow.test')).toBeTruthy();
       expect(screen.getByText('Client')).toBeTruthy();
+    });
+
+    it('laisse chaque bloc afficher sa propre erreur (requêtes silencieuses)', async () => {
+      const { http } = await setup();
+      const accounts = expectAccounts(http);
+      const transactions = expectTransactions(http, 5);
+
+      expect(accounts.request.context.get(SILENT_ERRORS)).toBe(true);
+      expect(transactions.request.context.get(SILENT_ERRORS)).toBe(true);
+      accounts.flush(page([]));
+      transactions.flush(page([]));
+    });
+
+    it("n'appelle jamais la vue de la banque", async () => {
+      const { http } = await setup();
+      expectAccounts(http).flush(page([ACCOUNT]));
+      expectTransactions(http, 5).flush(page([]));
+      await screen.findByRole('link', { name: 'Courant' });
+
+      http.expectNone('/api/accounts/summary');
+      http.verify();
+    });
+
+    it('donne un nom accessible unique à chaque lien de compte de l’historique', async () => {
+      const { http } = await setup();
+      expectAccounts(http).flush(page([ACCOUNT]));
+      expectTransactions(http, 5).flush(
+        page([TRANSACTION, { ...TRANSACTION, id: 't2', createdAt: '2026-11-22T08:00:00Z' }]),
+      );
+
+      const links = await screen.findAllByRole('link', {
+        name: /^Voir le compte Courant, opération/,
+      });
+      expect(new Set(links.map((link) => link.getAttribute('aria-label'))).size).toBe(2);
+    });
+
+    it('signale une liste partielle au-delà de 100 comptes', async () => {
+      const { http } = await setup();
+      expectAccounts(http).flush({ ...page([ACCOUNT]), totalElements: 101 });
+      expectTransactions(http, 5).flush(page([]));
+
+      expect(
+        await screen.findByText('Seuls les 100 comptes les plus récents sont affichés.'),
+      ).toBeTruthy();
     });
 
     it('affiche les comptes actifs avec leur total par devise', async () => {
@@ -218,9 +263,11 @@ describe('Dashboard', () => {
         await screen.findByRole('heading', { name: 'Dernières opérations de la banque' }),
       ).toBeTruthy();
       expect(screen.getByText('Virement reçu de FR76 9999 9000 0109 9999 9999 912')).toBeTruthy();
-      expect(screen.getByRole('link', { name: 'Voir le compte' }).getAttribute('href')).toBe(
-        '/comptes/a1',
-      );
+      expect(
+        screen
+          .getByRole('link', { name: /^Voir le compte, opération du .* : Virement reçu de/ })
+          .getAttribute('href'),
+      ).toBe('/comptes/a1');
       expect(screen.getByText(/\+20,00\s€/)).toBeTruthy();
     });
 

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -34,7 +35,11 @@ import {
   Account,
   DEFAULT_ACCOUNT_LABEL,
   formatIban,
+  getActiveAccounts,
+  isPartialPage,
+  MAX_ACCOUNT_CHOICES,
   normalizeIban,
+  PARTIAL_ACCOUNTS_MESSAGE,
 } from '../accounts/accounts.models';
 import { AccountsService } from '../accounts/accounts.service';
 import { MAX_DESCRIPTION_LENGTH } from '../operations/operations.models';
@@ -53,7 +58,7 @@ import {
 } from './transfer.models';
 import { TransferService } from './transfer.service';
 
-const MAX_ACCOUNT_CHOICES = 100;
+export const UNKNOWN_SOURCE_MESSAGE = 'Ce compte est introuvable ou clôturé.';
 const STALE_DATA_CODES: readonly string[] = ['ACCOUNT_CLOSED', 'INSUFFICIENT_FUNDS'];
 const FIELDS = ['sourceAccountId', 'destinationIban', 'amount', 'description'] as const;
 type TransferField = (typeof FIELDS)[number];
@@ -134,7 +139,7 @@ export class TransferPage {
   /** Le client choisit parmi ses comptes ; l'administrateur part d'un compte précis. */
   protected readonly accounts = rxResource({
     params: () => (this.isAdmin() ? undefined : {}),
-    stream: () => this.accountsService.listAccounts(0, MAX_ACCOUNT_CHOICES),
+    stream: () => this.accountsService.listAccounts(0, MAX_ACCOUNT_CHOICES, true),
   });
   protected readonly adminAccount = rxResource({
     params: () => (this.isAdmin() && this.from() ? { id: this.from() as string } : undefined),
@@ -142,10 +147,33 @@ export class TransferPage {
   });
 
   protected readonly activeAccounts = computed(() =>
-    this.accounts.hasValue()
-      ? this.accounts.value().content.filter((account) => account.status === 'ACTIVE')
-      : [],
+    getActiveAccounts(this.accounts.hasValue() ? this.accounts.value() : undefined),
   );
+  protected readonly isPartial = computed(() =>
+    isPartialPage(this.accounts.hasValue() ? this.accounts.value() : undefined),
+  );
+  protected readonly partialMessage = PARTIAL_ACCOUNTS_MESSAGE;
+  protected readonly unknownSourceMessage = UNKNOWN_SOURCE_MESSAGE;
+  /** Le compte de `from` n'existe pas (admin : 404) ou n'est pas un compte actif du client. */
+  protected readonly isSourceUnknown = computed(() => {
+    const from = this.from();
+    if (!from) {
+      return false;
+    }
+    if (this.isAdmin()) {
+      const error = this.adminAccount.error();
+      return error instanceof HttpErrorResponse && error.status === 404;
+    }
+    return this.accounts.hasValue() && !this.activeAccounts().some((a) => a.id === from);
+  });
+  /** Texte lu par les lecteurs d'écran à l'arrivée du résultat (la région existe en permanence). */
+  protected readonly announcement = computed(() => {
+    const result = this.outcome();
+    if (!result || this.step() !== 'result') {
+      return '';
+    }
+    return result.kind === 'success' ? 'Virement effectué.' : result.message;
+  });
   protected readonly source = computed<Account | null>(() => {
     if (this.isAdmin()) {
       return this.adminAccount.hasValue() ? this.adminAccount.value() : null;
@@ -174,9 +202,13 @@ export class TransferPage {
     effect(() => {
       const id = this.preselectedId();
       if (id) {
+        // Un `from` qui change sur la même route repart d'un virement vierge sur ce compte.
         untracked(() => {
-          if (!this.form.controls.sourceAccountId.value) {
+          if (this.form.controls.sourceAccountId.value !== id) {
             this.form.controls.sourceAccountId.setValue(id);
+            this.step.set('form');
+            this.summary.set(null);
+            this.outcome.set(null);
           }
         });
       }

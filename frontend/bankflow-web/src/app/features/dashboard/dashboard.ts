@@ -9,14 +9,20 @@ import { ROLE_LABELS } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { AmountPipe } from '../../core/format/amount.pipe';
 import { DateFrPipe } from '../../core/format/date-fr.pipe';
-import { DEFAULT_ACCOUNT_LABEL, getBalanceTotals } from '../accounts/accounts.models';
+import {
+  DEFAULT_ACCOUNT_LABEL,
+  getActiveAccounts,
+  getBalanceTotals,
+  isPartialPage,
+  MAX_ACCOUNT_CHOICES,
+  PARTIAL_ACCOUNTS_MESSAGE,
+} from '../accounts/accounts.models';
 import { AccountsService } from '../accounts/accounts.service';
 import { getAmountSign, getTransactionLabel, Transaction } from '../operations/operations.models';
 import { OperationsService } from '../operations/operations.service';
 
 export const CLIENT_TRANSACTIONS_COUNT = 5;
 export const ADMIN_TRANSACTIONS_COUNT = 10;
-const MAX_ACCOUNT_CHOICES = 100;
 
 /** Les alertes arrivent avec les notifications : aucune valeur fictive n'est affichée. */
 const UPCOMING_SECTIONS = [
@@ -62,7 +68,7 @@ export class Dashboard {
   /** Chaque bloc se charge et échoue seul : une panne n'empêche pas l'affichage des autres. */
   protected readonly accounts = rxResource({
     params: () => (this.isAdmin() ? undefined : {}),
-    stream: () => this.accountsService.listAccounts(0, MAX_ACCOUNT_CHOICES),
+    stream: () => this.accountsService.listAccounts(0, MAX_ACCOUNT_CHOICES, true),
   });
   protected readonly summary = rxResource({
     params: () => (this.isAdmin() ? {} : undefined),
@@ -70,13 +76,16 @@ export class Dashboard {
   });
   protected readonly transactions = rxResource({
     params: () => ({ size: this.isAdmin() ? ADMIN_TRANSACTIONS_COUNT : CLIENT_TRANSACTIONS_COUNT }),
-    stream: ({ params }) => this.operationsService.listTransactions({}, 0, params.size),
+    stream: ({ params }) => this.operationsService.listTransactions({}, 0, params.size, true),
   });
 
+  protected readonly partialMessage = PARTIAL_ACCOUNTS_MESSAGE;
   protected readonly activeAccounts = computed(() =>
-    this.accounts.hasValue()
-      ? this.accounts.value().content.filter((account) => account.status === 'ACTIVE')
-      : [],
+    getActiveAccounts(this.accounts.hasValue() ? this.accounts.value() : undefined),
+  );
+  /** Au-delà de la limite, les totaux ne couvrent qu'une partie des comptes. */
+  protected readonly isPartial = computed(() =>
+    isPartialPage(this.accounts.hasValue() ? this.accounts.value() : undefined),
   );
   protected readonly totals = computed(() => getBalanceTotals(this.activeAccounts()));
   private readonly accountLabels = computed(
@@ -84,7 +93,8 @@ export class Dashboard {
       new Map(this.activeAccounts().map((a) => [a.id, a.label || DEFAULT_ACCOUNT_LABEL] as const)),
   );
 
-  protected getTransactionAccount(transaction: Transaction): string {
-    return this.accountLabels().get(transaction.accountId) ?? 'Voir le compte';
+  /** Libellé du compte quand il est connu (comptes du client), sinon `null`. */
+  protected findTransactionAccount(transaction: Transaction): string | null {
+    return this.accountLabels().get(transaction.accountId) ?? null;
   }
 }

@@ -18,7 +18,12 @@ import { AmountPipe } from '../../core/format/amount.pipe';
 import { DateFrPipe } from '../../core/format/date-fr.pipe';
 import { getRangeLabel } from '../../core/format/page-range';
 import { AccountsService } from '../accounts/accounts.service';
-import { Account, DEFAULT_ACCOUNT_LABEL, PageResponse } from '../accounts/accounts.models';
+import {
+  Account,
+  DEFAULT_ACCOUNT_LABEL,
+  MAX_ACCOUNT_CHOICES,
+  PageResponse,
+} from '../accounts/accounts.models';
 import {
   getAmountSign,
   getOperationsTitle,
@@ -32,7 +37,6 @@ import {
 } from './operations.models';
 import { OperationsService } from './operations.service';
 
-export const MAX_ACCOUNT_CHOICES = 100;
 export const INVALID_PERIOD_MESSAGE = 'La date de début doit précéder la date de fin.';
 const ID_PREFIX_LENGTH = 8;
 

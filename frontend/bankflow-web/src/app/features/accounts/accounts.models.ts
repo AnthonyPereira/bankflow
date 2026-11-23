@@ -34,6 +34,19 @@ export function formatIban(accountNumber: string): string {
   return accountNumber.replace(/\s/g, '').replace(/(.{4})(?=.)/g, '$1 ');
 }
 
+/** Nombre de comptes chargés pour un choix ou un résumé : au-delà, la liste est partielle. */
+export const MAX_ACCOUNT_CHOICES = 100;
+export const PARTIAL_ACCOUNTS_MESSAGE = `Seuls les ${MAX_ACCOUNT_CHOICES} comptes les plus récents sont affichés.`;
+
+/** Les comptes actifs d'une page (liste vide tant qu'elle n'est pas chargée). */
+export function getActiveAccounts(page: PageResponse<Account> | undefined): Account[] {
+  return page ? page.content.filter((account) => account.status === 'ACTIVE') : [];
+}
+
+export function isPartialPage(page: PageResponse<Account> | undefined): boolean {
+  return !!page && page.totalElements > MAX_ACCOUNT_CHOICES;
+}
+
 /** Forme envoyée à l'API : sans espaces, en majuscules. */
 export function normalizeIban(iban: string): string {
   return iban.replace(/\s/g, '').toUpperCase();

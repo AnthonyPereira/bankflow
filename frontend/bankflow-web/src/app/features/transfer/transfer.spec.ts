@@ -47,7 +47,15 @@ function page(content: Account[]): PageResponse<Account> {
 describe('TransferPage', () => {
   const isAdmin = signal(false);
 
-  async function setup(options: { admin?: boolean; from?: string; account?: Account } = {}) {
+  async function setup(
+    options: {
+      admin?: boolean;
+      from?: string;
+      account?: Account;
+      total?: number;
+      adminStatus?: number;
+    } = {},
+  ) {
     isAdmin.set(options.admin ?? false);
     const { fixture } = await render(TransferPage, {
       inputs: options.from ? { from: options.from } : {},
@@ -61,15 +69,23 @@ describe('TransferPage', () => {
     const http = TestBed.inject(HttpTestingController);
     if (options.admin) {
       if (options.from) {
-        http.expectOne(`/api/accounts/${options.from}`).flush(options.account ?? ACCOUNT);
+        const request = http.expectOne(`/api/accounts/${options.from}`);
+        if (options.adminStatus) {
+          request.flush(null, { status: options.adminStatus, statusText: 'Error' });
+        } else {
+          request.flush(options.account ?? ACCOUNT);
+        }
       }
     } else {
       http
         .expectOne((r) => r.url === '/api/accounts')
-        .flush(page([ACCOUNT, SECOND_ACCOUNT, CLOSED_ACCOUNT]));
+        .flush({
+          ...page([ACCOUNT, SECOND_ACCOUNT, CLOSED_ACCOUNT]),
+          totalElements: options.total ?? 3,
+        });
     }
     await fixture.whenStable();
-    return { http, user: userEvent.setup() };
+    return { http, user: userEvent.setup(), fixture };
   }
 
   function getField(name: string): HTMLInputElement | HTMLSelectElement {
@@ -112,6 +128,50 @@ describe('TransferPage', () => {
     await setup({ from: 'a3' });
 
     expect((getField('sourceAccountId') as HTMLSelectElement).value).toBe('');
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'Ce compte est introuvable ou clôturé.',
+    );
+  });
+
+  it('présélectionne à nouveau le compte quand `from` change sur la même route', async () => {
+    const { fixture } = await setup({ from: 'a1' });
+    expect((getField('sourceAccountId') as HTMLSelectElement).value).toBe('a1');
+
+    fixture.componentRef.setInput('from', 'a2');
+    await fixture.whenStable();
+
+    expect((getField('sourceAccountId') as HTMLSelectElement).value).toBe('a2');
+  });
+
+  it('signale une liste de comptes partielle au-delà de 100 comptes', async () => {
+    await setup({ from: 'a1', total: 101 });
+
+    expect(screen.getByText('Seuls les 100 comptes les plus récents sont affichés.')).toBeTruthy();
+  });
+
+  it('ne signale rien jusqu’à 100 comptes', async () => {
+    await setup({ from: 'a1', total: 100 });
+
+    expect(screen.queryByText(/comptes les plus récents/)).toBeNull();
+  });
+
+  it('garde une région aria-live en permanence', async () => {
+    await setup({ from: 'a1' });
+
+    expect(document.querySelector('[aria-live="polite"]')).toBeTruthy();
+  });
+
+  it('désactive « Modifier le virement » pendant un « Réessayer » en cours', async () => {
+    const { http, user } = await setup({ from: 'a1' });
+    await fillForm(user);
+    await goToReview(user);
+    await user.click(screen.getByRole('button', { name: 'Confirmer le virement' }));
+    http.expectOne('/api/transfers').flush(null, { status: 503, statusText: 'Unavailable' });
+    await user.click(await screen.findByRole('button', { name: 'Réessayer' }));
+
+    const edit = screen.getByRole('button', { name: 'Modifier le virement' });
+    expect(edit.hasAttribute('disabled')).toBe(true);
+    http.expectOne('/api/transfers').flush(TRANSFER, { status: 201, statusText: 'Created' });
   });
 
   it('refuse un IBAN invalide et un montant invalide sans passer au récapitulatif', async () => {
@@ -336,6 +396,21 @@ describe('TransferPage', () => {
       post.flush({ ...TRANSFER, performedBy: 'ADMIN' }, { status: 201, statusText: 'Created' });
       expect(await screen.findByRole('heading', { name: 'Virement effectué' })).toBeTruthy();
       http.expectOne('/api/accounts/a1').flush(ACCOUNT);
+    });
+
+    it('affiche « introuvable » sans « Réessayer » sur un 404', async () => {
+      await setup({ admin: true, from: 'zzz', adminStatus: 404 });
+
+      expect((await screen.findByRole('alert')).textContent).toBe(
+        'Ce compte est introuvable ou clôturé.',
+      );
+      expect(screen.queryByRole('button', { name: 'Réessayer' })).toBeNull();
+    });
+
+    it('propose « Réessayer » sur une erreur 5xx', async () => {
+      await setup({ admin: true, from: 'a1', adminStatus: 500 });
+
+      expect(await screen.findByRole('button', { name: 'Réessayer' })).toBeTruthy();
     });
 
     it('refuse de partir d’un compte clôturé', async () => {

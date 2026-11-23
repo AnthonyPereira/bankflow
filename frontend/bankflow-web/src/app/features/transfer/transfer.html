@@ -5,6 +5,11 @@
     <p>{{ chooseAccountFirstMessage }}</p>
     <a matButton="filled" routerLink="/administration/clients">Voir les clients</a>
   </section>
+} @else if (isAdmin() && isSourceUnknown()) {
+  <section class="panel">
+    <p role="alert">{{ unknownSourceMessage }}</p>
+    <a matButton="outlined" routerLink="/administration/clients">Voir les clients</a>
+  </section>
 } @else if (isAdmin() ? adminAccount.error() : accounts.error()) {
   <section class="panel">
     <p role="alert">Le compte source n'a pas pu être chargé.</p>
@@ -25,12 +30,22 @@
   </section>
 } @else if (!isAdmin() && activeAccounts().length === 0) {
   <section class="panel">
+    @if (isSourceUnknown()) {
+      <p role="alert">{{ unknownSourceMessage }}</p>
+    }
     <p>Vous n'avez aucun compte actif pour faire un virement.</p>
     <a matButton="outlined" routerLink="/comptes">Voir mes comptes</a>
   </section>
 } @else {
+  <div class="sr-only" aria-live="polite">{{ announcement() }}</div>
   <section class="panel" aria-labelledby="form-title" [hidden]="step() !== 'form'">
     <h2 id="form-title" tabindex="-1">1. Saisir le virement</h2>
+    @if (isSourceUnknown()) {
+      <p class="form-error" role="alert">{{ unknownSourceMessage }}</p>
+    }
+    @if (isPartial()) {
+      <p class="hint">{{ partialMessage }}</p>
+    }
     @if (isAdmin()) {
       <p class="intro">Vous agissez au nom du client : le virement est tracé comme tel.</p>
     }
@@ -153,7 +168,7 @@
     }
     @case ('result') {
       <section class="panel" aria-labelledby="result-title">
-        <div aria-live="polite">
+        <div>
           @if (outcome(); as result) {
             @if (result.kind === 'success') {
               <h2 id="result-title" tabindex="-1">Virement effectué</h2>
@@ -185,7 +200,12 @@
                     {{ isSubmitting() ? 'Envoi…' : 'Réessayer' }}
                   </button>
                 }
-                <button matButton="outlined" type="button" (click)="editTransfer()">
+                <button
+                  matButton="outlined"
+                  type="button"
+                  [disabled]="isSubmitting()"
+                  (click)="editTransfer()"
+                >
                   Modifier le virement
                 </button>
               </div>

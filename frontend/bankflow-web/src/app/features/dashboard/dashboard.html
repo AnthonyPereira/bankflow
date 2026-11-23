@@ -95,6 +95,11 @@
             </li>
           }
         </ul>
+        @if (isPartial()) {
+          <p class="hint">
+            <span>{{ partialMessage }}</span> Les totaux sont partiels.
+          </p>
+        }
         <h3>Total par devise</h3>
         <ul class="totals">
           @for (total of totals(); track total.currency) {
@@ -144,9 +149,19 @@
                 <td>{{ transaction.createdAt | dateFr }}</td>
                 <th scope="row">{{ getTransactionLabel(transaction) }}</th>
                 <td>
-                  <a [routerLink]="['/comptes', transaction.accountId]">{{
-                    getTransactionAccount(transaction)
-                  }}</a>
+                  @let accountLabel = findTransactionAccount(transaction);
+                  <a
+                    [routerLink]="['/comptes', transaction.accountId]"
+                    [attr.aria-label]="
+                      'Voir le compte' +
+                      (accountLabel ? ' ' + accountLabel : '') +
+                      ', opération du ' +
+                      (transaction.createdAt | dateFr) +
+                      ' : ' +
+                      getTransactionLabel(transaction)
+                    "
+                    >{{ accountLabel ?? 'Voir le compte' }}</a
+                  >
                 </td>
                 <td
                   class="numeric"
