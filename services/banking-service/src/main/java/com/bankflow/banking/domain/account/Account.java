@@ -84,6 +84,28 @@ public class Account {
         this.closedAt = now;
     }
 
+    /** Crédite le compte (dépôt, annulation d'un retrait). Refusé sur un compte clôturé. */
+    public void credit(Money amount) {
+        requireOpen();
+        this.balance = getBalance().add(amount).amount();
+    }
+
+    /** Débite le compte sans jamais le rendre négatif. Refusé sur un compte clôturé. */
+    public void debit(Money amount) {
+        requireOpen();
+        var newBalance = getBalance().subtract(amount);
+        if (newBalance.isNegative()) {
+            throw new InsufficientFundsException();
+        }
+        this.balance = newBalance.amount();
+    }
+
+    private void requireOpen() {
+        if (isClosed()) {
+            throw new AccountClosedException();
+        }
+    }
+
     public boolean isClosed() {
         return status == AccountStatus.CLOSED;
     }
