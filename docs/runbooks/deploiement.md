@@ -13,7 +13,7 @@ Ce dépôt reste public : **n'y enregistrez jamais de runner**, car une PR de fo
 
 Seul le frontend est routé par Traefik. Il relaie `/api` vers la Gateway, et les autres conteneurs restent sur le réseau interne.
 
-La MVP 1 ne déploie que le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka (avec `kafka-init`) : le serveur n'a que 8 Go de mémoire. Customer, Banking, Notification et Analytics ne sont ni construits ni lancés, et la Gateway répond 503 sur leurs routes. Chaque MVP suivante ajoutera son service à la matrice de `deploy.yml` et au compose de `deploy-platform`.
+La MVP 2 déploie le frontend, la Gateway, l'Auth Service, le Customer Service, le Banking Service, PostgreSQL et Kafka (avec `kafka-init`) : le serveur n'a que 8 Go de mémoire, et chaque service Spring est limité à 512 Mo (1 Go de plus que la MVP 1). Notification et Analytics ne sont ni construits ni lancés, et la Gateway répond 503 sur leurs routes. Chaque MVP suivante ajoutera son service à la matrice de `deploy.yml` et au compose de `deploy-platform`.
 
 L'adresse du visiteur (quotas de la Gateway) vient de l'en-tête `CF-Connecting-IP`. Nginx ne le croit que s'il est relayé depuis un réseau privé (Traefik) : Traefik ne doit donc être joignable que par le tunnel Cloudflare.
 
@@ -73,6 +73,35 @@ Noter le mot de passe administrateur affiché dans un gestionnaire de mots de pa
 | Inscription puis connexion | Tableau de bord |
 | `https://bankflow.anthonypereira.dpdns.org/actuator/health` | Page de l'application, sans données JSON |
 | `cd ~/apps/bankflow && docker compose -p bankflow ps` | Tous les services `healthy`, `kafka-init` terminé |
+
+## Mise en ligne de la MVP 2 (customer-service et banking-service)
+
+La matrice de `deploy.yml` publie aussi les images `customer-service` et `banking-service`. **Aucun nouveau secret n'est nécessaire** : `CUSTOMER_DB_PASSWORD` et `BANKING_DB_PASSWORD` existent déjà dans `~/apps/bankflow/.env` (étape 4) et PostgreSQL les connaît déjà.
+
+Ordre à respecter :
+
+1. Fusionner la PR de `deploy-platform` qui ajoute les deux services au compose, **juste avant** de fusionner la release `0.2.0` dans `main`. Le compose exige alors les images `customer-service` et `banking-service`, qui n'existent sur GHCR qu'à partir de la `0.2.0` : après cette fusion, un retour arrière vers une version antérieure (`0.1.1`) échoue au téléchargement des images. Pour revenir en arrière, il faut aussi annuler la PR de `deploy-platform`.
+2. Fusionner la release dans `main`, puis attendre la mise en ligne (ou lancer `Déploiement` dans `deploy-platform`).
+
+Variables à connaître (toutes ont une valeur par défaut, rien à ajouter au `.env` en temps normal) :
+
+| Variable | Service | Effet |
+|---|---|---|
+| `EVENTS_REPLAY_ON_STARTUP` | Auth Service | `true` par défaut : au démarrage, l'Auth Service republie `UserRegistered` pour tous les utilisateurs, ce qui crée les profils manquants dans le Customer Service (rattrapage, ADR-004). Au premier démarrage de la MVP 2, c'est ce qui crée les profils des comptes existants. |
+| `DEMO_ACCOUNTS_ENABLED` | Auth Service et Banking Service | `false` masque le tableau des comptes de démonstration et cesse de les créer, sans les désactiver. Banking Service lit la même variable pour créer les comptes bancaires de démonstration : une seule valeur pilote les deux. |
+| `TRUSTED_PROXIES` | Gateway | Expression régulière des adresses de proxys dont la Gateway croit `CF-Connecting-IP`. Par défaut, les réseaux privés, ce qui couvre Traefik. |
+
+### Vérifier après la mise en ligne
+
+| Vérification | Résultat attendu |
+|---|---|
+| `cd ~/apps/bankflow && docker compose -p bankflow ps` | `customer-service` et `banking-service` `healthy`, `kafka-init` terminé |
+| `docker compose -p bankflow logs auth-service` | Le rattrapage des profils s'est terminé sans erreur |
+| Connexion avec un compte de démonstration | Tableau de bord |
+| `GET /api/customers/me` avec le jeton de la session | 200 avec le profil du client |
+| `GET /api/accounts` avec le même jeton | 200 avec la liste des comptes |
+| En-tête `Location` d'une réponse de création | Commence par `https://bankflow.anthonypereira.dpdns.org/api/` |
+| `docker stats --no-stream` | Aucun conteneur près de sa limite de 512 Mo |
 
 ## Au quotidien
 
