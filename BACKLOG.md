@@ -296,7 +296,7 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 - [x] BF-009-04 — Verrouiller les deux comptes dans un ordre déterministe (par exemple tri par UUID) pour éviter les deadlocks
 - [x] BF-009-05 — Gérer les statuts de `Transfer` (PENDING, COMPLETED, REJECTED), avec la traçabilité `performed_by_user_id` et `performed_by_role` → voir [ADR-005](docs/adr/ADR-005-role-administrateur.md)
 - [x] BF-009-06 — `GET /transfers/{id}` avec contrôle d'appartenance (source ou destination)
-- [ ] BF-009-07 — Ajouter Swagger pour l'ensemble du Banking Service
+- [x] BF-009-07 — Ajouter Swagger pour l'ensemble du Banking Service
 - [x] BF-009-08 — Données de démonstration : au démarrage, ouvrir un ou deux comptes pour `demo.client` avec quelques dépôts, retraits et virements, pour que la vitrine ne soit pas vide. Les données (un « Compte courant » avec historique et un « Livret épargne ») sont recréées au démarrage du Banking Service si `demo.client` n'a plus aucun compte actif, et jamais sinon. Elles passent par les mêmes règles métier que les autres opérations, et rien n'est créé avec `DEMO_ACCOUNTS_ENABLED=false` → voir [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)
 - [x] BF-009-09 — Rédiger l'[ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md) (garde-fous de la vitrine)
 - [ ] BF-009-10 — Limiter le débit de `POST /transfers` **par utilisateur**, en plus de la limite par IP de la Gateway, qui existe déjà : un visiteur peut sinon sonder des IBAN (`DESTINATION_ACCOUNT_NOT_FOUND` ou `CURRENCY_MISMATCH` révèle l'existence et la devise d'un compte)
