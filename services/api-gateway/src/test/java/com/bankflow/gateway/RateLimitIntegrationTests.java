@@ -24,7 +24,8 @@ import org.springframework.test.context.DynamicPropertySource;
         properties = {
             "bankflow.rate-limit.login-per-minute=3",
             "bankflow.rate-limit.register-per-minute=1",
-            "bankflow.rate-limit.transfers-per-minute=1"
+            "bankflow.rate-limit.transfers-per-minute=1",
+            "bankflow.rate-limit.operations-per-minute=3"
         })
 @ActiveProfiles("test")
 class RateLimitIntegrationTests {
@@ -155,6 +156,32 @@ class RateLimitIntegrationTests {
         assertThat(post("/api/transfers", ip).statusCode()).isEqualTo(401);
 
         assertThat(post("/api/%74ransfers", ip).statusCode()).isEqualTo(429);
+    }
+
+    @Test
+    void lesOperationsBancairesPartagentUneLimiteParAdresse() throws Exception {
+        var ip = "203.0.113.60";
+        assertThat(post("/api/accounts/a1/deposits", ip).statusCode()).isNotEqualTo(429);
+        assertThat(post("/api/accounts/a2/withdrawals", ip).statusCode()).isNotEqualTo(429);
+        assertThat(post("/api/accounts", ip).statusCode()).isNotEqualTo(429);
+
+        for (var path :
+                List.of(
+                        "/api/accounts/a3/close",
+                        "/api/accounts/a1/deposits",
+                        "/api/transactions/t1/compensations")) {
+            assertThat(post(path, ip).statusCode()).as(path).isEqualTo(429);
+        }
+        assertThat(post("/api/accounts/a1/deposits", "203.0.113.61").statusCode())
+                .isNotEqualTo(429);
+    }
+
+    @Test
+    void lesAutresRoutesDesComptesNeSontPasLimitees() throws Exception {
+        var ip = "203.0.113.62";
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertThat(post("/api/accounts/a1/transactions", ip).statusCode()).isNotEqualTo(429);
+        }
     }
 
     private HttpResponse<String> post(String path, String clientIp) throws Exception {

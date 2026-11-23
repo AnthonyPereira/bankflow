@@ -211,6 +211,8 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 - [x] BF-006-09 — Documenter les contrats d'événements
 - [x] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
 - [x] BF-006-11 — Rattraper les profils manquants. Seule l'inscription publie `UserRegistered` : le compte administrateur initial, les comptes de démonstration et les comptes créés avant la MVP 2 n'ont pas de profil, et une panne de Kafka à l'inscription en fait perdre un jusqu'à l'Outbox (BF-011). Mécanisme à décider (création du profil au premier `GET /customers/me` à partir du JWT, ou publication de `UserRegistered` au démarrage de l'Auth Service pour les comptes sans profil), avec un test pour chaque cas
+- [x] BF-006-12 — Un administrateur n'a jamais de fiche client : `UserRegistered` porte le `role`, le Customer Service ignore `ROLE_ADMIN`, le profil fictif de `demo.admin` est supprimé ([ADR-005](docs/adr/ADR-005-role-administrateur.md))
+- [x] BF-006-13 — Administrateur restreint (`demo.admin`) : le Customer Service ne lui liste et ne lui montre que les clients de démonstration (404 sinon), et publie `demo` dans `CustomerCreated` et `CustomerUpdated` ([ADR-004](docs/adr/ADR-004-reference-client-banking.md))
 
 ### Tests
 - [x] Tests unitaires : droits d'accès et validations
@@ -241,6 +243,7 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 - [x] BF-007-08 — Clôturer un compte (endpoint ou action dédiée) : interdite si le solde est différent de 0
 - [x] BF-007-09 — Ajouter un value object `Money` (BigDecimal et devise), en interdisant `double` et `float`
 - [x] BF-007-10 — Ajouter un gestionnaire d'erreurs métier (`AccountNotFound`, `AccountClosed`…) au format `ProblemDetail`
+- [x] BF-007-13 — Administrateur restreint (`demo.admin`, claim `demo`) : le Banking Service ne lui montre que les comptes, opérations et virements des clients de démonstration (`customer_refs.demo`, 404 sinon), avec une seule règle de visibilité ([ADR-005](docs/adr/ADR-005-role-administrateur.md), [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md))
 
 ### Tests
 - [x] Tests unitaires : création, clôture, règles de statut, `Money`
@@ -296,7 +299,8 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 - [ ] BF-009-07 — Ajouter Swagger pour l'ensemble du Banking Service
 - [x] BF-009-08 — Données de démonstration : au démarrage, ouvrir un ou deux comptes pour `demo.client` avec quelques dépôts, retraits et virements, pour que la vitrine ne soit pas vide. Les données (un « Compte courant » avec historique et un « Livret épargne ») sont recréées au démarrage du Banking Service si `demo.client` n'a plus aucun compte actif, et jamais sinon. Elles passent par les mêmes règles métier que les autres opérations, et rien n'est créé avec `DEMO_ACCOUNTS_ENABLED=false` → voir [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)
 - [x] BF-009-09 — Rédiger l'[ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md) (garde-fous de la vitrine)
-- [ ] BF-009-10 — Limiter le débit de `POST /transfers` par utilisateur : un visiteur peut sinon sonder des IBAN (`DESTINATION_ACCOUNT_NOT_FOUND` ou `CURRENCY_MISMATCH` révèle l'existence et la devise d'un compte)
+- [ ] BF-009-10 — Limiter le débit de `POST /transfers` **par utilisateur**, en plus de la limite par IP de la Gateway, qui existe déjà : un visiteur peut sinon sonder des IBAN (`DESTINATION_ACCOUNT_NOT_FOUND` ou `CURRENCY_MISMATCH` révèle l'existence et la devise d'un compte)
+- [x] BF-009-11 — Gateway : limiter à 60 par minute et par IP (`RATE_LIMIT_OPERATIONS_PER_MINUTE`) les ouvertures de compte, dépôts, retraits, clôtures et compensations
 
 ### Tests
 - [x] Tests unitaires de chaque règle métier
@@ -636,7 +640,7 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
   - limiter la mémoire de chaque JVM (ex. `-Xmx256m`) et ne déployer que les services développés (le serveur a 8 Go de RAM) ;
   - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), que `deploy-platform` repère en interrogeant l'API toutes les 5 minutes avant de lancer `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
   - configurer le profil `prod-sim` (BF-002-08) ; les secrets vivent dans `~/apps/bankflow/.env` sur le serveur, jamais dans Git ;
-  - sur le serveur : retirer le sudo temporaire (`/etc/sudoers.d/claude-temp`), puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
+  - sur le serveur : retirer la règle sudo temporaire créée pour l'opération, puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
   - documenter le déploiement et le retour arrière dans `docs/runbooks/`.
 
 - [ ] BF-023-17 — Mettre en ligne les services de la MVP 2 :
