@@ -5,6 +5,7 @@ import com.bankflow.customer.domain.customer.CustomerCreated;
 import com.bankflow.customer.domain.customer.CustomerRepository;
 import com.bankflow.customer.domain.customer.CustomerUpdated;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -53,9 +54,30 @@ public class CustomerRegistrationService {
         if (demo) {
             customer.markAsDemo(now);
         }
+        if (customer.isDemo() && customer.hasEmptyProfile()) {
+            fillDemoProfile(customer, now);
+        }
         events.publishEvent(CustomerCreated.createFrom(customer));
         if (customer.getStatus() != previousStatus) {
             events.publishEvent(CustomerUpdated.createFrom(customer));
         }
+    }
+
+    /**
+     * Remplit le profil fictif d'un compte de démonstration encore vide, sans jamais écraser une
+     * saisie. Le profil ne quitte pas ce service : aucun événement n'est publié pour lui.
+     *
+     * <p>Un profil de démonstration entièrement vidé est rempli à nouveau au prochain rejeu de
+     * {@code UserRegistered} : c'est voulu, pour que la vitrine ne reste jamais vide.
+     */
+    private void fillDemoProfile(Customer customer, Instant now) {
+        DemoProfiles.findByEmail(customer.getEmail())
+                .ifPresent(profile ->
+                        customer.updateContact(
+                                profile.firstName(),
+                                profile.lastName(),
+                                profile.phone(),
+                                profile.address(),
+                                now));
     }
 }

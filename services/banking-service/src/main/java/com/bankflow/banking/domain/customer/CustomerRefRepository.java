@@ -1,6 +1,7 @@
 package com.bankflow.banking.domain.customer;
 
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 public interface CustomerRefRepository extends JpaRepository<CustomerRef, UUID> {
 
     Optional<CustomerRef> findByUserId(UUID userId);
+
+    /** Retrouve les références d'un email (celui du client de démonstration). */
+    List<CustomerRef> findAllByEmailIgnoreCase(String email);
 
     long countByStatus(CustomerStatus status);
 

@@ -85,6 +85,11 @@ public class Customer {
         this.updatedAt = truncate(now);
     }
 
+    /** Vrai tant qu'aucune coordonnée n'a été saisie. */
+    public boolean hasEmptyProfile() {
+        return firstName == null && lastName == null && phone == null && address == null;
+    }
+
     /**
      * @throws DemoCustomerCannotBeSuspendedException pour un client de démonstration
      */

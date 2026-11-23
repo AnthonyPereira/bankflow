@@ -1,12 +1,14 @@
 package com.bankflow.banking.application.customer;
 
 import com.bankflow.banking.domain.customer.CustomerRef;
+import com.bankflow.banking.domain.customer.CustomerRefCreated;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.customer.CustomerStatus;
 import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,8 +23,11 @@ public class CustomerRefSynchronizer {
 
     private final CustomerRefRepository customerRefs;
 
-    CustomerRefSynchronizer(CustomerRefRepository customerRefs) {
+    private final ApplicationEventPublisher events;
+
+    CustomerRefSynchronizer(CustomerRefRepository customerRefs, ApplicationEventPublisher events) {
         this.customerRefs = customerRefs;
+        this.events = events;
     }
 
     /**
@@ -41,9 +46,10 @@ public class CustomerRefSynchronizer {
                             }
                             existing.applyState(userId, email, status, occurredAt);
                         },
-                        () ->
-                                customerRefs.saveAndFlush(
-                                        new CustomerRef(
-                                                customerId, userId, email, status, occurredAt)));
+                        () -> {
+                            customerRefs.saveAndFlush(
+                                    new CustomerRef(customerId, userId, email, status, occurredAt));
+                            events.publishEvent(new CustomerRefCreated(customerId));
+                        });
     }
 }

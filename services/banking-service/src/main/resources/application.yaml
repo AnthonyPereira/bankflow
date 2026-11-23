@@ -63,3 +63,8 @@ management:
       group:
         readiness:
           include: readinessState,db
+
+bankflow:
+  demo:
+    # Comptes et historique du client de démonstration (même variable que l'Auth Service)
+    enabled: ${DEMO_ACCOUNTS_ENABLED:true}
