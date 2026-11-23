@@ -9,14 +9,19 @@ import com.bankflow.banking.domain.transaction.Actor;
 import com.bankflow.banking.domain.transaction.Transaction;
 import com.bankflow.banking.domain.transaction.TransactionRepository;
 import com.bankflow.banking.domain.transaction.TransactionType;
+import com.bankflow.banking.domain.transfer.Transfer;
+import com.bankflow.banking.domain.transfer.TransferRepository;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -38,16 +43,19 @@ public class TransactionService {
     private final AccountRepository accounts;
     private final CustomerRefRepository customerRefs;
     private final OperationGuard guard;
+    private final TransferRepository transfers;
 
     TransactionService(
             TransactionRepository transactions,
             AccountRepository accounts,
             CustomerRefRepository customerRefs,
-            OperationGuard guard) {
+            OperationGuard guard,
+            TransferRepository transfers) {
         this.transactions = transactions;
         this.accounts = accounts;
         this.customerRefs = customerRefs;
         this.guard = guard;
+        this.transfers = transfers;
     }
 
     @Transactional(readOnly = true)
@@ -71,7 +79,10 @@ public class TransactionService {
         return new PageImpl<>(createViews(page.getContent()), pageable, page.getTotalElements());
     }
 
-    /** Deux requêtes pour toute la page : écritures compensatrices et opérations compensées. */
+    /**
+     * Un nombre fixe de requêtes pour toute la page : écritures compensatrices, opérations
+     * compensées, virements et comptes de contrepartie.
+     */
     private List<TransactionView> createViews(List<Transaction> page) {
         if (page.isEmpty()) {
             return List.of();
@@ -91,13 +102,49 @@ public class TransactionService {
         Map<UUID, TransactionType> compensatedTypes =
                 transactions.findAllById(compensatedIds).stream()
                         .collect(Collectors.toMap(Transaction::getId, Transaction::getType));
+        var counterparties = findCounterpartyIbans(page);
         return page.stream()
                 .map(tx ->
                         TransactionView.createFor(
-                                tx,
-                                compensatedBy.get(tx.getId()),
-                                compensatedTypes.get(tx.getCompensatesTransactionId())))
+                                        tx,
+                                        compensatedBy.get(tx.getId()),
+                                        compensatedTypes.get(tx.getCompensatesTransactionId()))
+                                .copyWithCounterpartyIban(counterparties.get(tx.getId())))
                 .toList();
+    }
+
+    /** IBAN de l'autre compte de chaque virement de la page, par identifiant de transaction. */
+    private Map<UUID, String> findCounterpartyIbans(List<Transaction> page) {
+        var transferIds =
+                page.stream().map(Transaction::getTransferId).filter(Objects::nonNull).toList();
+        if (transferIds.isEmpty()) {
+            return Map.of();
+        }
+        var transfersById =
+                transfers.findAllById(transferIds).stream()
+                        .collect(Collectors.toMap(Transfer::getId, Function.identity()));
+        var accountIds = new HashSet<UUID>();
+        transfersById
+                .values()
+                .forEach(transfer -> {
+                    accountIds.add(transfer.getSourceAccountId());
+                    accountIds.add(transfer.getDestinationAccountId());
+                });
+        Map<UUID, String> numbers =
+                accounts.findAllById(accountIds).stream()
+                        .collect(Collectors.toMap(Account::getId, Account::getAccountNumber));
+        var result = new HashMap<UUID, String>();
+        for (var tx : page) {
+            var transfer = transfersById.get(tx.getTransferId());
+            if (transfer != null) {
+                var otherId =
+                        tx.getType() == TransactionType.TRANSFER_OUT
+                                ? transfer.getDestinationAccountId()
+                                : transfer.getSourceAccountId();
+                result.put(tx.getId(), numbers.get(otherId));
+            }
+        }
+        return result;
     }
 
     @Transactional(readOnly = true)

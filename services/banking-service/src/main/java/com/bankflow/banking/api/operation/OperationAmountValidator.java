@@ -37,7 +37,7 @@ public class OperationAmountValidator implements ConstraintValidator<OperationAm
     }
 
     /** Montant validé, ramené à 2 décimales (forme canonique utilisée pour l'empreinte). */
-    static BigDecimal parseAmount(String value) {
+    public static BigDecimal parseAmount(String value) {
         return new BigDecimal(value).setScale(2, RoundingMode.UNNECESSARY);
     }
 

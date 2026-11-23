@@ -1,5 +1,7 @@
 package com.bankflow.banking;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.bankflow.banking.domain.customer.CustomerRef;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.customer.CustomerStatus;
@@ -13,6 +15,7 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -29,6 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -173,5 +177,30 @@ public abstract class BankingApiTestSupport {
         } catch (IOException exception) {
             throw new IllegalStateException(exception);
         }
+    }
+
+    /** Solde = crédits − débits des écritures du compte ; sur toute la base, débits = crédits. */
+    protected static void assertLedgerInvariants(JdbcTemplate jdbc, String... accountIds) {
+        var signed = "SUM(CASE direction WHEN 'CREDIT' THEN amount ELSE -amount END)";
+        for (var accountId : accountIds) {
+            var balance =
+                    jdbc.queryForObject(
+                            "SELECT balance FROM accounts WHERE id = ?::uuid",
+                            BigDecimal.class,
+                            accountId);
+            var fromEntries =
+                    jdbc.queryForObject(
+                            "SELECT COALESCE("
+                                    + signed
+                                    + ", 0) FROM ledger_entries"
+                                    + " WHERE account_id = ?::uuid",
+                            BigDecimal.class,
+                            accountId);
+            assertThat(balance).isEqualByComparingTo(fromEntries);
+        }
+        var gap =
+                jdbc.queryForObject(
+                        "SELECT COALESCE(" + signed + ", 0) FROM ledger_entries", BigDecimal.class);
+        assertThat(gap).isEqualByComparingTo("0");
     }
 }
