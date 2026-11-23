@@ -89,6 +89,11 @@
     @if (isAdmin()) {
       <p class="intro">Vous agissez au nom du client : les opérations sont tracées comme telles.</p>
     }
+    <p class="transfer-link">
+      <a matButton="filled" [routerLink]="['/virement']" [queryParams]="{ from: current.id }">
+        {{ isAdmin() ? 'Faire un virement depuis ce compte' : 'Faire un virement' }}
+      </a>
+    </p>
     <div class="forms">
       @for (draft of drafts; track draft.kind) {
         <section class="panel" [attr.aria-labelledby]="draft.kind + '-title'">
@@ -181,7 +186,7 @@
                 <tr>
                   <td>{{ transaction.createdAt | dateFr }}</td>
                   <th scope="row">
-                    {{ typeLabels[transaction.type] }}
+                    {{ getTransactionLabel(transaction) }}
                     @if (transaction.compensatedByTransactionId) {
                       <span class="badge closed">Annulée</span>
                     }
@@ -214,7 +219,7 @@
                             'Annuler l\'opération du ' +
                             (transaction.createdAt | dateFr) +
                             ' : ' +
-                            typeLabels[transaction.type]
+                            getTransactionLabel(transaction)
                           "
                           (click)="startCompensation(transaction)"
                         >

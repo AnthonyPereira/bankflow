@@ -18,10 +18,16 @@ import { AmountPipe } from '../../core/format/amount.pipe';
 import { DateFrPipe } from '../../core/format/date-fr.pipe';
 import { getRangeLabel } from '../../core/format/page-range';
 import { AccountsService } from '../accounts/accounts.service';
-import { Account, DEFAULT_ACCOUNT_LABEL, PageResponse } from '../accounts/accounts.models';
+import {
+  Account,
+  DEFAULT_ACCOUNT_LABEL,
+  MAX_ACCOUNT_CHOICES,
+  PageResponse,
+} from '../accounts/accounts.models';
 import {
   getAmountSign,
   getOperationsTitle,
+  getTransactionLabel,
   Transaction,
   TRANSACTION_TYPES,
   TRANSACTIONS_PAGE_SIZE,
@@ -31,7 +37,6 @@ import {
 } from './operations.models';
 import { OperationsService } from './operations.service';
 
-export const MAX_ACCOUNT_CHOICES = 100;
 export const INVALID_PERIOD_MESSAGE = 'La date de début doit précéder la date de fin.';
 const ID_PREFIX_LENGTH = 8;
 
@@ -61,6 +66,7 @@ export class Operations {
   protected readonly getAmountSign = getAmountSign;
   protected readonly types = TRANSACTION_TYPES;
   protected readonly typeLabels = TYPE_LABELS;
+  protected readonly getTransactionLabel = getTransactionLabel;
   protected readonly defaultLabel = DEFAULT_ACCOUNT_LABEL;
   protected readonly periodMessage = INVALID_PERIOD_MESSAGE;
   protected readonly getRangeLabel = getRangeLabel;

@@ -139,6 +139,48 @@ describe('AccountDetail', () => {
     expect(screen.getByRole('button', { name: 'Déposer' })).toBeTruthy();
   });
 
+  it('nomme la contrepartie des virements dans l’historique', async () => {
+    await setup({
+      transactions: [
+        {
+          ...TRANSACTION,
+          id: 't2',
+          type: 'TRANSFER_IN',
+          counterpartyIban: 'FR7699999000010999999999912',
+        },
+        {
+          ...TRANSACTION,
+          id: 't3',
+          type: 'TRANSFER_OUT',
+          direction: 'DEBIT',
+          counterpartyIban: 'FR7699999000010888888888812',
+        },
+      ],
+    });
+
+    expect(screen.getByText('Virement reçu de FR76 9999 9000 0109 9999 9999 912')).toBeTruthy();
+    expect(screen.getByText('Virement émis vers FR76 9999 9000 0108 8888 8888 812')).toBeTruthy();
+  });
+
+  it('propose le virement depuis un compte actif, selon le rôle', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Faire un virement' }).getAttribute('href')).toBe(
+      '/virement?from=a1',
+    );
+  });
+
+  it('propose « Faire un virement depuis ce compte » à un administrateur', async () => {
+    await setup({ admin: true });
+    expect(
+      screen.getByRole('link', { name: 'Faire un virement depuis ce compte' }).getAttribute('href'),
+    ).toBe('/virement?from=a1');
+  });
+
+  it('ne propose pas de virement depuis un compte clôturé', async () => {
+    await setup({ account: { ...ACCOUNT, status: 'CLOSED' } });
+    expect(screen.queryByRole('link', { name: /Faire un virement/ })).toBeNull();
+  });
+
   it('signale une opération effectuée par un conseiller', async () => {
     await setup({ transactions: [{ ...TRANSACTION, performedBy: 'ADMIN' }] });
 

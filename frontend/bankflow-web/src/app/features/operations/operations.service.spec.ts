@@ -112,6 +112,8 @@ describe('getOperationErrorMessage', () => {
     ['CUSTOMER_NOT_FOUND', 'Client introuvable.'],
     ['ACCOUNT_BALANCE_NOT_ZERO', 'Le solde doit être à zéro pour clôturer le compte.'],
     ['ACCOUNT_LIMIT_REACHED', 'Ce client a déjà 5 comptes ouverts.'],
+    ['DESTINATION_ACCOUNT_NOT_FOUND', 'Aucun compte actif ne correspond à cet IBAN.'],
+    ['CURRENCY_MISMATCH', 'Les deux comptes doivent avoir la même devise.'],
     ['ACCOUNT_NOT_FOUND', 'Compte introuvable.'],
   ])('traduit %s', (code, message) => {
     expect(getOperationErrorMessage(build({ code, detail: 'autre' }))).toBe(message);

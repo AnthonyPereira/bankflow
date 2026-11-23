@@ -78,6 +78,18 @@ describe('Shell', () => {
     expect(screen.getByRole('link', { name: 'Mes opérations' })).toBeTruthy();
   });
 
+  it('propose « Faire un virement » à un client, vers /virement', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Faire un virement' }).getAttribute('href')).toBe(
+      '/virement',
+    );
+  });
+
+  it("ne propose pas « Faire un virement » à l'administrateur", async () => {
+    await setup({ isAdmin: true });
+    expect(screen.queryByRole('link', { name: 'Faire un virement' })).toBeNull();
+  });
+
   it('nomme le menu « Toutes les opérations » pour un administrateur', async () => {
     await setup({ isAdmin: true });
     expect(screen.getByRole('link', { name: 'Toutes les opérations' })).toBeTruthy();

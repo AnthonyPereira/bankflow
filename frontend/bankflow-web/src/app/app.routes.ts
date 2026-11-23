@@ -46,6 +46,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/operations/operations').then((m) => m.Operations),
       },
       {
+        path: 'virement',
+        title: 'Faire un virement · BankFlow',
+        loadComponent: () => import('./features/transfer/transfer').then((m) => m.TransferPage),
+      },
+      {
         path: 'profil',
         title: 'Mon profil · BankFlow',
         loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
