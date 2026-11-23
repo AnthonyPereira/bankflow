@@ -26,6 +26,16 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard').then((m) => m.Dashboard),
       },
       {
+        path: 'comptes',
+        title: 'Mes comptes · BankFlow',
+        loadComponent: () => import('./features/accounts/accounts').then((m) => m.Accounts),
+      },
+      {
+        path: 'profil',
+        title: 'Mon profil · BankFlow',
+        loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
+      },
+      {
         path: 'administration',
         title: 'Administration · BankFlow',
         canActivate: [adminGuard],
