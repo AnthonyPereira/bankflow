@@ -2,7 +2,7 @@
 <p class="intro">
   {{
     isAdmin()
-      ? 'Consultez les comptes de tous les clients et ouvrez-en un à votre nom.'
+      ? 'Consultez les comptes de tous les clients.'
       : 'Consultez vos comptes et ouvrez-en un nouveau.'
   }}
 </p>
@@ -93,37 +93,40 @@
   }
 </section>
 
-<section class="panel" aria-labelledby="open-title">
-  <h2 id="open-title">{{ isAdmin() ? 'Ouvrir un compte à votre nom' : 'Ouvrir un compte' }}</h2>
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <div aria-live="polite">
-      @if (successMessage(); as message) {
-        <p class="form-info">{{ message }}</p>
-      }
-    </div>
-    @if (errorMessage(); as message) {
-      <p class="form-error" role="alert">{{ message }}</p>
-    }
-
-    <mat-form-field appearance="outline">
-      <mat-label>Devise</mat-label>
-      <select matNativeControl formControlName="currency">
-        @for (currency of currencies; track currency) {
-          <option [value]="currency">{{ currency }}</option>
+<!-- Les comptes appartiennent aux clients : un administrateur n'en ouvre pas (refusé aussi par l'API) -->
+@if (!isAdmin()) {
+  <section class="panel" aria-labelledby="open-title">
+    <h2 id="open-title">Ouvrir un compte</h2>
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div aria-live="polite">
+        @if (successMessage(); as message) {
+          <p class="form-info">{{ message }}</p>
         }
-      </select>
-    </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Libellé (facultatif)</mat-label>
-      <input matInput formControlName="label" />
-      @if (form.controls.label.hasError('maxlength')) {
-        <mat-error>Le libellé ne peut pas dépasser 50 caractères.</mat-error>
+      </div>
+      @if (errorMessage(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
       }
-    </mat-form-field>
 
-    <button matButton="filled" class="submit" type="submit" [disabled]="isSubmitting()">
-      {{ isSubmitting() ? 'Ouverture…' : 'Ouvrir le compte' }}
-    </button>
-  </form>
-</section>
+      <mat-form-field appearance="outline">
+        <mat-label>Devise</mat-label>
+        <select matNativeControl formControlName="currency">
+          @for (currency of currencies; track currency) {
+            <option [value]="currency">{{ currency }}</option>
+          }
+        </select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Libellé (facultatif)</mat-label>
+        <input matInput formControlName="label" />
+        @if (form.controls.label.hasError('maxlength')) {
+          <mat-error>Le libellé ne peut pas dépasser 50 caractères.</mat-error>
+        }
+      </mat-form-field>
+
+      <button matButton="filled" class="submit" type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Ouverture…' : 'Ouvrir le compte' }}
+      </button>
+    </form>
+  </section>
+}

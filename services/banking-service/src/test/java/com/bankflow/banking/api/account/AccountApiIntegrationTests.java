@@ -169,6 +169,27 @@ class AccountApiIntegrationTests extends BankingApiTestSupport {
     }
 
     @Test
+    void unAdminNePeutPasOuvrirDeCompte() throws Exception {
+        var adminId = UUID.randomUUID();
+        createCustomerRef(adminId, CustomerStatus.ACTIVE);
+
+        var response = createAccount(createToken(adminId, ADMIN), "EUR", null);
+
+        assertThat(response.statusCode()).isEqualTo(403);
+        assertThat(parseJson(response).get("code").asString()).isEqualTo("ACCESS_DENIED");
+        assertThat(
+                        parseJson(
+                                        send(
+                                                "GET",
+                                                "/accounts?size=100",
+                                                createToken(adminId, CLIENT),
+                                                null))
+                                .get("totalElements")
+                                .asInt())
+                .isZero();
+    }
+
+    @Test
     void unClientSansReferenceVoitUnePageVide() throws Exception {
         var response = send("GET", "/accounts", createToken(UUID.randomUUID(), CLIENT), null);
 
