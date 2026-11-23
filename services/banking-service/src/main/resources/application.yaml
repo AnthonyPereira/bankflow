@@ -48,6 +48,8 @@ spring:
 
 server:
   port: 8083
+  # Reconstruit les URL publiques (Location) depuis les en-têtes X-Forwarded-* de la Gateway
+  forward-headers-strategy: framework
 
 management:
   endpoints:
