@@ -621,7 +621,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
   - garder ce dépôt **public** et porter le runner auto-hébergé dans le dépôt privé `deploy-platform`, qui peut déployer plusieurs applications ;
   - écrire un `docker-compose.yml` de déploiement : seuls le front (port 80) et l'api-gateway (`/api`) sont routés par Traefik (réseau `web`) ; services, PostgreSQL et Kafka restent sur un réseau interne ; Kafka UI, Mailpit, Prometheus et Grafana ne sont jamais exposés ;
   - limiter la mémoire de chaque JVM (ex. `-Xmx256m`) et ne déployer que les services développés (le serveur a 8 Go de RAM) ;
-  - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), puis signal vers `deploy-platform`, qui lance `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
+  - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), que `deploy-platform` repère en interrogeant l'API toutes les 5 minutes avant de lancer `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
   - configurer le profil `prod-sim` (BF-002-08) ; les secrets vivent dans `~/apps/bankflow/.env` sur le serveur, jamais dans Git ;
   - sur le serveur : retirer le sudo temporaire (`/etc/sudoers.d/claude-temp`), puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
   - documenter le déploiement et le retour arrière dans `docs/runbooks/`.

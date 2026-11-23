@@ -87,7 +87,9 @@ Ne modifiez pas `~/apps/bankflow/docker-compose.yml` sur le serveur : il est rem
 
 ## Retour arrière
 
-Dans `deploy-platform` → Actions → Déploiement → Run workflow, indiquer `bankflow` et le SHA complet de la dernière version saine. Corrigez ensuite le problème avec un hotfix selon `CONTRIBUTING.md`, pour que `main` ne redéploie pas la version fautive.
+Dans `deploy-platform` → Actions → Déploiement → Run workflow, indiquer `bankflow` et le SHA complet de la dernière version saine. Cette version reste en ligne jusqu'à la prochaine publication réussie de `main` : corrigez ensuite le problème avec un hotfix selon `CONTRIBUTING.md`, dont la fusion remettra la mise en ligne automatique en route. Pour revenir tout de suite à la dernière version publiée, relancer le même workflow avec `version` vide.
+
+Si une nouvelle version ne démarre pas, `deploy-platform` ne la retente pas toutes les 5 minutes : le run échoue une fois, puis attend la publication suivante ou un lancement manuel.
 
 Une migration Flyway déjà appliquée n'est pas annulée par ce retour arrière. Sauvegardez la base avant une release qui modifie le schéma :
 

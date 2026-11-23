@@ -1,6 +1,8 @@
 name: Déploiement
 
-# Construit les images et les publie sur GHCR. Le dépôt privé deploy-platform repère seul ce run réussi (il interroge l'API toutes les 5 minutes) et met la version en ligne : ce dépôt public ne détient aucun jeton vers lui.
+# Construit les images et les publie sur GHCR. Le dépôt privé deploy-platform repère seul ce run
+# réussi (il interroge l'API toutes les 5 minutes) et met la version en ligne : ce dépôt public ne
+# détient aucun jeton vers lui.
 # Ce dépôt est public : aucun job ne doit s'exécuter sur le serveur maison.
 #
 # Le déploiement part d'un push dans main, et seulement une fois la CI de ce même commit verte : le
