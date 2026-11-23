@@ -40,6 +40,9 @@ public class DemoAccountsSeeder {
 
     private static final Logger log = LoggerFactory.getLogger(DemoAccountsSeeder.class);
 
+    /** Email du client de démonstration, créé par l'Auth Service. */
+    private static final String DEMO_CLIENT_EMAIL = "demo.client@bankflow.local";
+
     private final DemoAccountsProperties properties;
     private final CustomerRefRepository customerRefs;
     private final AccountRepository accounts;
@@ -74,10 +77,12 @@ public class DemoAccountsSeeder {
         }
         try {
             customerRefs
-                    .findAllByEmailIgnoreCase(properties.clientEmail())
+                    .findAllByEmailIgnoreCase(DEMO_CLIENT_EMAIL)
                     .forEach(ref -> seedAccounts(ref.getCustomerId()));
-        } catch (RuntimeException exception) {
-            log.warn("Données de démonstration non créées au démarrage ({})", exception.toString());
+        } catch (Exception exception) {
+            log.warn(
+                    "Données de démonstration non créées au démarrage ({})",
+                    exception.getClass().getSimpleName());
         }
     }
 
@@ -93,11 +98,11 @@ public class DemoAccountsSeeder {
     public void seedAccounts(UUID customerId) {
         try {
             transaction.executeWithoutResult(status -> createAccountsIfNeeded(customerId));
-        } catch (RuntimeException exception) {
+        } catch (Exception exception) {
             log.warn(
                     "Données de démonstration non créées pour le client {} ({})",
                     customerId,
-                    exception.toString());
+                    exception.getClass().getSimpleName());
         }
     }
 
@@ -113,24 +118,24 @@ public class DemoAccountsSeeder {
         var actor = Actor.createFrom(userId, false);
         var current = accountService.openAccount(userId, Currency.EUR, "Compte courant");
         var savings = accountService.openAccount(userId, Currency.EUR, "Livret épargne");
-        operations.deposit(actor, current.getId(), amount("2450.00"), "Salaire de novembre");
-        operations.withdraw(actor, current.getId(), amount("60.00"), "Retrait distributeur");
-        operations.deposit(actor, current.getId(), amount("35.50"), "Remboursement");
+        operations.deposit(actor, current.getId(), parseAmount("2450.00"), "Salaire de novembre");
+        operations.withdraw(actor, current.getId(), parseAmount("60.00"), "Retrait distributeur");
+        operations.deposit(actor, current.getId(), parseAmount("35.50"), "Remboursement");
         transfers.createTransfer(
                 actor,
                 current.getId(),
                 savings.getAccountNumber(),
-                amount("200.00"),
+                parseAmount("200.00"),
                 "Épargne du mois");
         log.info("Données de démonstration créées");
     }
 
     private boolean isEligible(CustomerRef customer) {
         return customer.getStatus() == CustomerStatus.ACTIVE
-                && customer.getEmail().equalsIgnoreCase(properties.clientEmail());
+                && customer.getEmail().equalsIgnoreCase(DEMO_CLIENT_EMAIL);
     }
 
-    private static BigDecimal amount(String value) {
+    private static BigDecimal parseAmount(String value) {
         return new BigDecimal(value);
     }
 }

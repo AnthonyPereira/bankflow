@@ -10,6 +10,7 @@ import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountRepository;
 import com.bankflow.banking.domain.account.AccountStatus;
 import com.bankflow.banking.domain.customer.CustomerRef;
+import com.bankflow.banking.domain.customer.CustomerRefCreated;
 import com.bankflow.banking.domain.customer.CustomerStatus;
 import com.bankflow.banking.domain.money.Currency;
 import com.bankflow.banking.domain.transaction.Actor;
@@ -17,12 +18,18 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
 /** Création des comptes de démonstration du client de la vitrine. */
+@RecordApplicationEvents
 class DemoAccountsSeederIntegrationTests extends BankingApiTestSupport {
 
     private static final String DEMO_EMAIL = "demo.client@bankflow.local";
@@ -33,6 +40,7 @@ class DemoAccountsSeederIntegrationTests extends BankingApiTestSupport {
     @Autowired private AccountService accountService;
     @Autowired private OperationService operations;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private ApplicationEvents events;
 
     private CustomerRef syncCustomer(String email, CustomerStatus status) {
         var customerId = UUID.randomUUID();
@@ -152,6 +160,64 @@ class DemoAccountsSeederIntegrationTests extends BankingApiTestSupport {
                 .allSatisfy(amount -> assertThat(amount).isGreaterThan(BigDecimal.ZERO));
         assertLedgerInvariants(
                 jdbc, active.get(0).getId().toString(), active.get(1).getId().toString());
+    }
+
+    @Test
+    void deuxDeclenchementsConcurrentsNeCreentQueDeuxComptes() throws Exception {
+        var customer =
+                customerRefs.saveAndFlush(
+                        new CustomerRef(
+                                UUID.randomUUID(),
+                                UUID.randomUUID(),
+                                DEMO_EMAIL,
+                                CustomerStatus.ACTIVE,
+                                Instant.now()));
+        var start = new CountDownLatch(1);
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            var tasks =
+                    List.of(
+                            pool.submit(() -> {
+                                start.await();
+                                seeder.seedAccounts(customer.getCustomerId());
+                                return null;
+                            }),
+                            pool.submit(() -> {
+                                start.await();
+                                seeder.seedAccounts(customer.getCustomerId());
+                                return null;
+                            }));
+            start.countDown();
+            for (var task : tasks) {
+                task.get(60, TimeUnit.SECONDS);
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(findAccounts(customer)).hasSize(2);
+        assertThat(countTransactions(customer)).isEqualTo(5);
+    }
+
+    @Test
+    void uneMiseAJourDeLaReferenceNePublieAucunCustomerRefCreated() {
+        var customer = syncCustomer("maj@bankflow.test", CustomerStatus.ACTIVE);
+        assertThat(createdEvents(customer)).isEqualTo(1);
+
+        synchronizer.syncCustomer(
+                customer.getCustomerId(),
+                customer.getUserId(),
+                "maj@bankflow.test",
+                CustomerStatus.SUSPENDED,
+                Instant.now().plusSeconds(10));
+
+        assertThat(createdEvents(customer)).isEqualTo(1);
+    }
+
+    private long createdEvents(CustomerRef customer) {
+        return events.stream(CustomerRefCreated.class)
+                .filter(event -> event.customerId().equals(customer.getCustomerId()))
+                .count();
     }
 
     @Test

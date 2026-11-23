@@ -66,6 +66,9 @@ public class CustomerRegistrationService {
     /**
      * Remplit le profil fictif d'un compte de démonstration encore vide, sans jamais écraser une
      * saisie. Le profil ne quitte pas ce service : aucun événement n'est publié pour lui.
+     *
+     * <p>Un profil de démonstration entièrement vidé est rempli à nouveau au prochain rejeu de
+     * {@code UserRegistered} : c'est voulu, pour que la vitrine ne reste jamais vide.
      */
     private void fillDemoProfile(Customer customer, Instant now) {
         DemoProfiles.findByEmail(customer.getEmail())

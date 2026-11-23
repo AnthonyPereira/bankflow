@@ -68,4 +68,3 @@ bankflow:
   demo:
     # Comptes et historique du client de démonstration (même variable que l'Auth Service)
     enabled: ${DEMO_ACCOUNTS_ENABLED:true}
-    client-email: ${DEMO_CLIENT_EMAIL:demo.client@bankflow.local}
