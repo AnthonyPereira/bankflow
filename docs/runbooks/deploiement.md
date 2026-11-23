@@ -88,7 +88,7 @@ Variables à connaître (toutes ont une valeur par défaut, rien à ajouter au `
 | Variable | Service | Effet |
 |---|---|---|
 | `EVENTS_REPLAY_ON_STARTUP` | Auth Service | `true` par défaut : au démarrage, l'Auth Service republie `UserRegistered` pour tous les utilisateurs, ce qui crée les profils manquants dans le Customer Service (rattrapage, ADR-004). Au premier démarrage de la MVP 2, c'est ce qui crée les profils des comptes existants. |
-| `DEMO_ACCOUNTS_ENABLED` | Auth Service | `false` masque le tableau des comptes de démonstration et cesse de les créer, sans les désactiver. |
+| `DEMO_ACCOUNTS_ENABLED` | Auth Service et Banking Service | `false` masque le tableau des comptes de démonstration et cesse de les créer, sans les désactiver. Banking Service lit la même variable pour créer les comptes bancaires de démonstration : une seule valeur pilote les deux. |
 | `TRUSTED_PROXIES` | Gateway | Expression régulière des adresses de proxys dont la Gateway croit `CF-Connecting-IP`. Par défaut, les réseaux privés, ce qui couvre Traefik. |
 
 ### Vérifier après la mise en ligne
