@@ -34,17 +34,29 @@ class UserRegisteredPublisher {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void publish(UserRegistered event) {
+        send(event);
+    }
+
+    /**
+     * Envoie l'événement sur Kafka, sans jamais lever : la panne est journalisée.
+     *
+     * @return {@code false} si l'envoi a déjà échoué (Kafka injoignable), {@code true} sinon
+     */
+    boolean send(UserRegistered event) {
         var key = event.userId().toString();
         try {
-            kafkaTemplate
-                    .send(TOPIC, key, objectMapper.writeValueAsString(buildEnvelope(event)))
-                    .whenComplete((result, failure) -> {
-                        if (failure != null) {
-                            log.error("UserRegistered non publié pour {}", key, failure);
-                        }
-                    });
+            var future =
+                    kafkaTemplate
+                            .send(TOPIC, key, objectMapper.writeValueAsString(buildEnvelope(event)))
+                            .whenComplete((result, failure) -> {
+                                if (failure != null) {
+                                    log.error("UserRegistered non publié pour {}", key, failure);
+                                }
+                            });
+            return !future.isCompletedExceptionally();
         } catch (RuntimeException exception) {
             log.error("UserRegistered non publié pour {}", key, exception);
+            return false;
         }
     }
 
@@ -52,6 +64,7 @@ class UserRegisteredPublisher {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("userId", event.userId());
         payload.put("email", event.email());
+        payload.put("demo", event.demo());
 
         var envelope = new LinkedHashMap<String, Object>();
         envelope.put("eventId", UUID.randomUUID());

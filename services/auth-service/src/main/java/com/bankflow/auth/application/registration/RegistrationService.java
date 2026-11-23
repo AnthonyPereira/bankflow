@@ -59,7 +59,7 @@ public class RegistrationService {
             }
             throw exception;
         }
-        events.publishEvent(new UserRegistered(user.getId(), user.getEmail(), now));
+        events.publishEvent(new UserRegistered(user.getId(), user.getEmail(), false, now));
         return user;
     }
 

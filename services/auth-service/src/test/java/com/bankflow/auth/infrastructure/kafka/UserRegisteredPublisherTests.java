@@ -18,7 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
 class UserRegisteredPublisherTests {
 
     private static final UserRegistered EVENT =
-            new UserRegistered(UUID.randomUUID(), "a@bankflow.test", Instant.now());
+            new UserRegistered(UUID.randomUUID(), "a@bankflow.test", false, Instant.now());
 
     @SuppressWarnings("unchecked")
     private final KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
