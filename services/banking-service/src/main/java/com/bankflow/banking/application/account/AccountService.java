@@ -8,6 +8,7 @@ import com.bankflow.banking.domain.customer.CustomerRef;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.money.Currency;
 import java.time.Clock;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -57,14 +58,7 @@ public class AccountService {
         if (active >= Account.MAX_ACTIVE_PER_CUSTOMER) {
             throw new AccountLimitReachedException();
         }
-        var account =
-                Account.open(
-                        customer.getCustomerId(),
-                        generateFreeAccountNumber(),
-                        currency,
-                        label,
-                        clock.instant());
-        return accounts.saveAndFlush(account);
+        return insertWithFreeNumber(customer.getCustomerId(), currency, label);
     }
 
     @Transactional(readOnly = true)
@@ -87,9 +81,12 @@ public class AccountService {
     /** Clôture un compte de solde nul. Un client suspendu ne peut plus rien modifier. */
     @Transactional
     public Account closeAccount(UUID userId, boolean admin, UUID accountId) {
-        var account = findVisibleAccount(userId, admin, accountId);
-        if (!admin
-                && customerRefs.findByUserId(userId).map(CustomerRef::isSuspended).orElse(false)) {
+        // Le verrou sérialise deux clôtures simultanées : la seconde voit le compte déjà clôturé
+        var account =
+                accounts.findByIdForUpdate(accountId).orElseThrow(AccountNotFoundException::new);
+        var customer = customerRefs.findByUserId(userId);
+        requireVisible(account, admin, customer);
+        if (!admin && customer.map(CustomerRef::isSuspended).orElse(false)) {
             throw new CustomerSuspendedException();
         }
         account.close(clock.instant());
@@ -98,33 +95,38 @@ public class AccountService {
 
     private Account findVisibleAccount(UUID userId, boolean admin, UUID accountId) {
         var account = accounts.findById(accountId).orElseThrow(AccountNotFoundException::new);
-        if (admin) {
-            return account;
-        }
-        var ownsAccount =
-                customerRefs
-                        .findByUserId(userId)
-                        .map(customer -> customer.getCustomerId().equals(account.getCustomerId()))
-                        .orElse(false);
-        if (!ownsAccount) {
-            throw new AccountNotFoundException();
-        }
+        requireVisible(account, admin, customerRefs.findByUserId(userId));
         return account;
     }
 
-    /** Régénère le numéro en cas de collision, ce qui est quasi impossible sur 11 chiffres. */
-    private String generateFreeAccountNumber() {
-        for (int attempt = 1; attempt < MAX_NUMBER_ATTEMPTS; attempt++) {
-            var candidate = numberGenerator.generateIban();
-            if (!accounts.existsByAccountNumber(candidate)) {
-                return candidate;
+    private static void requireVisible(
+            Account account, boolean admin, Optional<CustomerRef> customer) {
+        var ownsAccount =
+                customer.map(ref -> ref.getCustomerId().equals(account.getCustomerId()))
+                        .orElse(false);
+        if (!admin && !ownsAccount) {
+            throw new AccountNotFoundException();
+        }
+    }
+
+    /**
+     * Insère le compte avec un numéro libre. Chaque essai insère réellement : une collision sur la
+     * contrainte unique est absorbée par la base (sans abîmer la transaction) et déclenche un
+     * nouveau numéro, ce qui est quasi impossible sur 11 chiffres aléatoires.
+     */
+    private Account insertWithFreeNumber(UUID customerId, Currency currency, String label) {
+        for (int attempt = 0; attempt < MAX_NUMBER_ATTEMPTS; attempt++) {
+            var account =
+                    Account.open(
+                            customerId,
+                            numberGenerator.generateIban(),
+                            currency,
+                            label,
+                            clock.instant());
+            if (accounts.insertIfNumberFree(account)) {
+                return account;
             }
         }
-        var last = numberGenerator.generateIban();
-        if (accounts.existsByAccountNumber(last)) {
-            throw new IllegalStateException(
-                    "Aucun numéro de compte libre après " + MAX_NUMBER_ATTEMPTS + " essais.");
-        }
-        return last;
+        throw new AccountNumberUnavailableException();
     }
 }

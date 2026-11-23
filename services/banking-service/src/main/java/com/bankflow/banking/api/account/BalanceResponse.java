@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public record BalanceResponse(UUID accountId, String balance, Currency currency, Instant asOf) {
 
-    static BalanceResponse from(Account account, Instant asOf) {
+    static BalanceResponse createFrom(Account account, Instant asOf) {
         return new BalanceResponse(
                 account.getId(), account.getBalance().toApiString(), account.getCurrency(), asOf);
     }

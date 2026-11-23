@@ -36,21 +36,34 @@ public class CustomerRef {
 
     protected CustomerRef() {}
 
+    /**
+     * {@code occurredAt} est la date de l'état publié par le Customer Service, pas l'horloge
+     * locale.
+     */
     public CustomerRef(
-            UUID customerId, UUID userId, String email, CustomerStatus status, Instant now) {
+            UUID customerId, UUID userId, String email, CustomerStatus status, Instant occurredAt) {
         this.customerId = customerId;
         this.userId = userId;
         this.email = email;
         this.status = status;
-        this.updatedAt = now;
+        this.updatedAt = occurredAt;
     }
 
-    /** Aligne la projection sur l'état complet publié par le Customer Service. */
-    public void applyState(UUID newUserId, String newEmail, CustomerStatus newStatus, Instant now) {
+    /**
+     * Un événement strictement plus ancien que l'état appliqué est périmé : le rejouer ferait
+     * revenir en arrière (par exemple réactiver un client suspendu). À égalité, il est appliqué.
+     */
+    public boolean isStaleEvent(Instant occurredAt) {
+        return occurredAt.isBefore(updatedAt);
+    }
+
+    /** Aligne la projection sur l'état complet publié à la date {@code occurredAt}. */
+    public void applyState(
+            UUID newUserId, String newEmail, CustomerStatus newStatus, Instant occurredAt) {
         this.userId = newUserId;
         this.email = newEmail;
         this.status = newStatus;
-        this.updatedAt = now;
+        this.updatedAt = occurredAt;
     }
 
     public boolean isSuspended() {

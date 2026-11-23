@@ -19,7 +19,7 @@ public record Money(BigDecimal amount, Currency currency) {
         amount = amount.setScale(STORAGE_SCALE, RoundingMode.UNNECESSARY);
     }
 
-    public static Money zero(Currency currency) {
+    public static Money createZero(Currency currency) {
         return new Money(BigDecimal.ZERO, currency);
     }
 
@@ -41,7 +41,10 @@ public record Money(BigDecimal amount, Currency currency) {
         return amount.signum() == 0;
     }
 
-    /** Montant en chaîne décimale à 2 décimales, tel qu'il est exposé en JSON. */
+    /**
+     * Montant en chaîne décimale à 2 décimales, tel qu'il est exposé en JSON. Les montants entrants
+     * seront limités à 2 décimales : l'arrondi ne joue que sur des valeurs déjà exactes.
+     */
     public String toApiString() {
         return amount.setScale(API_SCALE, RoundingMode.HALF_UP).toPlainString();
     }

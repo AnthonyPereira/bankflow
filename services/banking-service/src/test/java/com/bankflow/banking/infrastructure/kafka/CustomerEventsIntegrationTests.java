@@ -6,6 +6,7 @@ import com.bankflow.banking.BankingApiTestSupport;
 import com.bankflow.banking.domain.customer.CustomerStatus;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 class CustomerEventsIntegrationTests extends BankingApiTestSupport {
 
     private static final String TOPIC = "bank.customers";
+    private static final Instant T1 = Instant.parse("2026-11-23T10:00:00Z");
+    private static final Instant T2 = T1.plus(5, ChronoUnit.MINUTES);
+    private static final Instant T3 = T2.plus(5, ChronoUnit.MINUTES);
 
     @Autowired private KafkaTemplate<String, String> kafka;
     @Autowired private JdbcTemplate jdbc;
@@ -25,105 +29,148 @@ class CustomerEventsIntegrationTests extends BankingApiTestSupport {
         var customerId = UUID.randomUUID();
         var userId = UUID.randomUUID();
 
-        publish(customerId, "CustomerCreated", 1, customerId, userId, "a@bankflow.test", "ACTIVE");
+        publish(customerId, "CustomerCreated", 1, userId, "a@bankflow.test", "ACTIVE", T1);
 
         awaitTrue(() -> countRefs(customerId) == 1);
         var ref = customerRefs.findById(customerId).orElseThrow();
         assertThat(ref.getUserId()).isEqualTo(userId);
         assertThat(ref.getEmail()).isEqualTo("a@bankflow.test");
         assertThat(ref.getStatus()).isEqualTo(CustomerStatus.ACTIVE);
+        assertThat(ref.getUpdatedAt()).isEqualTo(T1);
     }
 
     @Test
-    void unMemeEvenementRecuDeuxFoisNeCreeQuUneLigne() throws Exception {
+    void unMemeEvenementRecuDeuxFoisNeCreeQuUneLigneEtLaisseLEtatInchange() throws Exception {
         var customerId = UUID.randomUUID();
         var userId = UUID.randomUUID();
-        publish(customerId, "CustomerCreated", 1, customerId, userId, "b@bankflow.test", "ACTIVE");
-        publish(customerId, "CustomerCreated", 1, customerId, userId, "b@bankflow.test", "ACTIVE");
-        // Marqueur : quand il est traité, les deux messages précédents (même partition) le sont
-        // aussi
-        var markerId = UUID.randomUUID();
-        publish(
-                markerId,
-                "CustomerCreated",
-                1,
-                markerId,
-                UUID.randomUUID(),
-                "m@bankflow.test",
-                "ACTIVE");
+        publish(customerId, "CustomerCreated", 1, userId, "b@bankflow.test", "ACTIVE", T1);
+        publish(customerId, "CustomerCreated", 1, userId, "b@bankflow.test", "ACTIVE", T1);
+        awaitMarkerProcessed();
 
-        awaitTrue(() -> countRefs(markerId) == 1);
         assertThat(countRefs(customerId)).isEqualTo(1);
+        var ref = customerRefs.findById(customerId).orElseThrow();
+        assertThat(ref.getStatus()).isEqualTo(CustomerStatus.ACTIVE);
+        assertThat(ref.getUpdatedAt()).isEqualTo(T1);
     }
 
     @Test
     void unCustomerUpdatedSuspendedMetLeStatutAJour() throws Exception {
         var customerId = UUID.randomUUID();
         var userId = UUID.randomUUID();
-        publish(customerId, "CustomerCreated", 1, customerId, userId, "c@bankflow.test", "ACTIVE");
+        publish(customerId, "CustomerCreated", 1, userId, "c@bankflow.test", "ACTIVE", T1);
         awaitTrue(() -> countRefs(customerId) == 1);
 
-        publish(
-                customerId,
-                "CustomerUpdated",
-                1,
-                customerId,
-                userId,
-                "c2@bankflow.test",
-                "SUSPENDED");
+        publish(customerId, "CustomerUpdated", 1, userId, "c2@bankflow.test", "SUSPENDED", T2);
 
         awaitTrue(() ->
                 customerRefs
                         .findById(customerId)
                         .map(ref -> ref.getStatus() == CustomerStatus.SUSPENDED)
                         .orElse(false));
-        assertThat(customerRefs.findById(customerId).orElseThrow().getEmail())
-                .isEqualTo("c2@bankflow.test");
+        var ref = customerRefs.findById(customerId).orElseThrow();
+        assertThat(ref.getEmail()).isEqualTo("c2@bankflow.test");
+        assertThat(ref.getUpdatedAt()).isEqualTo(T2);
     }
 
     @Test
-    void unMessageIllisibleEstIgnoreEtLeSuivantEstTraite() throws Exception {
+    void unAncienCustomerCreatedNeReactivePasUnClientSuspendu() throws Exception {
         var customerId = UUID.randomUUID();
-        var key = customerId.toString();
+        var userId = UUID.randomUUID();
+        publish(customerId, "CustomerUpdated", 1, userId, "e@bankflow.test", "SUSPENDED", T2);
+        awaitTrue(() -> countRefs(customerId) == 1);
+
+        publish(customerId, "CustomerCreated", 1, userId, "e@bankflow.test", "ACTIVE", T1);
+        awaitMarkerProcessed();
+
+        var ref = customerRefs.findById(customerId).orElseThrow();
+        assertThat(ref.getStatus()).isEqualTo(CustomerStatus.SUSPENDED);
+        assertThat(ref.getUpdatedAt()).isEqualTo(T2);
+    }
+
+    @Test
+    void unEvenementPlusRecentEstApplique() throws Exception {
+        var customerId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
+        publish(customerId, "CustomerUpdated", 1, userId, "f@bankflow.test", "SUSPENDED", T2);
+        awaitTrue(() -> countRefs(customerId) == 1);
+
+        publish(customerId, "CustomerUpdated", 1, userId, "f@bankflow.test", "ACTIVE", T3);
+
+        awaitTrue(() ->
+                customerRefs
+                        .findById(customerId)
+                        .map(ref -> ref.getStatus() == CustomerStatus.ACTIVE)
+                        .orElse(false));
+        assertThat(customerRefs.findById(customerId).orElseThrow().getUpdatedAt()).isEqualTo(T3);
+    }
+
+    @Test
+    void lesMessagesInvalidesSontIgnoresSansBloquerLaPartition() throws Exception {
+        var key = UUID.randomUUID().toString();
+        var statusInconnu = UUID.randomUUID();
+        var versionDeux = UUID.randomUUID();
+        var sansDate = UUID.randomUUID();
+        var dateInvalide = UUID.randomUUID();
         kafka.send(TOPIC, key, "ceci n'est pas du JSON").get();
         kafka.send(TOPIC, key, "{\"eventType\":\"Inconnu\",\"eventVersion\":1,\"payload\":{}}")
                 .get();
-        publish(
-                customerId,
-                "CustomerCreated",
-                2,
-                customerId,
-                UUID.randomUUID(),
-                "d@bankflow.test",
-                "ACTIVE");
-        publish(
-                customerId,
-                "CustomerCreated",
-                1,
-                customerId,
-                UUID.randomUUID(),
-                "d@bankflow.test",
-                "VIP");
-        publish(
-                customerId,
-                "CustomerCreated",
-                1,
-                customerId,
-                UUID.randomUUID(),
-                "d@bankflow.test",
-                "ACTIVE");
+        publish(statusInconnu, "CustomerCreated", 1, UUID.randomUUID(), "g@b.test", "VIP", T1);
+        publishRaw(
+                "{\"eventType\":\"CustomerCreated\",\"eventVersion\":1,\"occurredAt\":\"%s\","
+                                .formatted(T1)
+                        + "\"payload\":{\"customerId\":\"pas-un-uuid\",\"userId\":\"%s\","
+                                .formatted(UUID.randomUUID())
+                        + "\"email\":\"h@b.test\",\"status\":\"ACTIVE\"}}");
+        publish(versionDeux, "CustomerCreated", 2, UUID.randomUUID(), "i@b.test", "ACTIVE", T1);
+        publishRaw(
+                "{\"eventType\":\"CustomerCreated\",\"eventVersion\":1,"
+                        + "\"payload\":{\"customerId\":\"%s\",\"userId\":\"%s\","
+                                .formatted(sansDate, UUID.randomUUID())
+                        + "\"email\":\"j@b.test\",\"status\":\"ACTIVE\"}}");
+        publishRaw(
+                "{\"eventType\":\"CustomerCreated\",\"eventVersion\":1,"
+                        + "\"occurredAt\":\"hier\",\"payload\":{\"customerId\":\"%s\","
+                                .formatted(dateInvalide)
+                        + "\"userId\":\"%s\",\"email\":\"k@b.test\",\"status\":\"ACTIVE\"}}"
+                                .formatted(UUID.randomUUID()));
+        awaitMarkerProcessed();
 
-        awaitTrue(() -> countRefs(customerId) == 1);
+        for (var ignored : new UUID[] {statusInconnu, versionDeux, sansDate, dateInvalide}) {
+            assertThat(countRefs(ignored)).as(ignored.toString()).isZero();
+        }
+    }
+
+    @Test
+    void uneErreurDeBaseNEmpecheNiLeMessageSuivantNiLaPartition() throws Exception {
+        var userId = UUID.randomUUID();
+        var first = UUID.randomUUID();
+        publish(first, "CustomerCreated", 1, userId, "l@bankflow.test", "ACTIVE", T1);
+        awaitTrue(() -> countRefs(first) == 1);
+        var conflicting = UUID.randomUUID();
+
+        // Le userId est déjà pris par un autre client : l'insertion échoue (contrainte unique)
+        publish(conflicting, "CustomerCreated", 1, userId, "l2@bankflow.test", "ACTIVE", T1);
+        awaitMarkerProcessed();
+
+        assertThat(countRefs(conflicting)).isZero();
+        assertThat(countRefs(first)).isEqualTo(1);
+    }
+
+    /** Marqueur : quand il est traité, les messages précédents (même partition) le sont aussi. */
+    private void awaitMarkerProcessed() throws Exception {
+        var markerId = UUID.randomUUID();
+        publish(markerId, "CustomerCreated", 1, UUID.randomUUID(), "m@bankflow.test", "ACTIVE", T1);
+        awaitTrue(() -> countRefs(markerId) == 1);
     }
 
     private void publish(
-            UUID key,
+            UUID customerId,
             String eventType,
             int version,
-            UUID customerId,
             UUID userId,
             String email,
-            String status)
+            String status,
+            Instant occurredAt)
             throws Exception {
         var envelope =
                 """
@@ -135,12 +182,17 @@ class CustomerEventsIntegrationTests extends BankingApiTestSupport {
                                 UUID.randomUUID(),
                                 eventType,
                                 version,
-                                Instant.now(),
+                                occurredAt,
                                 customerId,
                                 userId,
                                 email,
                                 status);
-        kafka.send(TOPIC, key.toString(), envelope).get();
+        publishRaw(envelope);
+    }
+
+    /** Toujours la même clé : un seul topic partitionné par clé garde l'ordre d'envoi. */
+    private void publishRaw(String envelope) throws Exception {
+        kafka.send(TOPIC, "tests", envelope).get();
     }
 
     private int countRefs(UUID customerId) {

@@ -29,15 +29,6 @@ public class AccountNumberGenerator {
         return "FR" + computeIbanCheckDigits(bban) + bban;
     }
 
-    /** Contrôle la clé IBAN (ISO 13616, modulo 97) d'un IBAN sans espaces. */
-    public static boolean isValidIban(String iban) {
-        if (iban == null || iban.length() < 5 || !iban.matches("[A-Z]{2}[0-9]{2}[A-Z0-9]+")) {
-            return false;
-        }
-        var rearranged = iban.substring(4) + iban.substring(0, 4);
-        return convertToDigits(rearranged).mod(NINETY_SEVEN).intValue() == 1;
-    }
-
     private static String computeRibKey(String accountPart) {
         long remainder =
                 (89L * Long.parseLong(BANK_CODE)

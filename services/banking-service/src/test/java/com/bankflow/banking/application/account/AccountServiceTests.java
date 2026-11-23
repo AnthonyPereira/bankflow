@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.bankflow.banking.IbanTestSupport;
 import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountNumberGenerator;
 import com.bankflow.banking.domain.account.AccountRepository;
@@ -42,7 +43,7 @@ class AccountServiceTests {
                         customerRefs,
                         new AccountNumberGenerator(new SecureRandom()),
                         Clock.fixed(NOW, ZoneOffset.UTC));
-        when(accounts.saveAndFlush(any(Account.class))).thenAnswer(call -> call.getArgument(0));
+        when(accounts.insertIfNumberFree(any(Account.class))).thenReturn(true);
     }
 
     private CustomerRef givenCustomer(CustomerStatus status) {
@@ -62,7 +63,7 @@ class AccountServiceTests {
 
         assertThat(account.getCustomerId()).isEqualTo(customer.getCustomerId());
         assertThat(account.getLabel()).isEqualTo("Courant");
-        assertThat(AccountNumberGenerator.isValidIban(account.getAccountNumber())).isTrue();
+        assertThat(IbanTestSupport.isValidIban(account.getAccountNumber())).isTrue();
     }
 
     @Test
@@ -73,7 +74,7 @@ class AccountServiceTests {
 
         assertThatThrownBy(() -> service.openAccount(userId, Currency.EUR, null))
                 .isInstanceOf(AccountLimitReachedException.class);
-        verify(accounts, never()).saveAndFlush(any());
+        verify(accounts, never()).insertIfNumberFree(any());
     }
 
     @Test
@@ -97,12 +98,12 @@ class AccountServiceTests {
         var customer = givenCustomer(CustomerStatus.ACTIVE);
         when(accounts.countByCustomerIdAndStatus(customer.getCustomerId(), AccountStatus.ACTIVE))
                 .thenReturn(0L);
-        when(accounts.existsByAccountNumber(any())).thenReturn(true, true, false);
+        when(accounts.insertIfNumberFree(any())).thenReturn(false, false, true);
 
         var account = service.openAccount(userId, Currency.USD, null);
 
         assertThat(account.getAccountNumber()).hasSize(27);
-        verify(accounts, org.mockito.Mockito.times(3)).existsByAccountNumber(any());
+        verify(accounts, org.mockito.Mockito.times(3)).insertIfNumberFree(any());
     }
 
     @Test
@@ -110,10 +111,10 @@ class AccountServiceTests {
         var customer = givenCustomer(CustomerStatus.ACTIVE);
         when(accounts.countByCustomerIdAndStatus(customer.getCustomerId(), AccountStatus.ACTIVE))
                 .thenReturn(0L);
-        when(accounts.existsByAccountNumber(any())).thenReturn(true);
+        when(accounts.insertIfNumberFree(any())).thenReturn(false);
 
         assertThatThrownBy(() -> service.openAccount(userId, Currency.EUR, null))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(AccountNumberUnavailableException.class);
     }
 
     @Test
@@ -123,6 +124,7 @@ class AccountServiceTests {
                 Account.open(
                         UUID.randomUUID(), "FR7699999000010000000000000", Currency.EUR, null, NOW);
         when(accounts.findById(foreign.getId())).thenReturn(Optional.of(foreign));
+        when(accounts.findByIdForUpdate(foreign.getId())).thenReturn(Optional.of(foreign));
 
         assertThatThrownBy(() -> service.getAccount(userId, false, foreign.getId()))
                 .isInstanceOf(AccountNotFoundException.class);

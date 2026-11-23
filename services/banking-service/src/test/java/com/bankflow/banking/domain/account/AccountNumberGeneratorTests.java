@@ -2,6 +2,7 @@ package com.bankflow.banking.domain.account;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.bankflow.banking.IbanTestSupport;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import org.junit.jupiter.api.Test;
@@ -43,17 +44,17 @@ class AccountNumberGeneratorTests {
             var iban = generator.generateIban();
             assertThat(iban).hasSize(27);
             assertThat(computeIbanRemainder(iban)).as(iban).isEqualTo(1);
-            assertThat(AccountNumberGenerator.isValidIban(iban)).as(iban).isTrue();
+            assertThat(IbanTestSupport.isValidIban(iban)).as(iban).isTrue();
         }
     }
 
     @Test
     void reconnaitUnIbanReelEtRefuseUneCleFausse() {
         // IBAN d'exemple publié dans la norme ISO 13616
-        assertThat(AccountNumberGenerator.isValidIban("GB82WEST12345698765432")).isTrue();
-        assertThat(AccountNumberGenerator.isValidIban("GB83WEST12345698765432")).isFalse();
-        assertThat(AccountNumberGenerator.isValidIban("")).isFalse();
-        assertThat(AccountNumberGenerator.isValidIban(null)).isFalse();
+        assertThat(IbanTestSupport.isValidIban("GB82WEST12345698765432")).isTrue();
+        assertThat(IbanTestSupport.isValidIban("GB83WEST12345698765432")).isFalse();
+        assertThat(IbanTestSupport.isValidIban("")).isFalse();
+        assertThat(IbanTestSupport.isValidIban(null)).isFalse();
     }
 
     /** Implémentation indépendante du contrôle : déplace les 4 premiers caractères en fin. */

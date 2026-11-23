@@ -64,7 +64,7 @@ public class Account {
         this.accountNumber = accountNumber;
         this.currency = currency;
         this.label = label;
-        this.balance = Money.zero(currency).amount();
+        this.balance = Money.createZero(currency).amount();
         this.status = AccountStatus.ACTIVE;
         this.createdAt = now;
     }

@@ -2,6 +2,9 @@ package com.bankflow.banking.infrastructure.kafka;
 
 import com.bankflow.banking.application.customer.CustomerRefSynchronizer;
 import com.bankflow.banking.domain.customer.CustomerStatus;
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -40,7 +43,11 @@ class CustomerEventsConsumer {
         parseEvent(message)
                 .ifPresent(event ->
                         synchronizer.syncCustomer(
-                                event.customerId(), event.userId(), event.email(), event.status()));
+                                event.customerId(),
+                                event.userId(),
+                                event.email(),
+                                event.status(),
+                                event.occurredAt()));
     }
 
     private Optional<CustomerEvent> parseEvent(String message) {
@@ -60,14 +67,14 @@ class CustomerEventsConsumer {
                 log.warn("Événement {} {} de version non gérée ignoré", TOPIC, type);
                 return Optional.empty();
             }
-            return buildEvent(envelope.path("payload"), type);
-        } catch (JacksonException | IllegalArgumentException exception) {
+            return buildEvent(envelope.path("payload"), readOccurredAt(envelope), type);
+        } catch (JacksonException | IllegalArgumentException | DateTimeException exception) {
             log.warn("Événement {} invalide ignoré", TOPIC);
             return Optional.empty();
         }
     }
 
-    private Optional<CustomerEvent> buildEvent(JsonNode payload, String type) {
+    private Optional<CustomerEvent> buildEvent(JsonNode payload, Instant occurredAt, String type) {
         var customerId = readText(payload, "customerId");
         var userId = readText(payload, "userId");
         var email = readText(payload, "email");
@@ -86,7 +93,17 @@ class CustomerEventsConsumer {
                         UUID.fromString(customerId),
                         UUID.fromString(userId),
                         email,
-                        CustomerStatus.valueOf(status)));
+                        CustomerStatus.valueOf(status),
+                        occurredAt));
+    }
+
+    /** Date de l'état publié, tronquée à la microseconde comme PostgreSQL. */
+    private static Instant readOccurredAt(JsonNode envelope) {
+        var text = readText(envelope, "occurredAt");
+        if (text == null) {
+            throw new IllegalArgumentException("occurredAt absent");
+        }
+        return Instant.parse(text).truncatedTo(ChronoUnit.MICROS);
     }
 
     private static String readText(JsonNode node, String field) {
@@ -95,5 +112,9 @@ class CustomerEventsConsumer {
     }
 
     private record CustomerEvent(
-            UUID customerId, UUID userId, String email, CustomerStatus status) {}
+            UUID customerId,
+            UUID userId,
+            String email,
+            CustomerStatus status,
+            Instant occurredAt) {}
 }

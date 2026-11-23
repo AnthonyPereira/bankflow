@@ -21,7 +21,10 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,8 +47,14 @@ public abstract class BankingApiTestSupport {
     protected static final String ADMIN = "ROLE_ADMIN";
 
     private static final RSAKey KEY = generateKey();
-    private static final HttpServer JWKS = startJwksServer();
     private static final JsonMapper JSON = JsonMapper.builder().build();
+
+    /**
+     * Le port est conservé d'une classe à l'autre : les contextes Spring en cache l'ont mémorisé.
+     */
+    private static int jwksPort;
+
+    private static HttpServer jwks;
 
     protected final HttpClient client = HttpClient.newHttpClient();
 
@@ -54,11 +63,20 @@ public abstract class BankingApiTestSupport {
 
     @Autowired protected CustomerRefRepository customerRefs;
 
+    @BeforeAll
+    static synchronized void startJwksServer() {
+        jwks = createJwksServer(jwksPort);
+        jwksPort = jwks.getAddress().getPort();
+    }
+
+    @AfterAll
+    static synchronized void stopJwksServer() {
+        jwks.stop(0);
+    }
+
     @DynamicPropertySource
     static void registerJwksProperty(DynamicPropertyRegistry registry) {
-        registry.add(
-                "JWK_SET_URI",
-                () -> "http://127.0.0.1:" + JWKS.getAddress().getPort() + "/jwks.json");
+        registry.add("JWK_SET_URI", () -> "http://127.0.0.1:" + jwksPort + "/jwks.json");
     }
 
     /** Crée la référence d'un client, comme le ferait le consommateur Kafka. */
@@ -74,13 +92,21 @@ public abstract class BankingApiTestSupport {
 
     protected HttpResponse<String> send(String method, String path, String token, String body)
             throws Exception {
+        return send(method, path, token, body, Map.of());
+    }
+
+    /** Variante avec des en-têtes en plus ; un {@code Content-Type} fourni remplace le JSON. */
+    protected HttpResponse<String> send(
+            String method, String path, String token, String body, Map<String, String> headers)
+            throws Exception {
         var request = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path));
         if (token != null) {
             request.header("Authorization", "Bearer " + token);
         }
-        if (body != null) {
+        if (body != null && !headers.containsKey("Content-Type")) {
             request.header("Content-Type", "application/json");
         }
+        headers.forEach(request::header);
         request.method(
                 method,
                 body == null
@@ -94,12 +120,17 @@ public abstract class BankingApiTestSupport {
     }
 
     protected static String createToken(UUID userId, String role) {
+        return createToken(userId, role, ISSUER, AUDIENCE);
+    }
+
+    /** Jeton avec émetteur et audience au choix, pour tester les refus ; rôle nul = sans rôle. */
+    protected static String createToken(UUID userId, String role, String issuer, String audience) {
         try {
             var claims =
                     new JWTClaimsSet.Builder()
                             .subject(userId.toString())
-                            .issuer(ISSUER)
-                            .audience(AUDIENCE)
+                            .issuer(issuer)
+                            .audience(audience)
                             .claim("role", role)
                             .expirationTime(Date.from(Instant.now().plusSeconds(300)))
                             .build();
@@ -122,9 +153,9 @@ public abstract class BankingApiTestSupport {
         }
     }
 
-    private static HttpServer startJwksServer() {
+    private static HttpServer createJwksServer(int fixedPort) {
         try {
-            var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            var server = HttpServer.create(new InetSocketAddress("127.0.0.1", fixedPort), 0);
             server.createContext(
                     "/jwks.json",
                     exchange -> {

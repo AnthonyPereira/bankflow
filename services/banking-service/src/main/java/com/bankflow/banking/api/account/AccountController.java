@@ -39,11 +39,11 @@ class AccountController {
         var account =
                 accountService.openAccount(readUserId(jwt), request.currency(), request.label());
         var location =
-                ServletUriComponentsBuilder.fromCurrentRequestUri()
-                        .path("/{id}")
+                ServletUriComponentsBuilder.fromCurrentContextPath()
+                        .path("/accounts/{id}")
                         .buildAndExpand(account.getId())
                         .toUri();
-        return ResponseEntity.created(location).body(AccountResponse.from(account));
+        return ResponseEntity.created(location).body(AccountResponse.createFrom(account));
     }
 
     @GetMapping
@@ -57,23 +57,25 @@ class AccountController {
                     @Max(value = 100, message = "La taille doit être comprise entre 1 et 100.")
                     int size) {
         var accounts = accountService.listAccounts(readUserId(jwt), isAdmin(jwt), page, size);
-        return PageResponse.from(accounts, AccountResponse::from);
+        return PageResponse.createFrom(accounts, AccountResponse::createFrom);
     }
 
     @GetMapping("/{id}")
     AccountResponse getAccount(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return AccountResponse.from(accountService.getAccount(readUserId(jwt), isAdmin(jwt), id));
+        return AccountResponse.createFrom(
+                accountService.getAccount(readUserId(jwt), isAdmin(jwt), id));
     }
 
     @GetMapping("/{id}/balance")
     BalanceResponse getBalance(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         var account = accountService.getAccount(readUserId(jwt), isAdmin(jwt), id);
-        return BalanceResponse.from(account, clock.instant());
+        return BalanceResponse.createFrom(account, clock.instant());
     }
 
     @PostMapping("/{id}/close")
     AccountResponse closeAccount(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return AccountResponse.from(accountService.closeAccount(readUserId(jwt), isAdmin(jwt), id));
+        return AccountResponse.createFrom(
+                accountService.closeAccount(readUserId(jwt), isAdmin(jwt), id));
     }
 
     private static UUID readUserId(Jwt jwt) {

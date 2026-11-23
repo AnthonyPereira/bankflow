@@ -2,16 +2,22 @@ package com.bankflow.banking.api.account;
 
 import com.bankflow.banking.application.account.AccountLimitReachedException;
 import com.bankflow.banking.application.account.AccountNotFoundException;
+import com.bankflow.banking.application.account.AccountNumberUnavailableException;
 import com.bankflow.banking.application.account.CustomerNotReadyException;
 import com.bankflow.banking.application.account.CustomerSuspendedException;
 import com.bankflow.banking.domain.account.AccountBalanceNotZeroException;
 import com.bankflow.banking.domain.account.AccountClosedException;
 import java.util.LinkedHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -23,6 +29,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
     private static final String INVALID_DATA = "Les données envoyées sont invalides.";
 
     @ExceptionHandler(AccountNotFoundException.class)
@@ -53,6 +60,77 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccountBalanceNotZeroException.class)
     ProblemDetail handleAccountBalanceNotZero(AccountBalanceNotZeroException exception) {
         return buildProblem(HttpStatus.CONFLICT, "ACCOUNT_BALANCE_NOT_ZERO", exception);
+    }
+
+    @ExceptionHandler(AccountNumberUnavailableException.class)
+    ProblemDetail handleAccountNumberUnavailable(AccountNumberUnavailableException exception) {
+        return buildProblem(
+                HttpStatus.SERVICE_UNAVAILABLE, "ACCOUNT_NUMBER_UNAVAILABLE", exception);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    ProblemDetail handleConcurrentModification() {
+        var problem =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.CONFLICT,
+                        "La ressource a été modifiée en même temps, réessayez.");
+        problem.setProperty("code", "CONCURRENT_MODIFICATION");
+        return problem;
+    }
+
+    /** Dernier filet : jamais de message d'exception ni de pile dans la réponse. */
+    @ExceptionHandler(Exception.class)
+    ProblemDetail handleUnexpected(Exception exception) throws Exception {
+        if (exception instanceof AccessDeniedException
+                || exception instanceof AuthenticationException) {
+            // Laissées à Spring Security, qui produit le 401 ou le 403
+            throw exception;
+        }
+        log.error("Erreur inattendue", exception);
+        var problem =
+                ProblemDetail.forStatusAndDetail(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Une erreur interne est survenue, réessayez plus tard.");
+        problem.setProperty("code", "INTERNAL_ERROR");
+        return problem;
+    }
+
+    /** Ajoute un {@code code} (et un détail français) aux erreurs produites par Spring MVC. */
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(
+            Exception exception,
+            Object body,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
+        // Le corps n'est fabriqué par Spring que dans le parent : on complète le résultat
+        var response = super.handleExceptionInternal(exception, body, headers, status, request);
+        if (response != null
+                && response.getBody() instanceof ProblemDetail problem
+                && (problem.getProperties() == null
+                        || !problem.getProperties().containsKey("code"))) {
+            problem.setProperty("code", resolveGenericCode(status));
+            problem.setDetail(resolveGenericDetail(status, problem.getDetail()));
+        }
+        return response;
+    }
+
+    private static String resolveGenericCode(HttpStatusCode status) {
+        return switch (status.value()) {
+            case 400 -> "VALIDATION_ERROR";
+            case 404 -> "RESOURCE_NOT_FOUND";
+            case 405, 406, 415 -> "REQUEST_NOT_SUPPORTED";
+            default -> status.is5xxServerError() ? "INTERNAL_ERROR" : "REQUEST_REJECTED";
+        };
+    }
+
+    private static String resolveGenericDetail(HttpStatusCode status, String current) {
+        return switch (status.value()) {
+            case 400 -> INVALID_DATA;
+            case 404 -> "Ressource introuvable.";
+            case 405, 406, 415 -> "Cette requête n'est pas prise en charge.";
+            default -> status.is5xxServerError() ? "Une erreur interne est survenue." : current;
+        };
     }
 
     @Override

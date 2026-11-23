@@ -3,9 +3,10 @@ package com.bankflow.banking.api.account;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bankflow.banking.BankingApiTestSupport;
-import com.bankflow.banking.domain.account.AccountNumberGenerator;
+import com.bankflow.banking.IbanTestSupport;
 import com.bankflow.banking.domain.customer.CustomerStatus;
 import java.net.http.HttpResponse;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +47,29 @@ class AccountApiIntegrationTests extends BankingApiTestSupport {
         assertThat(account.get("closedAt").isNull()).isTrue();
         var iban = account.get("accountNumber").asString();
         assertThat(iban).hasSize(27).startsWith("FR");
-        assertThat(AccountNumberGenerator.isValidIban(iban)).isTrue();
+        assertThat(IbanTestSupport.isValidIban(iban)).isTrue();
+    }
+
+    @Test
+    void laLocationUtiliseLUrlPubliqueDerriereLaGateway() throws Exception {
+        var userId = UUID.randomUUID();
+        createCustomerRef(userId, CustomerStatus.ACTIVE);
+
+        var response =
+                send(
+                        "POST",
+                        "/accounts",
+                        createToken(userId, CLIENT),
+                        "{\"currency\":\"EUR\"}",
+                        Map.of(
+                                "X-Forwarded-Proto", "https",
+                                "X-Forwarded-Host", "bankflow.example",
+                                "X-Forwarded-Prefix", "/api"));
+
+        assertThat(response.statusCode()).isEqualTo(201);
+        var id = parseJson(response).get("id").asString();
+        assertThat(response.headers().firstValue("Location").orElseThrow())
+                .isEqualTo("https://bankflow.example/api/accounts/" + id);
     }
 
     @Test

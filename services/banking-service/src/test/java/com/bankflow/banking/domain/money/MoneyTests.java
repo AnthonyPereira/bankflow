@@ -47,7 +47,7 @@ class MoneyTests {
 
     @Test
     void detecteLeZero() {
-        assertThat(Money.zero(Currency.USD).isZero()).isTrue();
+        assertThat(Money.createZero(Currency.USD).isZero()).isTrue();
         assertThat(eur("0.0001").isZero()).isFalse();
         assertThat(eur("0.0001").isNegative()).isFalse();
     }
@@ -56,7 +56,7 @@ class MoneyTests {
     void exposeUneChaineADeuxDecimales() {
         assertThat(eur("150").toApiString()).isEqualTo("150.00");
         assertThat(eur("1234.5").toApiString()).isEqualTo("1234.50");
-        assertThat(Money.zero(Currency.EUR).toApiString()).isEqualTo("0.00");
+        assertThat(Money.createZero(Currency.EUR).toApiString()).isEqualTo("0.00");
         assertThat(eur("-3").toApiString()).isEqualTo("-3.00");
     }
 }

@@ -17,7 +17,7 @@ public record AccountResponse(
         Instant createdAt,
         Instant closedAt) {
 
-    static AccountResponse from(Account account) {
+    static AccountResponse createFrom(Account account) {
         return new AccountResponse(
                 account.getId(),
                 account.getAccountNumber(),
