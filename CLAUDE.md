@@ -63,18 +63,19 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 - **Runner** : il ne doit **jamais** être enregistré sur `bankflow`, car le dépôt est public.
 - **Procédure** : [docs/runbooks/deploiement.md](docs/runbooks/deploiement.md).
 
-## État d'avancement (2026-11-20)
+## État d'avancement (2026-11-23)
 
-**MVP 1 publiée en `0.1.0`** (tag `v0.1.0`, fusionnée dans `main` le 2026-11-20, voir [CHANGELOG](CHANGELOG.md)) : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005 et BF-016 sont terminés.
-
-Les dernières étapes, toutes fusionnées dans `develop` avec une CI verte :
-- **#35** : Spring Boot 4.2.0 et Spring Cloud 2026.0.0 en GA (BF-001-01 terminé).
-- **#36** : packages rangés par fonctionnalité dans chaque couche.
-- **#37** : comptes de démonstration sur la page de connexion (BF-016-15). Ils sont créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire compris, `demo.admin` est un vrai administrateur), mais ne peuvent jamais être désactivés définitivement. `DEMO_ACCOUNTS_ENABLED=false` masque le tableau et ne les crée plus, sans les désactiver. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_PASSWORD`) reste secret.
-
-Seul `GHCR_PULL_TOKEN` (deploy-platform) est nécessaire, et le runner est en ligne.
+**MVP 1 en ligne en `0.1.1`** sur `https://bankflow.anthonypereira.dpdns.org`, avec les comptes de démonstration (voir [CHANGELOG](CHANGELOG.md)) : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005, BF-016 et BF-023-16 sont terminés.
+- `0.1.0` (tag `v0.1.0`, #39) : contenu de la MVP 1, après trois revues de code complètes. Elle n'a jamais été mise en ligne, car le build des images Spring échouait.
+- `0.1.1` (tag `v0.1.1`, hotfix #51) : `unzip` installé dans l'image de build, pour que le wrapper Maven vérifie la bonne archive.
+- Comptes de démonstration (BF-016-15) : créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire compris, `demo.admin` est un vrai administrateur), mais ne peuvent jamais être désactivés définitivement. `DEMO_ACCOUNTS_ENABLED=false` masque le tableau et ne les crée plus, sans les désactiver. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_EMAIL` / `ADMIN_PASSWORD`, dans `~/apps/bankflow/.env` sur le serveur) reste secret.
+- Déploiement : `deploy-platform` cherche lui-même les nouvelles versions (cron toutes les 5 min, `actions/github-script`, sans `gh`). L'état est gardé dans `~/apps/bankflow/.version` et `.derniere`. Seul `GHCR_PULL_TOKEN` (deploy-platform) est nécessaire.
+- Protection de `main` : `require_last_push_approval` est désactivé (dépôt à une seule personne).
 
 ### Prochaines étapes
 
-1. **Après la release `0.1.0`** : vérifier en ligne que seuls le front et `/api` répondent, puis cocher BF-023-16.
-2. **MVP 2 (`0.2.0`)** : BF-006 (Customer Service), puis BF-007 à BF-009 (comptes, dépôts et retraits, virements), puis BF-017 (écrans Angular).
+**MVP 2 (`0.2.0`)** : le contenu est listé dans le jalon du [BACKLOG](BACKLOG.md#mise-en-ligne-sur-le-serveur-maison).
+1. ADR-004 (résolution du `customerId`), puis BF-006, rattrapage des profils compris (BF-006-11).
+2. BF-007, BF-008 et BF-009, avec les données de démonstration (BF-009-08).
+3. BF-017 et le reste de BF-016 (10b, 11, 12b). Les écrans des comptes peuvent démarrer dès que BF-007 est fusionné.
+4. BF-023-17 (mise en ligne de customer-service et banking-service), puis `release/0.2.0` avec une revue de code complète.

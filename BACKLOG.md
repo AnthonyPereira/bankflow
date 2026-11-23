@@ -45,9 +45,11 @@ L'application sera mise en ligne sur le serveur maison (portable Ubuntu avec Doc
 | Jalon | Release | Lots nécessaires | Ce qui est visible en ligne |
 |---|---|---|---|
 | **MVP 1 : socle** (cible de la première mise en ligne) | `0.1.0` | BF-002, BF-003, BF-004, BF-005, BF-016 | Inscription, connexion et dashboard Angular |
-| **MVP 2 : bancaire** | `0.2.0` | MVP 1 + BF-006 à BF-009, BF-017 | Clients, comptes, dépôts, retraits et virements |
+| **MVP 2 : bancaire** | `0.2.0` | MVP 1 + BF-006 à BF-009, BF-017, le reste de BF-016 (10b, 11, 12b) et BF-023-17 | Clients, comptes, dépôts, retraits et virements |
 
 Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images Docker, publication GHCR et déploiement). Ensuite, chaque release fusionnée dans `main` est déployée automatiquement : avec Gitflow, un lot terminé arrive d'abord sur `develop` et n'est mis en ligne qu'avec sa release (voir les jalons de `CONTRIBUTING.md`).
+
+Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (données de démonstration) et BF-023-17 (mise en ligne des nouveaux services), puis une revue de code complète de `release/0.2.0` avant la fusion dans `main`, comme pour la `0.1.0`.
 
 ---
 
@@ -198,7 +200,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** premier consommateur métier et référence inter-services sans relation SQL.
 
 ### Tâches
-- [ ] BF-006-01 — Migration Flyway : table `customers` (`id`, `user_id` unique, `first_name`, `last_name`, `email`, `phone`, `address`, `status`, timestamps)
+- [ ] BF-006-01 — Migration Flyway : table `customers` (`id`, `user_id` unique, `first_name`, `last_name`, `email`, `phone`, `address`, `status`, timestamps). L'inscription ne demande que l'email et le mot de passe : `first_name`, `last_name`, `phone` et `address` sont donc facultatifs, et le client les complète depuis son profil (BF-006-04, BF-016-11)
 - [ ] BF-006-02 — Consumer `UserRegistered` qui crée le profil client (idempotent sur `user_id`)
 - [ ] BF-006-03 — `GET /customers/me`
 - [ ] BF-006-04 — `PUT /customers/me` : modification des coordonnées avec validation
@@ -208,6 +210,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-006-08 — Publier `CustomerCreated` et `CustomerUpdated` sur `bank.customers` (payload minimal)
 - [ ] BF-006-09 — Documenter les contrats d'événements
 - [ ] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
+- [ ] BF-006-11 — Rattraper les profils manquants. Seule l'inscription publie `UserRegistered` : le compte administrateur initial, les comptes de démonstration et les comptes créés avant la MVP 2 n'ont pas de profil, et une panne de Kafka à l'inscription en fait perdre un jusqu'à l'Outbox (BF-011). Mécanisme à décider (création du profil au premier `GET /customers/me` à partir du JWT, ou publication de `UserRegistered` au démarrage de l'Auth Service pour les comptes sans profil), avec un test pour chaque cas
 
 ### Tests
 - [ ] Tests unitaires : droits d'accès et validations
@@ -215,6 +218,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 
 ### Critères de validation
 - [ ] Une inscription crée automatiquement un profil client
+- [ ] Les comptes de démonstration et les comptes inscrits avant la MVP 2 ont aussi un profil
 - [ ] Un client ne peut pas consulter le profil d'un autre client
 
 ---
@@ -228,7 +232,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-007-01 — Migrations Flyway : `accounts`, `transfers`, `transactions`, `ledger_entries`, `idempotency_keys`
 - [ ] BF-007-02 — Entité `Account` (`customer_id`, `account_number` unique, `currency`, `balance DECIMAL(19,4)`, `status`, `version` pour le verrouillage optimiste)
 - [ ] BF-007-03 — Générer un numéro de compte unique (format IBAN fictif)
-- [ ] BF-007-04 — Résoudre `customerId` depuis le JWT (`userId` vers `customerId` : appel REST au Customer Service ou projection locale, à décider dans un ADR)
+- [ ] BF-007-04 — Résoudre `customerId` depuis le JWT (`userId` vers `customerId` : appel REST au Customer Service ou projection locale alimentée par `CustomerCreated`, à décider dans l'ADR-004)
 - [ ] BF-007-05 — `POST /accounts` : création avec devise, solde initial à 0 et statut ACTIVE
 - [ ] BF-007-06 — `GET /accounts` : seulement les comptes du client, ou tous pour un administrateur
 - [ ] BF-007-07 — `GET /accounts/{id}` et `GET /accounts/{id}/balance` avec contrôle d'appartenance
@@ -285,6 +289,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-009-05 — Gérer les statuts de `Transfer` (PENDING, COMPLETED, REJECTED)
 - [ ] BF-009-06 — `GET /transfers/{id}` avec contrôle d'appartenance (source ou destination)
 - [ ] BF-009-07 — Ajouter Swagger pour l'ensemble du Banking Service
+- [ ] BF-009-08 — Données de démonstration : au démarrage, ouvrir un ou deux comptes pour `demo.client` avec quelques dépôts, retraits et virements, pour que la vitrine ne soit pas vide. Idempotent (rien n'est recréé au redémarrage), en passant par les mêmes règles métier que les autres opérations, et désactivé avec `DEMO_ACCOUNTS_ENABLED=false`
 
 ### Tests
 - [ ] Tests unitaires de chaque règle métier
@@ -617,7 +622,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-023-15 — (Étude) Avro et Schema Registry
 
 ### Tâches — Déploiement sur le serveur maison (à avancer au jalon MVP 1)
-- [ ] BF-023-16 — Déployer `main` sur le serveur maison (`https://bankflow.anthonypereira.dpdns.org`) :
+- [x] BF-023-16 — Déployer `main` sur le serveur maison (`https://bankflow.anthonypereira.dpdns.org`) :
   - garder ce dépôt **public** et porter le runner auto-hébergé dans le dépôt privé `deploy-platform`, qui peut déployer plusieurs applications ;
   - écrire un `docker-compose.yml` de déploiement : seuls le front (port 80) et l'api-gateway (`/api`) sont routés par Traefik (réseau `web`) ; services, PostgreSQL et Kafka restent sur un réseau interne ; Kafka UI, Mailpit, Prometheus et Grafana ne sont jamais exposés ;
   - limiter la mémoire de chaque JVM (ex. `-Xmx256m`) et ne déployer que les services développés (le serveur a 8 Go de RAM) ;
@@ -625,6 +630,12 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
   - configurer le profil `prod-sim` (BF-002-08) ; les secrets vivent dans `~/apps/bankflow/.env` sur le serveur, jamais dans Git ;
   - sur le serveur : retirer le sudo temporaire (`/etc/sudoers.d/claude-temp`), puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
   - documenter le déploiement et le retour arrière dans `docs/runbooks/`.
+
+- [ ] BF-023-17 — Mettre en ligne les services de la MVP 2 :
+  - ajouter `customer-service` et `banking-service` à la matrice de `.github/workflows/deploy.yml` ;
+  - les ajouter au `docker-compose.yml` de `deploy-platform` (`apps/bankflow/`), avec healthcheck, rotation des logs, `no-new-privileges`, limite mémoire de la JVM et réseau `interne` uniquement ;
+  - brancher les services sur `customer_db` et `banking_db`, déjà créées au premier démarrage avec `CUSTOMER_DB_PASSWORD` et `BANKING_DB_PASSWORD` de `~/apps/bankflow/.env` : aucun nouveau secret, sauf si un service en demande un autre (à ajouter par l'utilisateur, jamais dans Git) ;
+  - mettre à jour le runbook de déploiement (services ajoutés, vérifications après mise en ligne).
 
 ### Critères de validation — Déploiement
 - [ ] Un `git push` sur `main` met l'application à jour en ligne en moins de 5 minutes
