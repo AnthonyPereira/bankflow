@@ -1,4 +1,4 @@
-package com.bankflow.customer.api.customer.dto;
+package com.bankflow.customer.api.customer;
 
 import com.bankflow.customer.application.customer.ContactDetails;
 import jakarta.validation.constraints.Pattern;
@@ -24,7 +24,7 @@ public record UpdateContactRequest(
         address = stripToNull(address);
     }
 
-    public ContactDetails toContactDetails() {
+    public ContactDetails createContactDetails() {
         return new ContactDetails(firstName, lastName, phone, address);
     }
 

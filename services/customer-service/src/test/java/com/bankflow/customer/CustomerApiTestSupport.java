@@ -29,6 +29,8 @@ import java.util.UUID;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,7 +59,8 @@ public abstract class CustomerApiTestSupport {
     private static final Duration KAFKA_TIMEOUT = Duration.ofSeconds(30);
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final RSAKey KEY = generateKey();
-    private static final HttpServer JWKS = startJwksServer();
+    private static HttpServer jwks;
+    private static int jwksPort;
 
     private final HttpClient client = HttpClient.newHttpClient();
 
@@ -68,11 +71,29 @@ public abstract class CustomerApiTestSupport {
     @Autowired protected CustomerRegistrationService registrationService;
     @Autowired private KafkaContainer kafka;
 
+    /**
+     * Le serveur JWKS est arrêté en fin de classe. Il est relancé sur le même port pour la classe
+     * suivante : le contexte Spring, mis en cache, garde la même adresse.
+     */
+    @BeforeAll
+    static synchronized void startJwks() {
+        if (jwks == null) {
+            jwks = startJwksServer(jwksPort);
+            jwksPort = jwks.getAddress().getPort();
+        }
+    }
+
+    @AfterAll
+    static synchronized void stopJwks() {
+        if (jwks != null) {
+            jwks.stop(0);
+            jwks = null;
+        }
+    }
+
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
-        registry.add(
-                "JWK_SET_URI",
-                () -> "http://127.0.0.1:" + JWKS.getAddress().getPort() + "/jwks.json");
+        registry.add("JWK_SET_URI", () -> "http://127.0.0.1:" + jwksPort + "/jwks.json");
     }
 
     protected static String generateUniqueEmail() {
@@ -100,6 +121,13 @@ public abstract class CustomerApiTestSupport {
         return send(buildRequest(path, token).GET());
     }
 
+    protected HttpResponse<String> post(String path, String token, String body) throws Exception {
+        return send(
+                buildRequest(path, token)
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(body)));
+    }
+
     protected HttpResponse<String> put(String path, String token, String body) throws Exception {
         return send(
                 buildRequest(path, token)
@@ -108,11 +136,16 @@ public abstract class CustomerApiTestSupport {
     }
 
     protected static String createToken(UUID userId, String role) throws Exception {
+        return createToken(userId.toString(), ISSUER, AUDIENCE, role);
+    }
+
+    protected static String createToken(String subject, String issuer, String audience, String role)
+            throws Exception {
         var claims =
                 new JWTClaimsSet.Builder()
-                        .subject(userId.toString())
-                        .issuer(ISSUER)
-                        .audience(AUDIENCE)
+                        .subject(subject)
+                        .issuer(issuer)
+                        .audience(audience)
                         .claim("role", role)
                         .expirationTime(Date.from(Instant.now().plusSeconds(300)))
                         .build();
@@ -226,9 +259,9 @@ public abstract class CustomerApiTestSupport {
         }
     }
 
-    private static HttpServer startJwksServer() {
+    private static HttpServer startJwksServer(int port) {
         try {
-            var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            var server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
             server.createContext(
                     "/jwks.json",
                     exchange -> {

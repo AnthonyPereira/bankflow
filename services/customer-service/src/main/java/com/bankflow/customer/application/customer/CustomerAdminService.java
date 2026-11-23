@@ -32,7 +32,10 @@ public class CustomerAdminService {
         this.clock = clock;
     }
 
-    /** Les plus récents d'abord ; {@code q} cherche dans l'email, le prénom et le nom. */
+    /**
+     * Les plus récents d'abord ; {@code q} cherche dans l'email, le prénom et le nom. Le {@code
+     * LIKE '%…%'} ne profite d'aucun index : acceptable pour une démonstration.
+     */
     @Transactional(readOnly = true)
     public Page<Customer> searchCustomers(
             int page, int size, CustomerStatus status, String searchText) {
@@ -58,8 +61,7 @@ public class CustomerAdminService {
             customer.activate(now);
         }
         if (customer.getStatus() != previousStatus) {
-            customers.save(customer);
-            events.publishEvent(CustomerUpdated.of(customer, now));
+            events.publishEvent(CustomerUpdated.createFrom(customer));
         }
         return customer;
     }

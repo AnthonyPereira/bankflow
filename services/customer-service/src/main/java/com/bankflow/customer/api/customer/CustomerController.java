@@ -1,9 +1,5 @@
 package com.bankflow.customer.api.customer;
 
-import com.bankflow.customer.api.customer.dto.CustomerResponse;
-import com.bankflow.customer.api.customer.dto.PageResponse;
-import com.bankflow.customer.api.customer.dto.UpdateContactRequest;
-import com.bankflow.customer.api.customer.dto.UpdateStatusRequest;
 import com.bankflow.customer.application.customer.CurrentUser;
 import com.bankflow.customer.application.customer.CustomerAdminService;
 import com.bankflow.customer.application.customer.CustomerProfileService;
@@ -37,21 +33,21 @@ class CustomerController {
 
     @GetMapping("/me")
     CustomerResponse getMyProfile(JwtAuthenticationToken authentication) {
-        return CustomerResponse.from(
+        return CustomerResponse.createFrom(
                 profileService.getOwnProfile(createCurrentUser(authentication).userId()));
     }
 
     @PutMapping("/me")
     CustomerResponse updateMyProfile(
             JwtAuthenticationToken authentication, @Valid @RequestBody UpdateContactRequest body) {
-        return CustomerResponse.from(
+        return CustomerResponse.createFrom(
                 profileService.updateOwnContact(
-                        createCurrentUser(authentication).userId(), body.toContactDetails()));
+                        createCurrentUser(authentication).userId(), body.createContactDetails()));
     }
 
     @GetMapping("/{id}")
     CustomerResponse getCustomer(JwtAuthenticationToken authentication, @PathVariable UUID id) {
-        return CustomerResponse.from(
+        return CustomerResponse.createFrom(
                 profileService.getCustomer(id, createCurrentUser(authentication)));
     }
 
@@ -68,21 +64,31 @@ class CustomerController {
             @RequestParam(required = false) CustomerStatus status,
             @RequestParam(required = false) @Size(max = 100, message = "100 caractères au maximum")
                     String q) {
-        return PageResponse.from(
-                adminService.searchCustomers(page, size, status, q).map(CustomerResponse::from));
+        return PageResponse.createFrom(
+                adminService
+                        .searchCustomers(page, size, status, q)
+                        .map(CustomerResponse::createFrom));
     }
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     CustomerResponse updateStatus(
             @PathVariable UUID id, @Valid @RequestBody UpdateStatusRequest body) {
-        return CustomerResponse.from(adminService.changeStatus(id, body.status()));
+        return CustomerResponse.createFrom(adminService.changeStatus(id, body.status()));
     }
 
     private static CurrentUser createCurrentUser(JwtAuthenticationToken authentication) {
         var admin =
                 authentication.getAuthorities().stream()
                         .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
-        return new CurrentUser(UUID.fromString(authentication.getToken().getSubject()), admin);
+        return new CurrentUser(parseUserId(authentication.getToken().getSubject()), admin);
+    }
+
+    private static UUID parseUserId(String subject) {
+        try {
+            return UUID.fromString(subject);
+        } catch (IllegalArgumentException | NullPointerException exception) {
+            throw new InvalidTokenException();
+        }
     }
 }

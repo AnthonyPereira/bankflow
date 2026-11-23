@@ -3,6 +3,7 @@ package com.bankflow.customer.application.customer;
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerCreated;
 import com.bankflow.customer.domain.customer.CustomerRepository;
+import com.bankflow.customer.domain.customer.CustomerUpdated;
 import java.time.Clock;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,6 +33,10 @@ public class CustomerRegistrationService {
      * (jamais l'inverse). Dans tous les cas {@code CustomerCreated} est publié avec l'état actuel,
      * pour que le Banking Service rattrape un événement perdu.
      *
+     * <p>Un compte de démonstration n'étant jamais désactivé, le passage en démonstration réactive
+     * un client suspendu : ce changement de statut est alors aussi publié ({@code
+     * CustomerUpdated}).
+     *
      * @throws org.springframework.dao.DataIntegrityViolationException si un message concurrent a
      *     créé le client entre-temps : l'appelant rejoue alors l'appel, qui trouvera le client
      */
@@ -44,9 +49,13 @@ public class CustomerRegistrationService {
                         .orElseGet(() ->
                                 customers.saveAndFlush(
                                         Customer.createFromUser(userId, email, demo, now)));
+        var previousStatus = customer.getStatus();
         if (demo) {
             customer.markAsDemo(now);
         }
-        events.publishEvent(CustomerCreated.of(customer, now));
+        events.publishEvent(CustomerCreated.createFrom(customer));
+        if (customer.getStatus() != previousStatus) {
+            events.publishEvent(CustomerUpdated.createFrom(customer));
+        }
     }
 }

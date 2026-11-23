@@ -1,4 +1,4 @@
-package com.bankflow.customer.api.customer.dto;
+package com.bankflow.customer.api.customer;
 
 import com.bankflow.customer.domain.customer.CustomerStatus;
 import jakarta.validation.constraints.NotNull;

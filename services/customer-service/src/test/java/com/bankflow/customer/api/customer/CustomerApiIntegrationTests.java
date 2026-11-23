@@ -3,11 +3,18 @@ package com.bankflow.customer.api.customer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bankflow.customer.CustomerApiTestSupport;
+import com.bankflow.customer.application.customer.ContactDetails;
+import com.bankflow.customer.application.customer.CustomerProfileService;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 class CustomerApiIntegrationTests extends CustomerApiTestSupport {
+
+    @Autowired private CustomerProfileService profileService;
 
     @Test
     void leProfilEstIntrouvableAvantSaCreationPuisLisible() throws Exception {
@@ -103,6 +110,19 @@ class CustomerApiIntegrationTests extends CustomerApiTestSupport {
         var token = createToken(customer.getUserId(), ROLE_CLIENT);
 
         assertThat(get("/customers", token).statusCode()).isEqualTo(403);
+        // Le contrôle d'accès précède la validation : 403 même avec des paramètres invalides
+        assertThat(get("/customers?size=1000", token).statusCode()).isEqualTo(403);
+        assertThat(
+                        put(
+                                        "/customers/" + customer.getId() + "/status",
+                                        token,
+                                        "{\"status\":\"INCONNU\"}")
+                                .statusCode())
+                .isEqualTo(403);
+        assertThat(
+                        put("/customers/" + customer.getId() + "/status", token, "pas du json")
+                                .statusCode())
+                .isEqualTo(403);
         assertThat(
                         put(
                                         "/customers/" + customer.getId() + "/status",
@@ -146,9 +166,103 @@ class CustomerApiIntegrationTests extends CustomerApiTestSupport {
         var tooBig = get("/customers?size=101", adminToken);
         assertThat(tooBig.statusCode()).isEqualTo(400);
         assertThat(parseJson(tooBig).get("errors").has("size")).isTrue();
+        assertThat(parseJson(tooBig).get("code").asString()).isEqualTo("VALIDATION_ERROR");
         assertThat(get("/customers?size=0", adminToken).statusCode()).isEqualTo(400);
         assertThat(get("/customers?page=-1", adminToken).statusCode()).isEqualTo(400);
         assertThat(get("/customers?status=INCONNU", adminToken).statusCode()).isEqualTo(400);
+    }
+
+    @Test
+    void lesParametresEtLeCheminMalFormesDonnent400ValidationError() throws Exception {
+        var adminToken = createToken(UUID.randomUUID(), ROLE_ADMIN);
+
+        for (var path :
+                new String[] {
+                    "/customers?page=abc",
+                    "/customers?size=abc",
+                    "/customers?status=INCONNU",
+                    "/customers/pas-un-uuid"
+                }) {
+            var response = get(path, adminToken);
+            assertThat(response.statusCode()).as(path).isEqualTo(400);
+            assertThat(parseJson(response).get("code").asString())
+                    .as(path)
+                    .isEqualTo("VALIDATION_ERROR");
+        }
+    }
+
+    @Test
+    void unCorpsIllisibleOuUnStatutInconnuDonne400ValidationError() throws Exception {
+        var customer = createCustomer(generateUniqueEmail(), false);
+        var adminToken = createToken(UUID.randomUUID(), ROLE_ADMIN);
+        var url = "/customers/" + customer.getId() + "/status";
+
+        for (var body : new String[] {"pas du json", "{\"status\":\"INCONNU\"}", "{}"}) {
+            var response = put(url, adminToken, body);
+            assertThat(response.statusCode()).as(body).isEqualTo(400);
+            assertThat(parseJson(response).get("code").asString())
+                    .as(body)
+                    .isEqualTo("VALIDATION_ERROR");
+        }
+        var clientToken = createToken(customer.getUserId(), ROLE_CLIENT);
+        assertThat(
+                        parseJson(put("/customers/me", clientToken, "pas du json"))
+                                .get("code")
+                                .asString())
+                .isEqualTo("VALIDATION_ERROR");
+    }
+
+    @Test
+    void uneMethodeNonGereeDonne405RequestNotSupported() throws Exception {
+        var customer = createCustomer(generateUniqueEmail(), false);
+        var token = createToken(customer.getUserId(), ROLE_CLIENT);
+
+        var response = post("/customers/me", token, "{}");
+
+        assertThat(response.statusCode()).isEqualTo(405);
+        assertThat(parseJson(response).get("code").asString()).isEqualTo("REQUEST_NOT_SUPPORTED");
+    }
+
+    @Test
+    void laRechercheEstInsensibleALaCasseEtTraiteLesJokersLitteralement() throws Exception {
+        var tag = "joker" + UUID.randomUUID().toString().replace("-", "");
+        var withPercent =
+                createCustomerNamed(tag + "-a@bankflow.test", "Remi" + tag + "%X", "Dupont");
+        var withoutPercent =
+                createCustomerNamed(tag + "-b@bankflow.test", "Remi" + tag + "ZX", "Durand");
+        var withUnderscore = createCustomerNamed(tag + "-c@bankflow.test", "Alice", "Du_" + tag);
+        var withoutUnderscore = createCustomerNamed(tag + "-d@bankflow.test", "Alice", "DuX" + tag);
+        var adminToken = createToken(UUID.randomUUID(), ROLE_ADMIN);
+
+        // Prénom, insensible à la casse
+        assertThat(searchIds("remi" + tag, adminToken))
+                .containsExactlyInAnyOrder(withPercent, withoutPercent);
+        // Nom, insensible à la casse
+        assertThat(searchIds("DURAND", adminToken)).contains(withoutPercent);
+        // Le % saisi est cherché tel quel
+        assertThat(searchIds(tag + "%x", adminToken)).containsExactly(withPercent);
+        assertThat(searchIds("%", adminToken)).contains(withPercent).doesNotContain(withoutPercent);
+        // Le _ saisi est cherché tel quel
+        assertThat(searchIds("du_" + tag, adminToken)).containsExactly(withUnderscore);
+        assertThat(searchIds("du_" + tag, adminToken)).doesNotContain(withoutUnderscore);
+    }
+
+    private UUID createCustomerNamed(String email, String firstName, String lastName) {
+        var customer = createCustomer(email, false);
+        profileService.updateOwnContact(
+                customer.getUserId(), new ContactDetails(firstName, lastName, null, null));
+        return customer.getId();
+    }
+
+    private java.util.List<UUID> searchIds(String query, String adminToken) throws Exception {
+        var encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
+        var response = get("/customers?size=100&q=" + encoded, adminToken);
+        assertThat(response.statusCode()).isEqualTo(200);
+        var ids = new java.util.ArrayList<UUID>();
+        parseJson(response)
+                .get("content")
+                .forEach(item -> ids.add(UUID.fromString(item.get("id").asString())));
+        return ids;
     }
 
     @Test

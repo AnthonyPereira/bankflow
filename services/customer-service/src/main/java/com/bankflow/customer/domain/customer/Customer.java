@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -61,8 +62,8 @@ public class Customer {
         this.email = normalizeEmail(email);
         this.status = CustomerStatus.ACTIVE;
         this.demo = demo;
-        this.createdAt = now;
-        this.updatedAt = now;
+        this.createdAt = truncate(now);
+        this.updatedAt = truncate(now);
     }
 
     /** Crée le client d'un utilisateur qui vient de s'inscrire : actif, sans coordonnées. */
@@ -81,7 +82,7 @@ public class Customer {
         this.lastName = normalizeText(lastName);
         this.phone = normalizeText(phone);
         this.address = normalizeText(address);
-        this.updatedAt = now;
+        this.updatedAt = truncate(now);
     }
 
     /**
@@ -93,27 +94,36 @@ public class Customer {
         }
         if (status != CustomerStatus.SUSPENDED) {
             this.status = CustomerStatus.SUSPENDED;
-            this.updatedAt = now;
+            this.updatedAt = truncate(now);
         }
     }
 
     public void activate(Instant now) {
         if (status != CustomerStatus.ACTIVE) {
             this.status = CustomerStatus.ACTIVE;
-            this.updatedAt = now;
+            this.updatedAt = truncate(now);
         }
     }
 
     /**
      * Passe le client en démonstration (jamais l'inverse). Un client de démonstration ne pouvant
-     * pas être suspendu, il est réactivé s'il l'était.
+     * pas être suspendu (contrainte {@code customers_demo_never_suspended}), il est réactivé s'il
+     * l'était : l'appelant doit alors publier le changement de statut.
      */
     public void markAsDemo(Instant now) {
         if (!demo) {
             this.demo = true;
             this.status = CustomerStatus.ACTIVE;
-            this.updatedAt = now;
+            this.updatedAt = truncate(now);
         }
+    }
+
+    /**
+     * PostgreSQL stocke les dates à la microseconde : tronquer à l'écriture garantit que la date
+     * publiée dans les événements est identique à celle lue en base.
+     */
+    private static Instant truncate(Instant instant) {
+        return instant.truncatedTo(ChronoUnit.MICROS);
     }
 
     private static String normalizeText(String value) {

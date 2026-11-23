@@ -64,7 +64,6 @@ class CustomerProfileServiceTests {
     @Test
     void laMiseAJourDesCoordonneesEfaceLesChampsVides() {
         when(customers.findByUserId(ownerUserId)).thenReturn(Optional.of(customer));
-        when(customers.save(customer)).thenReturn(customer);
 
         var updated =
                 service.updateOwnContact(ownerUserId, new ContactDetails("Alice", " ", null, ""));

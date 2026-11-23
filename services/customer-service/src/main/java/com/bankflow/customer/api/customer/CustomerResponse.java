@@ -1,4 +1,4 @@
-package com.bankflow.customer.api.customer.dto;
+package com.bankflow.customer.api.customer;
 
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerStatus;
@@ -18,7 +18,7 @@ public record CustomerResponse(
         Instant createdAt,
         Instant updatedAt) {
 
-    public static CustomerResponse from(Customer customer) {
+    public static CustomerResponse createFrom(Customer customer) {
         return new CustomerResponse(
                 customer.getId(),
                 customer.getUserId(),

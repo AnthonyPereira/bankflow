@@ -33,7 +33,7 @@ public class CustomerProfileService {
                 details.phone(),
                 details.address(),
                 clock.instant());
-        return customers.save(customer);
+        return customer;
     }
 
     /** Réservé au propriétaire et aux administrateurs ; les autres reçoivent « introuvable ». */
