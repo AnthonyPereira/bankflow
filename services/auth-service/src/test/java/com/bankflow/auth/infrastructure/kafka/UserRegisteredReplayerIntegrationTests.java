@@ -25,8 +25,24 @@ class UserRegisteredReplayerIntegrationTests extends AuthApiTestSupport {
     @Autowired private KafkaContainer kafka;
     @Autowired private UserRegisteredReplayer replayer;
 
+    /**
+     * Le contexte a démarré (ApplicationReadyEvent émis) : le rejeu, lancé alors dans son thread,
+     * finit par publier les comptes de démonstration sans avoir bloqué le démarrage.
+     */
     @Test
-    void auDemarrageLesComptesDeDemonstrationSontRepublieAvecLIndicateurDemo() {
+    void leRejeuDeDemarrageSEffectueApresLeDemarrageSansLeBloquer() {
+        var payloads =
+                awaitPayloads(all ->
+                        hasPayloadFor(all, "demo.client@bankflow.local")
+                                && hasPayloadFor(all, "demo.admin@bankflow.local"));
+
+        assertThat(payloads).isNotEmpty();
+    }
+
+    @Test
+    void leRejeuRepublieLesComptesDeDemonstrationAvecLIndicateurDemo() {
+        replayer.replayAll();
+
         var payloads =
                 awaitPayloads(all ->
                         hasPayloadFor(all, "demo.client@bankflow.local")
@@ -76,7 +92,9 @@ class UserRegisteredReplayerIntegrationTests extends AuthApiTestSupport {
             var deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
             while (System.nanoTime() < deadline) {
                 for (var record : consumer.poll(Duration.ofMillis(500))) {
-                    payloads.add(JSON.readTree(record.value()).get("payload"));
+                    var envelope = JSON.readTree(record.value());
+                    assertThat(envelope.get("eventType").asString()).isEqualTo("UserRegistered");
+                    payloads.add(envelope.get("payload"));
                 }
                 if (condition.test(payloads)) {
                     return payloads;

@@ -37,7 +37,8 @@ class UserRegisteredIntegrationTests extends AuthApiTestSupport {
         assertThat(envelope.get("producer").asString()).isEqualTo("auth-service");
         assertThat(envelope.get("payload").get("userId").asString()).isEqualTo(userId);
         assertThat(envelope.get("payload").get("email").asString()).isEqualTo(email);
-        assertThat(envelope.get("payload").properties()).hasSize(3);
+        assertThat(envelope.get("payload").propertyNames())
+                .containsExactlyInAnyOrder("userId", "email", "demo");
         assertThat(envelope.get("payload").get("demo").asBoolean()).isFalse();
     }
 

@@ -37,19 +37,26 @@ class UserRegisteredPublisher {
         send(event);
     }
 
-    /** Envoie l'événement sur Kafka, sans jamais lever : la panne est journalisée. */
-    void send(UserRegistered event) {
+    /**
+     * Envoie l'événement sur Kafka, sans jamais lever : la panne est journalisée.
+     *
+     * @return {@code false} si l'envoi a déjà échoué (Kafka injoignable), {@code true} sinon
+     */
+    boolean send(UserRegistered event) {
         var key = event.userId().toString();
         try {
-            kafkaTemplate
-                    .send(TOPIC, key, objectMapper.writeValueAsString(buildEnvelope(event)))
-                    .whenComplete((result, failure) -> {
-                        if (failure != null) {
-                            log.error("UserRegistered non publié pour {}", key, failure);
-                        }
-                    });
+            var future =
+                    kafkaTemplate
+                            .send(TOPIC, key, objectMapper.writeValueAsString(buildEnvelope(event)))
+                            .whenComplete((result, failure) -> {
+                                if (failure != null) {
+                                    log.error("UserRegistered non publié pour {}", key, failure);
+                                }
+                            });
+            return !future.isCompletedExceptionally();
         } catch (RuntimeException exception) {
             log.error("UserRegistered non publié pour {}", key, exception);
+            return false;
         }
     }
 
