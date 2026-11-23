@@ -61,6 +61,19 @@ class ApiErrorsIntegrationTests extends BankingApiTestSupport {
     }
 
     @Test
+    void unePageAbusiveDonneValidationErrorSurLesComptesEtLesOperations() throws Exception {
+        var token = createClientToken();
+
+        assertProblem(
+                send("GET", "/accounts?page=100000000", token, null), 400, "VALIDATION_ERROR");
+        assertProblem(
+                send("GET", "/transactions?page=100000000", token, null), 400, "VALIDATION_ERROR");
+        assertThat(send("GET", "/accounts?page=10000", token, null).statusCode()).isEqualTo(200);
+        assertThat(send("GET", "/transactions?page=10001", token, null).statusCode())
+                .isEqualTo(400);
+    }
+
+    @Test
     void unParametreDePageNonNumeriqueDonneValidationError() throws Exception {
         var response = send("GET", "/accounts?page=abc", createClientToken(), null);
 
