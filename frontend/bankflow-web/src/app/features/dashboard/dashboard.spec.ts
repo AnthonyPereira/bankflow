@@ -3,7 +3,7 @@ import { MatIconTestingModule } from '@angular/material/icon/testing';
 import { render, screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { User } from '../../shared/models/auth.models';
+import { User } from '../../core/auth/auth.models';
 import { Dashboard } from './dashboard';
 
 const USER: User = {
@@ -14,11 +14,11 @@ const USER: User = {
 };
 
 describe('Dashboard', () => {
-  function setup(currentUser: AuthService['currentUser']) {
+  function setup(fetchCurrentUser: AuthService['fetchCurrentUser']) {
     return render(Dashboard, {
       providers: [
         importProvidersFrom(MatIconTestingModule),
-        { provide: AuthService, useValue: { currentUser } },
+        { provide: AuthService, useValue: { fetchCurrentUser } },
       ],
     });
   }
@@ -28,6 +28,13 @@ describe('Dashboard', () => {
 
     expect(await screen.findByText('a@bankflow.test')).toBeTruthy();
     expect(screen.getByText('Client')).toBeTruthy();
+  });
+
+  it('affiche le libellé du profil administrateur', async () => {
+    await setup(() => of({ ...USER, role: 'ROLE_ADMIN' }));
+
+    expect(await screen.findByText('Administrateur')).toBeTruthy();
+    expect(screen.queryByText('Client')).toBeNull();
   });
 
   it('annonce les sections à venir sans donnée fictive', async () => {

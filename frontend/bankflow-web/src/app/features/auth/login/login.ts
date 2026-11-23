@@ -9,14 +9,18 @@ import { MatInputModule } from '@angular/material/input';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { DemoAccount, Role } from '../../../shared/models/auth.models';
+import { resolveReturnUrl } from '../../../core/auth/return-url';
+import { DemoAccount, Role, ROLE_LABELS } from '../../../core/auth/auth.models';
 import { AuthCard } from '../auth-card/auth-card';
 
-const DEFAULT_DESTINATION = '/tableau-de-bord';
-const ROLE_LABELS: Record<Role, string> = {
-  ROLE_CLIENT: 'Client',
-  ROLE_ADMIN: 'Administrateur',
-};
+export const INVALID_CREDENTIALS_MESSAGE =
+  'Adresse email ou mot de passe incorrect. Après plusieurs échecs, le compte est bloqué quelques minutes.';
+export const UNEXPECTED_ERROR_MESSAGE = 'Une erreur inattendue est survenue. Réessayez.';
+
+/** État de navigation transmis par l'inscription quand la connexion automatique a échoué. */
+export interface LoginNavigationState {
+  registeredEmail: string;
+}
 
 @Component({
   selector: 'app-login',
@@ -37,19 +41,28 @@ export class Login {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  /** Page demandée avant la redirection vers la connexion. */
-  readonly returnUrl = input<string>();
+  /** Page demandée avant la redirection vers la connexion. Un paramètre répété donne un tableau. */
+  readonly returnUrl = input<string | string[]>();
+
+  private readonly registeredEmail = readRegisteredEmail(this.router);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
-    email: ['', [Validators.required, Validators.email]],
+    email: [this.registeredEmail ?? '', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
-  protected readonly submitting = signal(false);
+  protected readonly infoMessage = signal(
+    this.registeredEmail
+      ? 'Votre compte a été créé. Connectez-vous pour accéder à votre espace.'
+      : null,
+  );
+  protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly passwordVisible = signal(false);
-  protected readonly demoAccounts = toSignal(this.auth.demoAccounts(), { initialValue: [] });
+  protected readonly isPasswordVisible = signal(false);
+  protected readonly getDemoAccounts = toSignal(this.auth.fetchDemoAccounts(), {
+    initialValue: [],
+  });
 
-  protected roleLabel(role: Role): string {
+  protected getRoleLabel(role: Role): string {
     return ROLE_LABELS[role];
   }
 
@@ -64,24 +77,28 @@ export class Login {
       this.form.markAllAsTouched();
       return;
     }
-    this.submitting.set(true);
+    this.isSubmitting.set(true);
+    this.infoMessage.set(null);
     this.errorMessage.set(null);
     this.auth
       .login(this.form.getRawValue())
-      .pipe(finalize(() => this.submitting.set(false)))
+      .pipe(finalize(() => this.isSubmitting.set(false)))
       .subscribe({
-        next: () => void this.router.navigateByUrl(this.destination()),
-        error: (error: HttpErrorResponse) => {
-          if (error.status === 401) {
-            this.errorMessage.set('Adresse email ou mot de passe incorrect.');
+        next: () => void this.router.navigateByUrl(resolveReturnUrl(this.returnUrl())),
+        error: (error: unknown) => {
+          // Le message reste le même pour un compte verrouillé : le backend ne distingue pas les cas.
+          if (!(error instanceof HttpErrorResponse)) {
+            this.errorMessage.set(UNEXPECTED_ERROR_MESSAGE);
+          } else if (error.status === 401) {
+            this.errorMessage.set(INVALID_CREDENTIALS_MESSAGE);
           }
         },
       });
   }
+}
 
-  /** Seul un chemin interne est accepté, pour ne jamais rediriger vers un autre site. */
-  private destination(): string {
-    const url = this.returnUrl();
-    return url?.startsWith('/') && !url.startsWith('//') ? url : DEFAULT_DESTINATION;
-  }
+/** L'état de navigation n'existe que pendant la navigation qui construit le composant. */
+function readRegisteredEmail(router: Router): string | null {
+  const email: unknown = router.currentNavigation()?.extras.state?.['registeredEmail'];
+  return typeof email === 'string' ? email : null;
 }

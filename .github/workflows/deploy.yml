@@ -1,7 +1,14 @@
 name: Déploiement
 
-# Construit les images, puis demande leur mise en ligne au dépôt privé deploy-platform.
+# Construit les images et les publie sur GHCR. Le dépôt privé deploy-platform repère seul ce run
+# réussi (il interroge l'API toutes les 5 minutes) et met la version en ligne : ce dépôt public ne
+# détient aucun jeton vers lui.
 # Ce dépôt est public : aucun job ne doit s'exécuter sur le serveur maison.
+#
+# Le déploiement part d'un push dans main, et seulement une fois la CI de ce même commit verte : le
+# job « verifier » l'attend en interrogeant l'API. On n'utilise pas workflow_run : il s'exécute avec
+# les secrets dans le contexte d'un run qui peut venir d'une PR, ce qui oblige à filtrer finement.
+# Ici, le checkout ne récupère que le commit poussé sur main, du code de confiance.
 on:
   push:
     branches: [main]
@@ -15,9 +22,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verifier:
+    name: CI verte sur main
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+    outputs:
+      version: ${{ steps.ci.outputs.version }}
+    steps:
+      - name: Attendre la CI de ce commit
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::SHA invalide"; exit 1; }
+          url="repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&event=push&branch=main"
+          for _ in $(seq 1 80); do
+            # Une erreur passagère de l'API ne doit pas faire échouer l'attente
+            etat="$(gh api "$url" --jq '.workflow_runs | sort_by(.created_at) | last | "\(.status // "")/\(.conclusion // "")"')" || etat=""
+            case "$etat" in
+              completed/success)
+                echo "version=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
+              completed/*)
+                echo "::error::La CI de $GITHUB_SHA a échoué (${etat#completed/})"
+                exit 1 ;;
+            esac
+            sleep 30
+          done
+          echo "::error::La CI de $GITHUB_SHA n'est pas terminée après 40 minutes"
+          exit 1
+
   build:
     name: image ${{ matrix.name }}
-    if: github.ref == 'refs/heads/main'
+    needs: verifier
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -67,19 +107,4 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ github.sha }}
-
-  deployer:
-    name: demande de mise en ligne
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Prévenir deploy-platform
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
-        run: |
-          gh api "repos/${GITHUB_REPOSITORY_OWNER}/deploy-platform/dispatches" \
-            -f event_type=deployer \
-            -f "client_payload[app]=bankflow" \
-            -f "client_payload[version]=$GITHUB_SHA"
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ needs.verifier.outputs.version }}

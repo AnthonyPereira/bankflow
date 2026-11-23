@@ -11,14 +11,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableScheduling
 class ApplicationConfig {
 
-    @Bean
-    Clock clock() {
+    @Bean("clock")
+    Clock createClock() {
         return Clock.systemUTC();
     }
 
     /** Le préfixe {bcrypt} permettra de migrer plus tard vers Argon2 (ADR-001, section 2.2). */
-    @Bean
-    PasswordEncoder passwordEncoder() {
+    @Bean("passwordEncoder")
+    PasswordEncoder createPasswordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 }

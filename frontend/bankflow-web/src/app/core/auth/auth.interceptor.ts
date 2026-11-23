@@ -10,21 +10,21 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     return next(request);
   }
   const auth = inject(AuthService);
-  const sentToken = auth.accessToken();
+  const sentToken = auth.getAccessToken();
 
-  return next(withToken(request, sentToken)).pipe(
+  return next(addBearerToken(request, sentToken)).pipe(
     catchError((error: unknown) => {
-      const currentToken = auth.accessToken();
+      const currentToken = auth.getAccessToken();
       if (!(error instanceof HttpErrorResponse) || error.status !== 401 || !currentToken) {
         return throwError(() => error);
       }
       // Une autre requête a peut-être déjà renouvelé le jeton pendant celle-ci
       const freshToken = currentToken === sentToken ? auth.refresh() : of(currentToken);
-      return freshToken.pipe(switchMap((token) => next(withToken(request, token))));
+      return freshToken.pipe(switchMap((token) => next(addBearerToken(request, token))));
     }),
   );
 };
 
-function withToken<T>(request: HttpRequest<T>, token: string | null): HttpRequest<T> {
+function addBearerToken<T>(request: HttpRequest<T>, token: string | null): HttpRequest<T> {
   return token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
 }

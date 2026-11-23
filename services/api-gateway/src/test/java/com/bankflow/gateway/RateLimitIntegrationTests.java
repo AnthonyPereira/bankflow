@@ -9,6 +9,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,11 +23,13 @@ import org.springframework.test.context.DynamicPropertySource;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
             "bankflow.rate-limit.login-per-minute=3",
-            "bankflow.rate-limit.register-per-minute=1"
+            "bankflow.rate-limit.register-per-minute=1",
+            "bankflow.rate-limit.transfers-per-minute=1"
         })
 @ActiveProfiles("test")
 class RateLimitIntegrationTests {
 
+    private static final AtomicReference<String> LAST_RAW_PATH = new AtomicReference<>();
     private static final HttpServer DOWNSTREAM = startDownstream();
 
     private final HttpClient client = HttpClient.newHttpClient();
@@ -34,7 +38,7 @@ class RateLimitIntegrationTests {
     private int port;
 
     @DynamicPropertySource
-    static void properties(DynamicPropertyRegistry registry) {
+    static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add(
                 "AUTH_SERVICE_URL", () -> "http://127.0.0.1:" + DOWNSTREAM.getAddress().getPort());
     }
@@ -68,6 +72,17 @@ class RateLimitIntegrationTests {
     }
 
     @Test
+    void deuxAdressesIpv6DuMemePrefixe64PartagentLaLimite() throws Exception {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            assertThat(post("/api/auth/login", "2001:db8:60::" + (attempt + 1)).statusCode())
+                    .isEqualTo(200);
+        }
+
+        assertThat(post("/api/auth/login", "2001:db8:60::ffff").statusCode()).isEqualTo(429);
+        assertThat(post("/api/auth/login", "2001:db8:61::1").statusCode()).isEqualTo(200);
+    }
+
+    @Test
     void chaqueRouteASaPropreLimite() throws Exception {
         var ip = "203.0.113.30";
 
@@ -82,6 +97,64 @@ class RateLimitIntegrationTests {
         post("/api/auth/register", ip);
 
         assertThat(post("/api/auth/register/", ip).statusCode()).isEqualTo(429);
+    }
+
+    @Test
+    void unCaractereEncodeAtteintBienLaRouteDeConnexion() throws Exception {
+        var response = post("/api/auth/%6Cogin", "203.0.113.50");
+
+        // Le service d'authentification décode ce chemin en /auth/login
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(LAST_RAW_PATH.get()).isEqualTo("/auth/%6Cogin");
+    }
+
+    @Test
+    void unCaractereEncodeNeContournePasLaLimiteDeConnexion() throws Exception {
+        var ip = "203.0.113.51";
+        for (int attempt = 0; attempt < 3; attempt++) {
+            post("/api/auth/login", ip);
+        }
+
+        for (var path :
+                List.of("/api/auth/%6Cogin", "/api/auth/%6c%6F%67%69%6E", "/api/%61uth/login/")) {
+            assertThat(post(path, ip).statusCode()).as(path).isEqualTo(429);
+        }
+    }
+
+    @Test
+    void unCheminNonNormaliseNeContournePasLaLimiteDeConnexion() throws Exception {
+        var ip = "203.0.113.52";
+        for (int attempt = 0; attempt < 3; attempt++) {
+            post("/api/auth/login", ip);
+        }
+
+        for (var path :
+                List.of(
+                        "/api//auth/login",
+                        "/api/auth/./login",
+                        "/api/auth/x/../login",
+                        "/api/auth/login;x=1",
+                        "/api/auth/%2E/login")) {
+            // Le pare-feu de Spring Security les rejette aussi, mais après ce filtre
+            assertThat(post(path, ip).statusCode()).as(path).isEqualTo(429);
+        }
+    }
+
+    @Test
+    void unCaractereEncodeNeContournePasLaLimiteDInscription() throws Exception {
+        var ip = "203.0.113.53";
+        post("/api/auth/register", ip);
+
+        assertThat(post("/api/auth/%72egister", ip).statusCode()).isEqualTo(429);
+    }
+
+    @Test
+    void unCaractereEncodeNeContournePasLaLimiteDesVirements() throws Exception {
+        var ip = "203.0.113.54";
+        // Sans JWT, la Gateway répond 401, mais la tentative est comptée avant ce contrôle
+        assertThat(post("/api/transfers", ip).statusCode()).isEqualTo(401);
+
+        assertThat(post("/api/%74ransfers", ip).statusCode()).isEqualTo(429);
     }
 
     private HttpResponse<String> post(String path, String clientIp) throws Exception {
@@ -99,6 +172,7 @@ class RateLimitIntegrationTests {
             server.createContext(
                     "/",
                     exchange -> {
+                        LAST_RAW_PATH.set(exchange.getRequestURI().getRawPath());
                         exchange.getRequestBody().readAllBytes();
                         exchange.sendResponseHeaders(200, -1);
                         exchange.close();

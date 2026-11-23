@@ -1,5 +1,8 @@
 <app-auth-card heading="Connexion" intro="Accédez à votre espace BankFlow.">
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (infoMessage(); as message) {
+      <p class="form-info" role="status">{{ message }}</p>
+    }
     @if (errorMessage(); as message) {
       <p class="form-error" role="alert">{{ message }}</p>
     }
@@ -18,7 +21,7 @@
       <mat-label>Mot de passe</mat-label>
       <input
         matInput
-        [type]="passwordVisible() ? 'text' : 'password'"
+        [type]="isPasswordVisible() ? 'text' : 'password'"
         formControlName="password"
         autocomplete="current-password"
       />
@@ -27,14 +30,14 @@
         matSuffix
         type="button"
         [attr.aria-label]="
-          passwordVisible() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+          isPasswordVisible() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
         "
-        [attr.aria-pressed]="passwordVisible()"
-        (click)="passwordVisible.set(!passwordVisible())"
+        [attr.aria-pressed]="isPasswordVisible()"
+        (click)="isPasswordVisible.set(!isPasswordVisible())"
       >
         <mat-icon
           aria-hidden="true"
-          [svgIcon]="passwordVisible() ? 'visibility_off' : 'visibility'"
+          [svgIcon]="isPasswordVisible() ? 'visibility_off' : 'visibility'"
         />
       </button>
       @if (form.controls.password.hasError('required')) {
@@ -42,12 +45,12 @@
       }
     </mat-form-field>
 
-    <button matButton="filled" class="submit" type="submit" [disabled]="submitting()">
-      {{ submitting() ? 'Connexion…' : 'Se connecter' }}
+    <button matButton="filled" class="submit" type="submit" [disabled]="isSubmitting()">
+      {{ isSubmitting() ? 'Connexion…' : 'Se connecter' }}
     </button>
   </form>
 
-  @if (demoAccounts().length) {
+  @if (getDemoAccounts().length) {
     <section class="demo" aria-labelledby="demo-title">
       <h2 id="demo-title">Comptes de démonstration</h2>
       <p class="demo-intro">Découvrez l'application sans vous inscrire.</p>
@@ -60,9 +63,9 @@
           </tr>
         </thead>
         <tbody>
-          @for (account of demoAccounts(); track account.email) {
+          @for (account of getDemoAccounts(); track account.email) {
             <tr>
-              <td>{{ roleLabel(account.role) }}</td>
+              <td>{{ getRoleLabel(account.role) }}</td>
               <td class="credentials">
                 <span>{{ account.email }}</span>
                 <code>{{ account.password }}</code>
@@ -71,7 +74,7 @@
                 <button
                   matButton
                   type="button"
-                  [attr.aria-label]="'Utiliser le compte ' + roleLabel(account.role)"
+                  [attr.aria-label]="'Utiliser le compte ' + getRoleLabel(account.role)"
                   (click)="useAccount(account)"
                 >
                   Utiliser

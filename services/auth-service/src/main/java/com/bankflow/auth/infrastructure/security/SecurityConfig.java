@@ -17,9 +17,14 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Le service valide lui-même les JWT : la Gateway n'est pas l'unique frontière de sécurité. */
@@ -28,8 +33,14 @@ class SecurityConfig {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    /**
+     * Routes ouvertes sans JWT, listées une à une : aucun préfixe ne doit englober une route
+     * protégée comme {@code /auth/me}.
+     */
+    private static final RequestMatcher PUBLIC_ENDPOINTS = createPublicEndpointsMatcher();
+
+    @Bean("securityFilterChain")
+    SecurityFilterChain createSecurityFilterChain(HttpSecurity http) throws Exception {
         AuthenticationEntryPoint unauthorized =
                 (request, response, exception) -> {
                     response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
@@ -51,29 +62,13 @@ class SecurityConfig {
                 .authorizeHttpRequests(requests ->
                         requests.dispatcherTypeMatchers(DispatcherType.ERROR)
                                 .permitAll()
-                                .requestMatchers(
-                                        "/actuator/health/**",
-                                        "/actuator/info",
-                                        "/v3/api-docs/**",
-                                        "/swagger-ui/**",
-                                        "/swagger-ui.html")
-                                .permitAll()
-                                .requestMatchers(
-                                        HttpMethod.GET,
-                                        "/.well-known/jwks.json",
-                                        "/auth/demo-accounts")
-                                .permitAll()
-                                .requestMatchers(
-                                        HttpMethod.POST,
-                                        "/auth/register",
-                                        "/auth/login",
-                                        "/auth/refresh",
-                                        "/auth/logout")
+                                .requestMatchers(PUBLIC_ENDPOINTS)
                                 .permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->
-                        oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(roleConverter()))
+                        oauth2.bearerTokenResolver(createBearerTokenResolver())
+                                .jwt(jwt -> jwt.jwtAuthenticationConverter(createRoleConverter()))
                                 .authenticationEntryPoint(unauthorized)
                                 .accessDeniedHandler(forbidden))
                 .exceptionHandling(exceptions ->
@@ -83,8 +78,34 @@ class SecurityConfig {
                 .build();
     }
 
+    /**
+     * Sur une route publique, l'en-tête {@code Authorization} est ignoré : un JWT expiré, que le
+     * navigateur envoie justement pour rafraîchir sa session, ne doit pas faire répondre 401 à
+     * {@code /auth/refresh} ou {@code /auth/login}.
+     */
+    private static BearerTokenResolver createBearerTokenResolver() {
+        var resolver = new DefaultBearerTokenResolver();
+        return request -> PUBLIC_ENDPOINTS.matches(request) ? null : resolver.resolve(request);
+    }
+
+    private static RequestMatcher createPublicEndpointsMatcher() {
+        var paths = PathPatternRequestMatcher.withDefaults();
+        return new OrRequestMatcher(
+                paths.matcher("/actuator/health/**"),
+                paths.matcher("/actuator/info"),
+                paths.matcher("/v3/api-docs/**"),
+                paths.matcher("/swagger-ui/**"),
+                paths.matcher("/swagger-ui.html"),
+                paths.matcher(HttpMethod.GET, "/.well-known/jwks.json"),
+                paths.matcher(HttpMethod.GET, "/auth/demo-accounts"),
+                paths.matcher(HttpMethod.POST, "/auth/register"),
+                paths.matcher(HttpMethod.POST, "/auth/login"),
+                paths.matcher(HttpMethod.POST, "/auth/refresh"),
+                paths.matcher(HttpMethod.POST, "/auth/logout"));
+    }
+
     /** Le claim {@code role} contient déjà le préfixe ROLE_ attendu par Spring Security. */
-    private static JwtAuthenticationConverter roleConverter() {
+    private static JwtAuthenticationConverter createRoleConverter() {
         var authorities = new JwtGrantedAuthoritiesConverter();
         authorities.setAuthoritiesClaimName("role");
         authorities.setAuthorityPrefix("");

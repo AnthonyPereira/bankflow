@@ -3,6 +3,8 @@ package com.bankflow.auth.api.auth;
 import com.bankflow.auth.application.login.InvalidCredentialsException;
 import com.bankflow.auth.application.registration.EmailAlreadyUsedException;
 import com.bankflow.auth.application.token.InvalidRefreshTokenException;
+import com.bankflow.auth.application.user.InvalidSessionException;
+import com.bankflow.auth.domain.user.DemoAccountCannotBeDisabledException;
 import java.util.LinkedHashMap;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -42,8 +44,19 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
     }
 
+    @ExceptionHandler(DemoAccountCannotBeDisabledException.class)
+    ProblemDetail handleDemoAccountCannotBeDisabled(
+            DemoAccountCannotBeDisabledException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     ProblemDetail handleInvalidCredentials(InvalidCredentialsException exception) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidSessionException.class)
+    ProblemDetail handleInvalidSession(InvalidSessionException exception) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
     }
 

@@ -22,20 +22,20 @@ final class MutableHeadersRequest extends HttpServletRequestWrapper {
     }
 
     void set(String name, String value) {
-        var key = key(name);
+        var key = normalizeHeaderName(name);
         removed.remove(key);
         replaced.put(key, value);
     }
 
     void remove(String name) {
-        var key = key(name);
+        var key = normalizeHeaderName(name);
         replaced.remove(key);
         removed.add(key);
     }
 
     @Override
     public String getHeader(String name) {
-        var key = key(name);
+        var key = normalizeHeaderName(name);
         if (removed.contains(key)) {
             return null;
         }
@@ -44,7 +44,7 @@ final class MutableHeadersRequest extends HttpServletRequestWrapper {
 
     @Override
     public Enumeration<String> getHeaders(String name) {
-        var key = key(name);
+        var key = normalizeHeaderName(name);
         if (removed.contains(key)) {
             return Collections.emptyEnumeration();
         }
@@ -57,7 +57,8 @@ final class MutableHeadersRequest extends HttpServletRequestWrapper {
     public Enumeration<String> getHeaderNames() {
         var names = new LinkedHashSet<String>();
         for (var original : Collections.list(super.getHeaderNames())) {
-            if (!removed.contains(key(original)) && !replaced.containsKey(key(original))) {
+            if (!removed.contains(normalizeHeaderName(original))
+                    && !replaced.containsKey(normalizeHeaderName(original))) {
                 names.add(original);
             }
         }
@@ -65,7 +66,7 @@ final class MutableHeadersRequest extends HttpServletRequestWrapper {
         return Collections.enumeration(names);
     }
 
-    private static String key(String name) {
+    private static String normalizeHeaderName(String name) {
         return name.toLowerCase(Locale.ROOT);
     }
 }

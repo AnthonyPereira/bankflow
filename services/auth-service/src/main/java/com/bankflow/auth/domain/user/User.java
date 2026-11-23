@@ -30,6 +30,10 @@ public class User {
     @Column(nullable = false)
     private boolean enabled;
 
+    /** Compte de démonstration au mot de passe public : il ne peut jamais être désactivé. */
+    @Column(nullable = false, updatable = false)
+    private boolean demo;
+
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts;
 
@@ -44,18 +48,27 @@ public class User {
 
     protected User() {}
 
-    private User(UUID id, String email, String passwordHash, Role role, Instant now) {
+    private User(UUID id, String email, String passwordHash, Role role, boolean demo, Instant now) {
         this.id = id;
         this.email = normalizeEmail(email);
         this.passwordHash = passwordHash;
         this.role = role;
         this.enabled = true;
+        this.demo = demo;
         this.createdAt = now;
         this.updatedAt = now;
     }
 
     public static User register(String email, String passwordHash, Role role, Instant now) {
-        return new User(UUID.randomUUID(), email, passwordHash, role, now);
+        return new User(UUID.randomUUID(), email, passwordHash, role, false, now);
+    }
+
+    /**
+     * Crée un compte de démonstration. Il suit les mêmes règles que les autres comptes, sauf qu'il
+     * ne peut jamais être désactivé.
+     */
+    public static User registerDemo(String email, String passwordHash, Role role, Instant now) {
+        return new User(UUID.randomUUID(), email, passwordHash, role, true, now);
     }
 
     /** Une adresse ne doit exister qu'une fois, quelle que soit sa casse. */
@@ -65,6 +78,20 @@ public class User {
 
     public boolean isLockedAt(Instant now) {
         return lockedUntil != null && lockedUntil.isAfter(now);
+    }
+
+    /**
+     * Désactive le compte de façon permanente, contrairement au verrouillage temporaire après trop
+     * d'échecs de connexion.
+     *
+     * @throws DemoAccountCannotBeDisabledException pour un compte de démonstration
+     */
+    public void disable(Instant now) {
+        if (demo) {
+            throw new DemoAccountCannotBeDisabledException();
+        }
+        this.enabled = false;
+        this.updatedAt = now;
     }
 
     public UUID getId() {
@@ -85,6 +112,10 @@ public class User {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public boolean isDemo() {
+        return demo;
     }
 
     public int getFailedLoginAttempts() {

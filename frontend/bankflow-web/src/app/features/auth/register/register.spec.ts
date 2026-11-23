@@ -76,6 +76,55 @@ describe('Register', () => {
     expect(navigate).toHaveBeenCalledWith('/tableau-de-bord');
   });
 
+  it.each([
+    ['trop de tentatives', new HttpErrorResponse({ status: 429 })],
+    ['service injoignable', new HttpErrorResponse({ status: 0 })],
+  ])(
+    'renvoie vers la connexion si le compte est créé mais la connexion échoue (%s)',
+    async (_cause, loginError) => {
+      const { navigate, user } = await setup();
+      auth.register.mockReturnValue(of({ id: '1', email: EMAIL }));
+      auth.login.mockReturnValue(throwError(() => loginError));
+
+      await submit(user, EMAIL, PASSWORD);
+
+      expect(navigate).toHaveBeenCalledWith('/connexion', {
+        state: { registeredEmail: EMAIL },
+      });
+      expect(screen.queryByRole('alert')).toBeNull();
+    },
+  );
+
+  it('signale des informations refusées par le serveur', async () => {
+    const { navigate, user } = await setup();
+    auth.register.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
+
+    await submit(user, EMAIL, PASSWORD);
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Vérifiez les informations saisies.',
+    );
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('affiche un message générique pour une erreur qui ne vient pas du serveur', async () => {
+    const { navigate, user } = await setup();
+    auth.register.mockReturnValue(throwError(() => new Error('inattendue')));
+
+    await submit(user, EMAIL, PASSWORD);
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Une erreur inattendue est survenue. Réessayez.',
+    );
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('propose l’adresse enregistrée par le gestionnaire de mots de passe', async () => {
+    await setup();
+
+    expect(screen.getByLabelText('Adresse email').getAttribute('autocomplete')).toBe('username');
+  });
+
   it('signale une adresse déjà utilisée', async () => {
     const { navigate, user } = await setup();
     auth.register.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409 })));

@@ -204,7 +204,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-006-04 — `PUT /customers/me` : modification des coordonnées avec validation
 - [ ] BF-006-05 — `GET /customers/{id}` : réservé au propriétaire ou à un administrateur
 - [ ] BF-006-06 — `GET /customers` : liste paginée et filtrable, réservée à `ROLE_ADMIN`
-- [ ] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…)
+- [ ] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…). La suspension doit refuser les comptes de démonstration (`User.disable` de l'Auth Service lève `DemoAccountCannotBeDisabledException`)
 - [ ] BF-006-08 — Publier `CustomerCreated` et `CustomerUpdated` sur `bank.customers` (payload minimal)
 - [ ] BF-006-09 — Documenter les contrats d'événements
 - [ ] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
@@ -467,7 +467,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-016-12b — `shared/pipes` (montant ou devise, date) (reporté à la MVP 2, avec les premiers montants affichés)
 - [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
 - [x] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
-- [x] BF-016-15 — Afficher sur la page de connexion un tableau des comptes de démonstration (client et administrateur, mots de passe publics). Ils sont créés au démarrage de l'Auth Service et servis par `GET /auth/demo-accounts`. On les coupe avec `DEMO_ACCOUNTS_ENABLED=false`. Le compte administrateur initial (`ADMIN_PASSWORD`) reste secret
+- [x] BF-016-15 — Afficher sur la page de connexion un tableau des comptes de démonstration (client et administrateur, mots de passe publics). Ils sont créés au démarrage de l'Auth Service et servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire après 5 échecs compris, `demo.admin` est un vrai `ROLE_ADMIN`), sauf qu'ils ne peuvent jamais être désactivés définitivement (colonne `users.demo`). `DEMO_ACCOUNTS_ENABLED=false` masque la liste et ne crée plus les comptes absents, sans désactiver ceux qui existent déjà. Le compte administrateur initial (`ADMIN_PASSWORD`) reste secret
 
 ### Tests
 - [x] Tests Vitest : AuthService, intercepteurs, guards, formulaires de connexion et d'inscription
@@ -621,7 +621,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
   - garder ce dépôt **public** et porter le runner auto-hébergé dans le dépôt privé `deploy-platform`, qui peut déployer plusieurs applications ;
   - écrire un `docker-compose.yml` de déploiement : seuls le front (port 80) et l'api-gateway (`/api`) sont routés par Traefik (réseau `web`) ; services, PostgreSQL et Kafka restent sur un réseau interne ; Kafka UI, Mailpit, Prometheus et Grafana ne sont jamais exposés ;
   - limiter la mémoire de chaque JVM (ex. `-Xmx256m`) et ne déployer que les services développés (le serveur a 8 Go de RAM) ;
-  - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), puis signal vers `deploy-platform`, qui lance `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
+  - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), que `deploy-platform` repère en interrogeant l'API toutes les 5 minutes avant de lancer `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
   - configurer le profil `prod-sim` (BF-002-08) ; les secrets vivent dans `~/apps/bankflow/.env` sur le serveur, jamais dans Git ;
   - sur le serveur : retirer le sudo temporaire (`/etc/sudoers.d/claude-temp`), puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
   - documenter le déploiement et le retour arrière dans `docs/runbooks/`.

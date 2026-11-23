@@ -107,4 +107,4 @@ Les consommateurs du groupe doivent être arrêtés avant le reset.
 
 ## Démonstration dans le code
 
-Le producer et le consumer de démonstration se trouvent dans `services/auth-service`, package `infrastructure.kafka.demo`. Ils ne sont actifs qu'avec le profil Spring `kafka-demo`. Le test `KafkaDemoIntegrationTests` vérifie, avec un vrai broker lancé par Testcontainers, qu'un message produit est bien consommé.
+Le producer et le consumer de démonstration se trouvent dans les sources de test de `services/auth-service` (`src/test/java`, package `infrastructure.kafka.demo`) : ils ne partent donc pas dans l'artefact de production. Ils ne sont actifs qu'avec le profil Spring `kafka-demo`. Le test `KafkaDemoIntegrationTests` vérifie, avec un vrai broker lancé par Testcontainers, qu'un message produit est bien consommé.

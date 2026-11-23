@@ -7,11 +7,7 @@ const DURATION_MS = 6000;
 export class NotificationUiService {
   private readonly snackBar = inject(MatSnackBar);
 
-  info(message: string): void {
-    this.snackBar.open(message, 'Fermer', { duration: DURATION_MS });
-  }
-
-  error(message: string): void {
+  showError(message: string): void {
     this.snackBar.open(message, 'Fermer', {
       duration: DURATION_MS,
       politeness: 'assertive',

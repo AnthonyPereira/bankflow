@@ -8,11 +8,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/** Crée les comptes de démonstration absents. Un compte existant n'est jamais modifié. */
+/**
+ * Crée les comptes de démonstration absents, marqués comme tels pour qu'ils ne puissent jamais être
+ * désactivés. Un compte existant n'est jamais modifié. Avec {@code DEMO_ACCOUNTS_ENABLED=false},
+ * plus aucun compte n'est créé, mais ceux qui existent restent actifs.
+ *
+ * <p>Il s'exécute après {@link AdminAccountSeeder}.
+ */
 @Component
+@Order(AdminAccountSeeder.ORDER + 1)
 class DemoAccountsSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoAccountsSeeder.class);
@@ -40,7 +48,7 @@ class DemoAccountsSeeder implements ApplicationRunner {
                 continue;
             }
             users.save(
-                    User.register(
+                    User.registerDemo(
                             account.email(),
                             passwordEncoder.encode(account.password()),
                             account.role(),

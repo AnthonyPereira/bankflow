@@ -3,12 +3,18 @@ import { MatIconTestingModule } from '@angular/material/icon/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { DemoAccount } from '../../../shared/models/auth.models';
-import { Login } from './login';
+import { DemoAccount } from '../../../core/auth/auth.models';
+import {
+  INVALID_CREDENTIALS_MESSAGE,
+  Login,
+  LoginNavigationState,
+  UNEXPECTED_ERROR_MESSAGE,
+} from './login';
 
 const EMAIL = 'a@bankflow.test';
 const PASSWORD = 'un-mot-de-passe-solide';
@@ -18,11 +24,11 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 ];
 
 describe('Login', () => {
-  const auth = { login: vi.fn(), demoAccounts: vi.fn() };
+  const auth = { login: vi.fn(), fetchDemoAccounts: vi.fn() };
 
-  async function setup(returnUrl?: string, demoAccounts: DemoAccount[] = []) {
+  async function setup(returnUrl?: string | string[], demoAccounts: DemoAccount[] = []) {
     auth.login.mockReset();
-    auth.demoAccounts.mockReturnValue(of(demoAccounts));
+    auth.fetchDemoAccounts.mockReturnValue(of(demoAccounts));
     await render(Login, {
       inputs: returnUrl ? { returnUrl } : {},
       providers: [
@@ -70,8 +76,12 @@ describe('Login', () => {
     expect(navigate).toHaveBeenCalledWith('/administration');
   });
 
-  it('ignore une adresse de retour externe', async () => {
-    const { navigate, user } = await setup('//site-externe.example');
+  it.each([
+    ['externe', '//site-externe.example'],
+    ['avec antislash', '/\\site-externe.example'],
+    ['répétée', ['/administration', '/tableau-de-bord']],
+  ])('ignore une adresse de retour %s', async (_cas, returnUrl) => {
+    const { navigate, user } = await setup(returnUrl);
     auth.login.mockReturnValue(of(undefined));
 
     await fillAndSubmit(user);
@@ -79,16 +89,39 @@ describe('Login', () => {
     expect(navigate).toHaveBeenCalledWith('/tableau-de-bord');
   });
 
-  it('signale des identifiants incorrects', async () => {
+  it('signale des identifiants incorrects sans révéler un verrouillage', async () => {
     const { navigate, user } = await setup();
     auth.login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
 
     await fillAndSubmit(user);
 
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Adresse email ou mot de passe incorrect.',
+    expect((await screen.findByRole('alert')).textContent?.trim()).toBe(
+      INVALID_CREDENTIALS_MESSAGE,
+    );
+    expect(INVALID_CREDENTIALS_MESSAGE).toBe(
+      'Adresse email ou mot de passe incorrect. Après plusieurs échecs, le compte est bloqué quelques minutes.',
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('affiche un message générique pour une erreur qui ne vient pas du serveur', async () => {
+    const { navigate, user } = await setup();
+    auth.login.mockReturnValue(throwError(() => new Error('jeton indécodable')));
+
+    await fillAndSubmit(user);
+
+    expect((await screen.findByRole('alert')).textContent).toContain(UNEXPECTED_ERROR_MESSAGE);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("laisse l'intercepteur annoncer les autres erreurs du serveur", async () => {
+    const { user } = await setup();
+    auth.login.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+
+    await fillAndSubmit(user);
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toBeTruthy();
   });
 
   it('permet d’afficher le mot de passe', async () => {
@@ -124,5 +157,34 @@ describe('Login', () => {
     await setup();
 
     expect(screen.queryByRole('heading', { name: 'Comptes de démonstration' })).toBeNull();
+  });
+
+  it("annonce le compte créé et préremplit l'email après l'inscription", async () => {
+    auth.fetchDemoAccounts.mockReturnValue(of([]));
+    TestBed.configureTestingModule({
+      providers: [
+        importProvidersFrom(MatIconTestingModule),
+        provideRouter([{ path: 'connexion', component: Login }]),
+        { provide: AuthService, useValue: auth },
+      ],
+    });
+    const harness = await RouterTestingHarness.create();
+    const state: LoginNavigationState = { registeredEmail: EMAIL };
+
+    await TestBed.inject(Router).navigateByUrl('/connexion', { state });
+    harness.detectChanges();
+
+    expect(screen.getByRole('status').textContent).toContain(
+      'Votre compte a été créé. Connectez-vous pour accéder à votre espace.',
+    );
+    expect(screen.getByLabelText<HTMLInputElement>('Adresse email').value).toBe(EMAIL);
+    expect(screen.getByLabelText<HTMLInputElement>('Mot de passe').value).toBe('');
+  });
+
+  it("n'annonce rien lors d'une connexion ordinaire", async () => {
+    await setup();
+
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>('Adresse email').value).toBe('');
   });
 });

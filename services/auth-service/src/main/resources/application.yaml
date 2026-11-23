@@ -28,17 +28,6 @@ spring:
         enable.idempotence: true
         # Une panne de Kafka ne doit pas bloquer longtemps une inscription
         max.block.ms: 3000
-    consumer:
-      # L'offset n'est validé qu'après le traitement du message
-      enable-auto-commit: false
-      auto-offset-reset: earliest
-      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
-      properties:
-        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-        spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-    listener:
-      ack-mode: record
 
 bankflow:
   # Comptes de démonstration au mot de passe public, affichés sur la page de connexion
@@ -60,6 +49,8 @@ bankflow:
   refresh:
     ttl: P7D
     reuse-grace: PT10S
+    # Durée de vie absolue d'une session : au-delà, il faut se reconnecter malgré les rotations
+    max-session-age: P30D
     cookie-secure: ${REFRESH_COOKIE_SECURE:true}
     purge-cron: "0 30 3 * * *"
 
@@ -70,7 +61,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        # Pas de prometheus en 0.1.0 : protégé par JWT, il ne pourrait pas être scrapé
+        include: health,info
   endpoint:
     health:
       probes:

@@ -4,14 +4,13 @@ import com.bankflow.auth.api.auth.dto.LoginRequest;
 import com.bankflow.auth.api.auth.dto.RegisterRequest;
 import com.bankflow.auth.api.auth.dto.TokenResponse;
 import com.bankflow.auth.api.auth.dto.UserResponse;
-import com.bankflow.auth.application.login.InvalidCredentialsException;
 import com.bankflow.auth.application.login.LoginService;
 import com.bankflow.auth.application.registration.RegistrationService;
 import com.bankflow.auth.application.token.AccessTokenService;
 import com.bankflow.auth.application.token.InvalidRefreshTokenException;
 import com.bankflow.auth.application.token.RefreshTokenService;
+import com.bankflow.auth.application.user.CurrentUserService;
 import com.bankflow.auth.domain.user.User;
-import com.bankflow.auth.domain.user.UserRepository;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -36,7 +35,7 @@ class AuthController {
     private final AccessTokenService accessTokenService;
     private final RefreshTokenService refreshTokenService;
     private final RefreshCookies refreshCookies;
-    private final UserRepository users;
+    private final CurrentUserService currentUserService;
     private final UserMapper userMapper;
 
     AuthController(
@@ -45,28 +44,28 @@ class AuthController {
             AccessTokenService accessTokenService,
             RefreshTokenService refreshTokenService,
             RefreshCookies refreshCookies,
-            UserRepository users,
+            CurrentUserService currentUserService,
             UserMapper userMapper) {
         this.registrationService = registrationService;
         this.loginService = loginService;
         this.accessTokenService = accessTokenService;
         this.refreshTokenService = refreshTokenService;
         this.refreshCookies = refreshCookies;
-        this.users = users;
+        this.currentUserService = currentUserService;
         this.userMapper = userMapper;
     }
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     UserResponse register(@Valid @RequestBody RegisterRequest request) {
-        return userMapper.toResponse(
+        return userMapper.mapToResponse(
                 registrationService.register(request.email(), request.password()));
     }
 
     @PostMapping("/login")
     ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         var user = loginService.authenticate(request.email(), request.password());
-        return tokens(user, refreshTokenService.issue(user.getId()));
+        return buildTokenResponse(user, refreshTokenService.issue(user.getId()));
     }
 
     @PostMapping("/refresh")
@@ -76,7 +75,7 @@ class AuthController {
             throw new InvalidRefreshTokenException();
         }
         var rotation = refreshTokenService.rotate(refreshToken);
-        return tokens(rotation.user(), rotation.refreshToken());
+        return buildTokenResponse(rotation.user(), rotation.refreshToken());
     }
 
     @PostMapping("/logout")
@@ -91,17 +90,16 @@ class AuthController {
     }
 
     @GetMapping("/me")
-    UserResponse me(@AuthenticationPrincipal Jwt jwt) {
-        return users.findById(UUID.fromString(jwt.getSubject()))
-                .map(userMapper::toResponse)
-                .orElseThrow(InvalidCredentialsException::new);
+    UserResponse getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
+        return userMapper.mapToResponse(
+                currentUserService.getCurrentUser(UUID.fromString(jwt.getSubject())));
     }
 
-    private ResponseEntity<TokenResponse> tokens(
+    private ResponseEntity<TokenResponse> buildTokenResponse(
             User user, RefreshTokenService.IssuedRefreshToken refreshToken) {
         var cookie = refreshCookies.create(refreshToken.value(), refreshToken.timeToLive());
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie)
-                .body(TokenResponse.from(accessTokenService.issue(user)));
+                .body(TokenResponse.createFrom(accessTokenService.issue(user)));
     }
 }
