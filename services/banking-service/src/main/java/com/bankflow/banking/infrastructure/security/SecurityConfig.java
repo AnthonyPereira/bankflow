@@ -64,11 +64,9 @@ class SecurityConfig {
                                 .requestMatchers(
                                         "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                 .permitAll()
-                                // Un administrateur consulte et clôture, mais n'ouvre pas de compte
-                                // :
-                                // les comptes appartiennent aux clients
-                                .requestMatchers(HttpMethod.POST, "/accounts")
-                                .hasAuthority("ROLE_CLIENT")
+                                // Vue d'ensemble de la banque : administrateurs seulement
+                                .requestMatchers(HttpMethod.GET, "/accounts/summary")
+                                .hasAuthority("ROLE_ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->
