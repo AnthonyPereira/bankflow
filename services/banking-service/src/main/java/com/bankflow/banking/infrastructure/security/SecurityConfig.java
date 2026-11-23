@@ -53,6 +53,10 @@ class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers("/actuator/health/**", "/actuator/info")
                                 .permitAll()
+                                // Désactivés en prod-sim : ces routes y répondent alors 404
+                                .requestMatchers(
+                                        "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                                .permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->
