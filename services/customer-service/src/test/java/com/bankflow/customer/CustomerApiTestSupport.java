@@ -135,11 +135,21 @@ public abstract class CustomerApiTestSupport {
                         .PUT(HttpRequest.BodyPublishers.ofString(body)));
     }
 
+    protected static String createToken(UUID userId, String role, boolean demo) throws Exception {
+        return createToken(userId.toString(), ISSUER, AUDIENCE, role, demo);
+    }
+
     protected static String createToken(UUID userId, String role) throws Exception {
         return createToken(userId.toString(), ISSUER, AUDIENCE, role);
     }
 
     protected static String createToken(String subject, String issuer, String audience, String role)
+            throws Exception {
+        return createToken(subject, issuer, audience, role, false);
+    }
+
+    protected static String createToken(
+            String subject, String issuer, String audience, String role, boolean demo)
             throws Exception {
         var claims =
                 new JWTClaimsSet.Builder()
@@ -147,6 +157,7 @@ public abstract class CustomerApiTestSupport {
                         .issuer(issuer)
                         .audience(audience)
                         .claim("role", role)
+                        .claim("demo", demo)
                         .expirationTime(Date.from(Instant.now().plusSeconds(300)))
                         .build();
         var jwt =

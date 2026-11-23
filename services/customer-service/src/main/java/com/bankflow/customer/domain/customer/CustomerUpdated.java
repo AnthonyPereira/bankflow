@@ -8,7 +8,12 @@ import java.util.UUID;
  * de dernière modification du client, c'est-à-dire la date de l'état publié.
  */
 public record CustomerUpdated(
-        UUID customerId, UUID userId, String email, CustomerStatus status, Instant occurredAt) {
+        UUID customerId,
+        UUID userId,
+        String email,
+        CustomerStatus status,
+        boolean demo,
+        Instant occurredAt) {
 
     public static CustomerUpdated createFrom(Customer customer) {
         return new CustomerUpdated(
@@ -16,6 +21,7 @@ public record CustomerUpdated(
                 customer.getUserId(),
                 customer.getEmail(),
                 customer.getStatus(),
+                customer.isDemo(),
                 customer.getUpdatedAt());
     }
 }

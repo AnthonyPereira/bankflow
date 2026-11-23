@@ -48,6 +48,7 @@ class UserRegisteredConsumerIntegrationTests extends CustomerApiTestSupport {
         assertThat(payload.get("userId").asString()).isEqualTo(userId.toString());
         assertThat(payload.get("email").asString()).isEqualTo(email);
         assertThat(payload.get("status").asString()).isEqualTo("ACTIVE");
+        assertThat(payload.get("demo").asBoolean()).isFalse();
     }
 
     @Test

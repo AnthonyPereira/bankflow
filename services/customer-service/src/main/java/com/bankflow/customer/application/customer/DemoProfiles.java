@@ -15,9 +15,7 @@ public final class DemoProfiles {
     private static final Map<String, ContactDetails> BY_EMAIL =
             Map.of(
                     "demo.client@bankflow.local",
-                    new ContactDetails("Camille", "Martin", PHONE, ADDRESS),
-                    "demo.admin@bankflow.local",
-                    new ContactDetails("Alex", "Conseiller", PHONE, ADDRESS));
+                    new ContactDetails("Camille", "Martin", PHONE, ADDRESS));
 
     private DemoProfiles() {}
 

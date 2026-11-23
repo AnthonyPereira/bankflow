@@ -12,7 +12,7 @@ public record UpdateContactRequest(
         @Size(max = 100, message = "100 caractères au maximum") String firstName,
         @Size(max = 100, message = "100 caractères au maximum") String lastName,
         @Pattern(
-                        regexp = "^\\+?[0-9 .-]{6,20}$",
+                        regexp = "^(?=(?:\\D*\\d){6})\\+?[0-9 .-]{6,20}$",
                         message = "Numéro de téléphone invalide (6 à 20 chiffres)")
                 String phone,
         @Size(max = 255, message = "255 caractères au maximum") String address) {

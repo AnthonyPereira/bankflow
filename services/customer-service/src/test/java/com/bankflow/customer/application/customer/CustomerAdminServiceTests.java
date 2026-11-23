@@ -36,7 +36,7 @@ class CustomerAdminServiceTests {
         var customer = Customer.createFromUser(UUID.randomUUID(), "a@bankflow.test", false, NOW);
         when(customers.findById(customer.getId())).thenReturn(Optional.of(customer));
 
-        service.changeStatus(customer.getId(), CustomerStatus.SUSPENDED);
+        service.changeStatus(customer.getId(), CustomerStatus.SUSPENDED, false);
 
         assertThat(customer.getStatus()).isEqualTo(CustomerStatus.SUSPENDED);
         verify(events).publishEvent(any(CustomerUpdated.class));
@@ -47,7 +47,7 @@ class CustomerAdminServiceTests {
         var customer = Customer.createFromUser(UUID.randomUUID(), "a@bankflow.test", false, NOW);
         when(customers.findById(customer.getId())).thenReturn(Optional.of(customer));
 
-        service.changeStatus(customer.getId(), CustomerStatus.ACTIVE);
+        service.changeStatus(customer.getId(), CustomerStatus.ACTIVE, false);
 
         verify(events, never()).publishEvent(any(Object.class));
         verify(customers, never()).save(any(Customer.class));
@@ -58,7 +58,8 @@ class CustomerAdminServiceTests {
         var customer = Customer.createFromUser(UUID.randomUUID(), "d@bankflow.test", true, NOW);
         when(customers.findById(customer.getId())).thenReturn(Optional.of(customer));
 
-        assertThatThrownBy(() -> service.changeStatus(customer.getId(), CustomerStatus.SUSPENDED))
+        assertThatThrownBy(() ->
+                        service.changeStatus(customer.getId(), CustomerStatus.SUSPENDED, false))
                 .isInstanceOf(DemoCustomerCannotBeSuspendedException.class);
         verify(events, never()).publishEvent(any(Object.class));
     }
@@ -69,7 +70,7 @@ class CustomerAdminServiceTests {
         customer.suspend(NOW);
         when(customers.findById(customer.getId())).thenReturn(Optional.of(customer));
 
-        service.changeStatus(customer.getId(), CustomerStatus.ACTIVE);
+        service.changeStatus(customer.getId(), CustomerStatus.ACTIVE, false);
 
         verify(events, times(1)).publishEvent(any(CustomerUpdated.class));
     }
@@ -79,7 +80,7 @@ class CustomerAdminServiceTests {
         var unknown = UUID.randomUUID();
         when(customers.findById(unknown)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.changeStatus(unknown, CustomerStatus.SUSPENDED))
+        assertThatThrownBy(() -> service.changeStatus(unknown, CustomerStatus.SUSPENDED, false))
                 .isInstanceOf(CustomerNotFoundException.class);
     }
 }

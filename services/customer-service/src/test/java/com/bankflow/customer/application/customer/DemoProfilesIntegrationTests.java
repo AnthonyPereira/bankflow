@@ -24,12 +24,10 @@ class DemoProfilesIntegrationTests extends CustomerApiTestSupport {
     }
 
     @Test
-    void unAdministrateurDeDemonstrationRecoitSonProfilFictif() {
+    void lAdministrateurDeDemonstrationNAPlusDeProfilFictif() {
         var customer = createCustomer(ADMIN_EMAIL, true);
 
-        assertThat(customer.getFirstName()).isEqualTo("Alex");
-        assertThat(customer.getLastName()).isEqualTo("Conseiller");
-        assertThat(customer.getPhone()).isEqualTo("+33 6 00 00 00 00");
+        assertThat(customer.hasEmptyProfile()).isTrue();
     }
 
     @Test

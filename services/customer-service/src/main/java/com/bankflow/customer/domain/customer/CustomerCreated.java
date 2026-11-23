@@ -10,7 +10,12 @@ import java.util.UUID;
  * appliqué.
  */
 public record CustomerCreated(
-        UUID customerId, UUID userId, String email, CustomerStatus status, Instant occurredAt) {
+        UUID customerId,
+        UUID userId,
+        String email,
+        CustomerStatus status,
+        boolean demo,
+        Instant occurredAt) {
 
     public static CustomerCreated createFrom(Customer customer) {
         return new CustomerCreated(
@@ -18,6 +23,7 @@ public record CustomerCreated(
                 customer.getUserId(),
                 customer.getEmail(),
                 customer.getStatus(),
+                customer.isDemo(),
                 customer.getUpdatedAt());
     }
 }
