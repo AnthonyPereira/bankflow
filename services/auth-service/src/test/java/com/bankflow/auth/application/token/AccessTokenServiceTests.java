@@ -49,10 +49,20 @@ class AccessTokenServiceTests {
         var jwt = createDecoder().decode(token.value());
         assertThat(jwt.getSubject()).isEqualTo(user.getId().toString());
         assertThat(jwt.getClaimAsString("role")).isEqualTo("ROLE_ADMIN");
+        assertThat(jwt.getClaimAsBoolean("demo")).isFalse();
         assertThat(jwt.getAudience()).containsExactly(AUDIENCE);
         assertThat(jwt.getId()).isNotBlank();
         assertThat(jwt.getHeaders()).containsEntry("kid", "cle-de-signature");
         assertThat(token.expiresInSeconds()).isEqualTo(900);
+    }
+
+    @Test
+    void leJwtDUnCompteDeDemonstrationPorteLeClaimDemoVrai() throws Exception {
+        var user = User.registerDemo("d@bankflow.test", "{noop}x", Role.ROLE_ADMIN, Instant.now());
+
+        var token = createServiceAt(Instant.now(), PROPERTIES).issue(user);
+
+        assertThat(createDecoder().decode(token.value()).getClaimAsBoolean("demo")).isTrue();
     }
 
     @Test
