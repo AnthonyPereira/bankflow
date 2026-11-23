@@ -27,6 +27,166 @@
   }
 </section>
 
+@if (isAdmin()) {
+  <section class="panel block" aria-labelledby="bank-title">
+    <h2 id="bank-title">Vue de la banque</h2>
+
+    @if (summary.error()) {
+      <p role="alert">La vue de la banque n'a pas pu être chargée.</p>
+      <button matButton="outlined" type="button" (click)="summary.reload()">Réessayer</button>
+    } @else if (summary.value(); as bank) {
+      <dl class="figures">
+        <div>
+          <dt>Clients actifs</dt>
+          <dd>{{ bank.customers.active }}</dd>
+        </div>
+        <div>
+          <dt>Clients suspendus</dt>
+          <dd>{{ bank.customers.suspended }}</dd>
+        </div>
+        <div>
+          <dt>Comptes ouverts</dt>
+          <dd>{{ bank.accounts.open }}</dd>
+        </div>
+        <div>
+          <dt>Comptes clôturés</dt>
+          <dd>{{ bank.accounts.closed }}</dd>
+        </div>
+      </dl>
+      <h3>Total des soldes par devise</h3>
+      @if (bank.totalsByCurrency.length === 0) {
+        <p>Aucun compte ouvert pour le moment.</p>
+      } @else {
+        <ul class="totals">
+          @for (total of bank.totalsByCurrency; track total.currency) {
+            <li>
+              <strong>{{ total.balance | amount: total.currency }}</strong>
+              <span
+                >sur {{ total.openAccounts }} compte{{ total.openAccounts > 1 ? 's' : '' }}</span
+              >
+            </li>
+          }
+        </ul>
+      }
+    } @else {
+      <mat-spinner diameter="32" aria-label="Chargement de la vue de la banque" />
+    }
+    <div class="shortcuts">
+      <a matButton="outlined" routerLink="/administration/clients">Clients</a>
+      <a matButton="outlined" routerLink="/comptes">Tous les comptes</a>
+    </div>
+  </section>
+} @else {
+  <section class="panel block" aria-labelledby="accounts-title">
+    <h2 id="accounts-title">Mes comptes</h2>
+
+    @if (accounts.error()) {
+      <p role="alert">Vos comptes n'ont pas pu être chargés.</p>
+      <button matButton="outlined" type="button" (click)="accounts.reload()">Réessayer</button>
+    } @else if (accounts.hasValue()) {
+      @if (activeAccounts().length === 0) {
+        <p>Vous n'avez pas encore de compte actif.</p>
+      } @else {
+        <ul class="accounts">
+          @for (account of activeAccounts(); track account.id) {
+            <li>
+              <a [routerLink]="['/comptes', account.id]">{{ account.label || defaultLabel }}</a>
+              <span class="amount">{{ account.balance | amount: account.currency }}</span>
+            </li>
+          }
+        </ul>
+        @if (isPartial()) {
+          <p class="hint">
+            <span>{{ partialMessage }}</span> Les totaux sont partiels.
+          </p>
+        }
+        <h3>Total par devise</h3>
+        <ul class="totals">
+          @for (total of totals(); track total.currency) {
+            <li>
+              <strong>{{ total.balance | amount: total.currency }}</strong>
+              <span
+                >sur {{ total.openAccounts }} compte{{ total.openAccounts > 1 ? 's' : '' }}</span
+              >
+            </li>
+          }
+        </ul>
+      }
+      <div class="shortcuts">
+        <a matButton="filled" routerLink="/virement">Faire un virement</a>
+      </div>
+    } @else {
+      <mat-spinner diameter="32" aria-label="Chargement de vos comptes" />
+    }
+  </section>
+}
+
+<section class="panel block" aria-labelledby="operations-title">
+  <h2 id="operations-title">
+    {{ isAdmin() ? 'Dernières opérations de la banque' : 'Dernières opérations' }}
+  </h2>
+
+  @if (transactions.error()) {
+    <p role="alert">Les opérations n'ont pas pu être chargées.</p>
+    <button matButton="outlined" type="button" (click)="transactions.reload()">Réessayer</button>
+  } @else if (transactions.value(); as history) {
+    @if (history.content.length === 0) {
+      <p>Aucune opération pour le moment.</p>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Opération</th>
+              <th scope="col">Compte</th>
+              <th scope="col" class="numeric">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (transaction of history.content; track transaction.id) {
+              <tr>
+                <td>{{ transaction.createdAt | dateFr }}</td>
+                <th scope="row">{{ getTransactionLabel(transaction) }}</th>
+                <td>
+                  @let accountLabel = findTransactionAccount(transaction);
+                  <a
+                    [routerLink]="['/comptes', transaction.accountId]"
+                    [attr.aria-label]="
+                      'Voir le compte' +
+                      (accountLabel ? ' ' + accountLabel : '') +
+                      ', opération du ' +
+                      (transaction.createdAt | dateFr) +
+                      ' : ' +
+                      getTransactionLabel(transaction)
+                    "
+                    >{{ accountLabel ?? 'Voir le compte' }}</a
+                  >
+                </td>
+                <td
+                  class="numeric"
+                  [class.credit]="transaction.direction === 'CREDIT'"
+                  [class.debit]="transaction.direction === 'DEBIT'"
+                >
+                  {{ getAmountSign(transaction)
+                  }}{{ transaction.amount | amount: transaction.currency }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    <div class="shortcuts">
+      <a matButton="outlined" routerLink="/operations">
+        {{ isAdmin() ? 'Voir toutes les opérations' : 'Voir toutes mes opérations' }}
+      </a>
+    </div>
+  } @else {
+    <mat-spinner diameter="32" aria-label="Chargement des opérations" />
+  }
+</section>
+
 <ul class="upcoming">
   @for (section of upcomingSections; track section.title) {
     <li class="panel">

@@ -41,6 +41,45 @@ function page<T>(content: T[], totalElements = content.length): PageResponse<T> 
   return { content, page: 0, size: 20, totalElements, totalPages: Math.ceil(totalElements / 20) };
 }
 
+describe('Operations : libellés des virements', () => {
+  it('affiche la contrepartie des virements', async () => {
+    const isAdmin = signal(false);
+    await render(Operations, {
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { isAdmin } },
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne((r) => r.url === '/api/accounts').flush(page([ACCOUNT]));
+    http
+      .expectOne((r) => r.url === '/api/transactions')
+      .flush(
+        page([
+          {
+            ...TRANSACTION,
+            id: 't2',
+            type: 'TRANSFER_IN',
+            direction: 'CREDIT',
+            counterpartyIban: 'FR7699999000010999999999912',
+          },
+          {
+            ...TRANSACTION,
+            id: 't3',
+            type: 'TRANSFER_OUT',
+            counterpartyIban: 'FR7699999000010888888888812',
+          },
+        ]),
+      );
+
+    expect(
+      await screen.findByText('Virement reçu de FR76 9999 9000 0109 9999 9999 912'),
+    ).toBeTruthy();
+    expect(screen.getByText('Virement émis vers FR76 9999 9000 0108 8888 8888 812')).toBeTruthy();
+  });
+});
+
 describe('Operations', () => {
   const isAdmin = signal(false);
 

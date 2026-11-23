@@ -1,4 +1,6 @@
-import { Currency } from '../accounts/accounts.models';
+import { Currency, formatIban } from '../accounts/accounts.models';
+
+export const MAX_DESCRIPTION_LENGTH = 140;
 
 export type TransactionType =
   'DEPOSIT' | 'WITHDRAWAL' | 'TRANSFER_IN' | 'TRANSFER_OUT' | 'COMPENSATION';
@@ -16,6 +18,8 @@ export interface Transaction {
   compensatedByTransactionId: string | null;
   description: string | null;
   direction: 'CREDIT' | 'DEBIT';
+  /** IBAN de l'autre compte, pour un virement seulement. */
+  counterpartyIban?: string | null;
   performedBy: PerformedBy;
   createdAt: string;
 }
@@ -55,6 +59,18 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
   TRANSFER_OUT: 'Virement émis',
   COMPENSATION: 'Annulation',
 };
+
+/** Un virement dit d'où vient l'argent ou où il va ; sans IBAN connu, le libellé du type suffit. */
+export function getTransactionLabel(transaction: Transaction): string {
+  const iban = transaction.counterpartyIban;
+  if (iban && transaction.type === 'TRANSFER_IN') {
+    return `Virement reçu de ${formatIban(iban)}`;
+  }
+  if (iban && transaction.type === 'TRANSFER_OUT') {
+    return `Virement émis vers ${formatIban(iban)}`;
+  }
+  return TYPE_LABELS[transaction.type];
+}
 
 /** Seuls un dépôt et un retrait se compensent, une seule fois. */
 export function canCompensate(transaction: Transaction): boolean {

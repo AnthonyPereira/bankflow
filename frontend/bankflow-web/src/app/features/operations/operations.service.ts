@@ -31,6 +31,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   TRANSACTION_NOT_FOUND: 'Opération introuvable.',
   ACCOUNT_BALANCE_NOT_ZERO: 'Le solde doit être à zéro pour clôturer le compte.',
   ACCOUNT_LIMIT_REACHED: 'Ce client a déjà 5 comptes ouverts.',
+  DESTINATION_ACCOUNT_NOT_FOUND: 'Aucun compte actif ne correspond à cet IBAN.',
+  CURRENCY_MISMATCH: 'Les deux comptes doivent avoir la même devise.',
 };
 
 /** Traduit le `code` du ProblemDetail en français, avec repli sur son `detail`. */
@@ -88,6 +90,7 @@ export class OperationsService {
     filters: TransactionFilters,
     page: number,
     size: number,
+    isSilent = false,
   ): Observable<PageResponse<Transaction>> {
     let params = new HttpParams().set('page', page).set('size', size);
     for (const [key, value] of Object.entries(filters)) {
@@ -95,7 +98,10 @@ export class OperationsService {
         params = params.set(key, value);
       }
     }
-    return this.http.get<PageResponse<Transaction>>(TRANSACTIONS_URL, { params });
+    return this.http.get<PageResponse<Transaction>>(TRANSACTIONS_URL, {
+      params,
+      context: new HttpContext().set(SILENT_ERRORS, isSilent),
+    });
   }
 
   /** Les erreurs métier sont affichées par l'écran, pas par un message global. */

@@ -41,6 +41,92 @@ dd {
   font: var(--mat-sys-body-large);
 }
 
+.block {
+  margin-top: 16px;
+}
+
+.block > :not(h2) {
+  margin-top: 16px;
+}
+
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+h3 {
+  font: var(--mat-sys-title-small);
+}
+
+.figures dd {
+  font: var(--mat-sys-headline-small);
+}
+
+.accounts,
+.totals {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.accounts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.totals li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+}
+
+thead th {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+tbody th {
+  font: var(--mat-sys-body-large);
+  font-weight: 500;
+}
+
+.numeric {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.credit {
+  color: var(--mat-sys-primary);
+}
+
+.debit {
+  color: var(--mat-sys-error);
+}
+
 .upcoming {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
