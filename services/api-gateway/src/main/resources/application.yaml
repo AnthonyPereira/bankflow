@@ -20,6 +20,9 @@ spring:
     gateway:
       server:
         webmvc:
+          # Proxys de confiance (adresses privées et de boucle) dont les en-têtes X-Forwarded-* sont
+          # repris, pour que les services en aval construisent leurs URL avec l'adresse publique
+          trusted-proxies: ${TRUSTED_PROXIES:(127\..*|10\..*|192\.168\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|::1|0:0:0:0:0:0:0:1|f[cd][0-9a-f]{2}:.*)}
           routes:
             - id: auth-service
               uri: ${AUTH_SERVICE_URL:http://localhost:8081}

@@ -341,6 +341,21 @@ class GatewayIntegrationTests {
     }
 
     @Test
+    void lesEnTetesForwardedDUnProxyDeConfianceSontRelayes() throws Exception {
+        send(
+                get("/api/accounts/42")
+                        .header("Authorization", formatBearer(createValidToken()))
+                        .header("X-Forwarded-Host", "bankflow.example")
+                        .header("X-Forwarded-Proto", "https")
+                        .header("X-Forwarded-Port", "443"));
+
+        var received = LAST_REQUEST.get();
+        assertThat(received.findHeader("X-Forwarded-Host")).startsWith("bankflow.example");
+        assertThat(received.findHeader("X-Forwarded-Proto")).startsWith("https");
+        assertThat(received.findHeader("X-Forwarded-Prefix")).isEqualTo("/api");
+    }
+
+    @Test
     void laSondeDeSanteResteAccessibleSansJwt() throws Exception {
         assertThat(send(get("/actuator/health/readiness")).statusCode()).isEqualTo(200);
     }
