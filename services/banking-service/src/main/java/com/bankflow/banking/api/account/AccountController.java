@@ -2,6 +2,7 @@ package com.bankflow.banking.api.account;
 
 import com.bankflow.banking.api.page.PageResponse;
 import com.bankflow.banking.application.account.AccountService;
+import com.bankflow.banking.domain.account.Account;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -36,8 +37,7 @@ class AccountController {
     @PostMapping
     ResponseEntity<AccountResponse> createAccount(
             @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateAccountRequest request) {
-        var account =
-                accountService.openAccount(readUserId(jwt), request.currency(), request.label());
+        var account = openAccount(jwt, request);
         var location =
                 ServletUriComponentsBuilder.fromCurrentContextPath()
                         .path("/accounts/{id}")
@@ -46,9 +46,25 @@ class AccountController {
         return ResponseEntity.created(location).body(AccountResponse.createFrom(account));
     }
 
+    private Account openAccount(Jwt jwt, CreateAccountRequest request) {
+        if (!isAdmin(jwt)) {
+            if (request.customerId() != null) {
+                throw new FieldValidationException(
+                        "customerId", "Ce champ est réservé aux conseillers.");
+            }
+            return accountService.openAccount(readUserId(jwt), request.currency(), request.label());
+        }
+        if (request.customerId() == null) {
+            throw new FieldValidationException("customerId", "Choisissez le client.");
+        }
+        return accountService.openAccountForCustomer(
+                request.customerId(), request.currency(), request.label());
+    }
+
     @GetMapping
     PageResponse<AccountResponse> listAccounts(
             @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) UUID customerId,
             @RequestParam(defaultValue = "0")
                     @Min(value = 0, message = "La page doit être positive.")
                     int page,
@@ -56,8 +72,16 @@ class AccountController {
                     @Min(value = 1, message = "La taille doit être comprise entre 1 et 100.")
                     @Max(value = 100, message = "La taille doit être comprise entre 1 et 100.")
                     int size) {
-        var accounts = accountService.listAccounts(readUserId(jwt), isAdmin(jwt), page, size);
+        // Le filtre est réservé aux administrateurs : un client ne voit que ses comptes
+        var accounts =
+                accountService.listAccounts(readUserId(jwt), isAdmin(jwt), customerId, page, size);
         return PageResponse.createFrom(accounts, AccountResponse::createFrom);
+    }
+
+    /** Chemin littéral : prioritaire sur {@code /{id}}, il n'est jamais lu comme un identifiant. */
+    @GetMapping("/summary")
+    AccountSummaryResponse getSummary() {
+        return AccountSummaryResponse.createFrom(accountService.getSummary());
     }
 
     @GetMapping("/{id}")
