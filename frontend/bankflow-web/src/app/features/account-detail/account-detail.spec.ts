@@ -287,7 +287,7 @@ describe('AccountDetail', () => {
 
   it.each([
     ['INSUFFICIENT_FUNDS', 'Le solde est insuffisant.'],
-    ['CUSTOMER_SUSPENDED', "Ce client est suspendu : aucune opération n'est possible."],
+    ['CUSTOMER_SUSPENDED', 'Votre profil est suspendu : contactez un conseiller.'],
     ['ACCOUNT_CLOSED', 'Ce compte est clôturé.'],
   ])('traduit l’erreur %s', async (code, message) => {
     const { http, user } = await setup();
@@ -298,6 +298,49 @@ describe('AccountDetail', () => {
       .flush({ code }, { status: 409, statusText: 'Conflict' });
 
     expect((await screen.findByRole('alert')).textContent).toContain(message);
+  });
+
+  it('parle du client, et non de « votre profil », à un administrateur', async () => {
+    const { http, user } = await setup({ admin: true });
+
+    await submitDeposit(user, '10');
+    http
+      .expectOne('/api/accounts/a1/deposits')
+      .flush({ code: 'CUSTOMER_SUSPENDED' }, { status: 403, statusText: 'Forbidden' });
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      "Ce client est suspendu : aucune opération n'est possible.",
+    );
+  });
+
+  it('renvoie un client vers la liste de ses comptes, sans afficher de propriétaire', async () => {
+    await setup();
+
+    expect(screen.getByRole('link', { name: '← Retour aux comptes' })).toBeTruthy();
+    expect(screen.queryByText('Client')).toBeNull();
+  });
+
+  it('affiche le client propriétaire à un administrateur, avec un lien vers sa fiche', async () => {
+    const { http } = await setup({ admin: true });
+    http.expectOne('/api/customers/c1').flush({
+      id: 'c1',
+      userId: 'u1',
+      email: 'alice@example.com',
+      firstName: 'Alice',
+      lastName: 'Martin',
+      phone: null,
+      address: null,
+      status: 'ACTIVE',
+      demo: false,
+      createdAt: '2026-11-23T10:00:00Z',
+    });
+
+    const owner = await screen.findByRole('link', { name: 'Alice Martin' });
+    expect(owner.getAttribute('href')).toBe('/administration/clients/c1');
+    expect(screen.getByRole('link', { name: '← Fiche du client' }).getAttribute('href')).toBe(
+      '/administration/clients/c1',
+    );
+    expect(screen.queryByRole('link', { name: '← Retour aux comptes' })).toBeNull();
   });
 
   it('désactive la clôture tant que le solde n’est pas nul', async () => {
@@ -442,7 +485,8 @@ describe('AccountDetail', () => {
     http
       .expectOne('/api/accounts/a1/close')
       .flush({ ...ACCOUNT, balance: '0.00', status: 'CLOSED' });
-    expect(await screen.findByText(CLOSED_MESSAGE)).toBeTruthy();
+    const message = await screen.findByText(CLOSED_MESSAGE);
+    expect(document.activeElement).toBe(message);
     http.expectOne('/api/accounts/a1').flush({ ...ACCOUNT, balance: '0.00', status: 'CLOSED' });
     expect(await screen.findByText('Clôturé')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Déposer' })).toBeNull();
@@ -470,6 +514,9 @@ describe('AccountDetail', () => {
     expect((await screen.findByRole('alert')).textContent).toContain(
       'Le solde doit être à zéro pour clôturer le compte.',
     );
+    // Le solde affiché était périmé : le compte est rechargé.
+    http.expectOne('/api/accounts/a1').flush({ ...ACCOUNT, balance: '12.00' });
+    expect((await screen.findAllByText(/12,00\s€/)).length).toBeGreaterThan(0);
   });
 
   it('annule une opération avec un motif, côté administrateur', async () => {

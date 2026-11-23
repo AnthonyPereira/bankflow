@@ -3,6 +3,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   ElementRef,
@@ -32,13 +33,17 @@ import { AuthService } from '../../core/auth/auth.service';
 import { AmountPipe } from '../../core/format/amount.pipe';
 import { DateFrPipe } from '../../core/format/date-fr.pipe';
 import { parseAmount, validateAmount } from '../../core/format/amount-input';
-import { getRangeLabel } from '../../core/format/page-range';
+import { getErrorCode, getFieldErrors, isRetryableError } from '../../core/http/problem-details';
+import { Pager } from '../../core/pagination/pager';
 import {
   Account,
   DEFAULT_ACCOUNT_LABEL,
   formatIban,
   PageResponse,
 } from '../accounts/accounts.models';
+import { AccountsService } from '../accounts/accounts.service';
+import { getCustomerName } from '../customers/customers.models';
+import { CustomersService } from '../customers/customers.service';
 import {
   canCompensate,
   getAmountSign,
@@ -50,14 +55,10 @@ import {
 } from '../operations/operations.models';
 import {
   ACCOUNT_NOT_FOUND_MESSAGE,
-  getErrorCode,
-  getFieldErrors,
   getOperationErrorMessage,
-  isRetryableError,
   OperationsService,
 } from '../operations/operations.service';
 import { MAX_REASON_LENGTH, MIN_REASON_LENGTH } from './account-detail.models';
-import { AccountDetailService } from './account-detail.service';
 
 export const CLOSED_MESSAGE = 'Le compte a été clôturé.';
 export const CANCELLED_MESSAGE = "L'opération a été annulée.";
@@ -110,6 +111,7 @@ function createOperationForm(builder: NonNullableFormBuilder) {
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    Pager,
     ReactiveFormsModule,
     RouterLink,
   ],
@@ -118,7 +120,8 @@ function createOperationForm(builder: NonNullableFormBuilder) {
   styleUrl: './account-detail.scss',
 })
 export class AccountDetail {
-  private readonly accountService = inject(AccountDetailService);
+  private readonly accountService = inject(AccountsService);
+  private readonly customersService = inject(CustomersService);
   private readonly operationsService = inject(OperationsService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -137,12 +140,21 @@ export class AccountDetail {
   protected readonly reasonMessage = REASON_MESSAGE;
   protected readonly notFoundMessage = ACCOUNT_NOT_FOUND_MESSAGE;
   protected readonly formatIban = formatIban;
-  protected readonly getRangeLabel = getRangeLabel;
   protected readonly canCompensate = canCompensate;
 
   protected readonly account = rxResource({
     params: () => ({ id: this.id() }),
     stream: ({ params }) => this.accountService.getAccount(params.id),
+  });
+  /** Le client propriétaire, affiché au conseiller pour savoir au nom de qui il agit. */
+  private readonly owner = rxResource({
+    params: () =>
+      this.isAdmin() && this.account.hasValue() ? this.account.value().customerId : undefined,
+    stream: ({ params }) => this.customersService.getCustomer(params),
+  });
+  protected readonly ownerName = computed(() => {
+    const owner = this.owner.hasValue() ? this.owner.value() : undefined;
+    return (owner && (getCustomerName(owner) ?? owner.email)) || 'Voir la fiche';
   });
   protected readonly isNotFound = () => {
     const error = this.account.error();
@@ -157,6 +169,7 @@ export class AccountDetail {
         { accountId: params.id },
         params.page,
         TRANSACTIONS_PAGE_SIZE,
+        true,
       ),
   });
 
@@ -281,10 +294,15 @@ export class AccountDetail {
           this.isConfirmingClose.set(false);
           this.closeMessage.set(CLOSED_MESSAGE);
           this.account.reload();
+          this.focusSelector('.close-status');
         },
         error: (error: unknown) => {
           this.isConfirmingClose.set(false);
-          this.closeError.set(getOperationErrorMessage(error));
+          this.closeError.set(getOperationErrorMessage(error, this.isAdmin()));
+          // Le solde affiché était périmé : il est rechargé pour que l'écran dise vrai.
+          if (getErrorCode(error) === 'ACCOUNT_BALANCE_NOT_ZERO') {
+            this.account.reload();
+          }
           this.focusSelector('.close-button');
         },
       });
@@ -331,7 +349,7 @@ export class AccountDetail {
           this.focusSelector('.compensation-status');
         },
         error: (error: unknown) => {
-          this.compensationError.set(getOperationErrorMessage(error));
+          this.compensationError.set(getOperationErrorMessage(error, this.isAdmin()));
           if (STALE_DATA_CODES.includes(getErrorCode(error) ?? '')) {
             this.refresh();
           }
@@ -411,8 +429,8 @@ export class AccountDetail {
     }
     draft.errorMessage.set(
       isRetryableError(error)
-        ? `${getOperationErrorMessage(error)} Vous pouvez réessayer sans risque de doublon.`
-        : getOperationErrorMessage(error),
+        ? `${getOperationErrorMessage(error, this.isAdmin())} Vous pouvez réessayer sans risque de doublon.`
+        : getOperationErrorMessage(error, this.isAdmin()),
     );
   }
 

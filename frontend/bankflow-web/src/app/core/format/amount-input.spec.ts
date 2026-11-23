@@ -15,13 +15,12 @@ describe('parseAmount', () => {
     ['10 000', '10000.00'],
     ['1 000,50', '1000.50'],
     ['10000.00', '10000.00'],
-    ['10,500', '10.50'],
     ['007', '7.00'],
   ])('accepte « %s » et l’envoie en « %s »', (input, expected) => {
     expect(parseAmount(input)).toEqual({ amount: expected });
   });
 
-  it.each(['', '0', '0,00', '0,000', '-5'])('refuse « %s » comme non positif', (input) => {
+  it.each(['', '0', '0,00', '-5'])('refuse « %s » comme non positif', (input) => {
     expect(parseAmount(input)).toEqual({ error: AMOUNT_POSITIVE_MESSAGE });
   });
 
@@ -32,9 +31,12 @@ describe('parseAmount', () => {
     },
   );
 
-  it('refuse plus de 2 décimales', () => {
-    expect(parseAmount('1,234')).toEqual({ error: AMOUNT_DECIMALS_MESSAGE });
-  });
+  it.each(['1,234', '10,500', '150.000', '0,000'])(
+    'refuse « %s » : plus de 2 décimales, zéros compris',
+    (input) => {
+      expect(parseAmount(input)).toEqual({ error: AMOUNT_DECIMALS_MESSAGE });
+    },
+  );
 
   it('refuse plus de 10 000,00', () => {
     expect(parseAmount('10000,01')).toEqual({ error: AMOUNT_MAX_MESSAGE });

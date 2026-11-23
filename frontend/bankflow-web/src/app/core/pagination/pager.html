@@ -1,0 +1,21 @@
+@if (isVisible()) {
+  <nav class="pager" [attr.aria-label]="label()">
+    <span class="pager-range" aria-live="polite">{{ rangeLabel() }}</span>
+    <button
+      matButton="outlined"
+      type="button"
+      [disabled]="pageIndex() === 0"
+      (click)="pageChange.emit(pageIndex() - 1)"
+    >
+      Page précédente
+    </button>
+    <button
+      matButton="outlined"
+      type="button"
+      [disabled]="pageIndex() >= totalPages() - 1"
+      (click)="pageChange.emit(pageIndex() + 1)"
+    >
+      Page suivante
+    </button>
+  </nav>
+}

@@ -107,20 +107,6 @@ mat-form-field {
   height: 48px;
 }
 
-.pager {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.pager-range {
-  margin-right: 8px;
-  color: var(--mat-sys-on-surface-variant);
-}
-
 .back {
   margin: 0 0 8px;
 }

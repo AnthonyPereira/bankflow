@@ -67,29 +67,14 @@
           </tbody>
         </table>
       </div>
-      @if (current.totalElements > pageSize) {
-        <nav class="pager" aria-label="Pagination des clients">
-          <span class="pager-range" aria-live="polite">{{
-            getRangeLabel(pageIndex(), pageSize, current.totalElements)
-          }}</span>
-          <button
-            matButton="outlined"
-            type="button"
-            [disabled]="pageIndex() === 0"
-            (click)="changePage(pageIndex() - 1)"
-          >
-            Page précédente
-          </button>
-          <button
-            matButton="outlined"
-            type="button"
-            [disabled]="pageIndex() >= current.totalPages - 1"
-            (click)="changePage(pageIndex() + 1)"
-          >
-            Page suivante
-          </button>
-        </nav>
-      }
+      <app-pager
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize"
+        [totalElements]="current.totalElements"
+        [totalPages]="current.totalPages"
+        label="Pagination des clients"
+        (pageChange)="changePage($event)"
+      />
     }
   } @else {
     <mat-spinner diameter="32" aria-label="Chargement des clients" />

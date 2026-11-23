@@ -30,7 +30,7 @@ import { finalize, startWith } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { parseAmount, validateAmount } from '../../core/format/amount-input';
 import { AmountPipe } from '../../core/format/amount.pipe';
-import { AccountDetailService } from '../account-detail/account-detail.service';
+import { getErrorCode, getFieldErrors, isRetryableError } from '../../core/http/problem-details';
 import {
   Account,
   DEFAULT_ACCOUNT_LABEL,
@@ -43,12 +43,7 @@ import {
 } from '../accounts/accounts.models';
 import { AccountsService } from '../accounts/accounts.service';
 import { MAX_DESCRIPTION_LENGTH } from '../operations/operations.models';
-import {
-  getErrorCode,
-  getFieldErrors,
-  getOperationErrorMessage,
-  isRetryableError,
-} from '../operations/operations.service';
+import { getOperationErrorMessage } from '../operations/operations.service';
 import {
   CHOOSE_ACCOUNT_FIRST_MESSAGE,
   IBAN_PATTERN,
@@ -102,7 +97,6 @@ function validateIban(control: AbstractControl<string>): ValidationErrors | null
 export class TransferPage {
   private readonly transferService = inject(TransferService);
   private readonly accountsService = inject(AccountsService);
-  private readonly accountDetailService = inject(AccountDetailService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
@@ -143,7 +137,7 @@ export class TransferPage {
   });
   protected readonly adminAccount = rxResource({
     params: () => (this.isAdmin() && this.from() ? { id: this.from() as string } : undefined),
-    stream: ({ params }) => this.accountDetailService.getAccount(params.id),
+    stream: ({ params }) => this.accountsService.getAccount(params.id),
   });
 
   protected readonly activeAccounts = computed(() =>
@@ -166,13 +160,11 @@ export class TransferPage {
     }
     return this.accounts.hasValue() && !this.activeAccounts().some((a) => a.id === from);
   });
-  /** Texte lu par les lecteurs d'écran à l'arrivée du résultat (la région existe en permanence). */
+  /** Texte lu par les lecteurs d'écran à l'arrivée d'un succès (la région existe en permanence). */
   protected readonly announcement = computed(() => {
     const result = this.outcome();
-    if (!result || this.step() !== 'result') {
-      return '';
-    }
-    return result.kind === 'success' ? 'Virement effectué.' : result.message;
+    // Un échec est annoncé par son propre `role="alert"` : l'annoncer ici le doublerait.
+    return result?.kind === 'success' && this.step() === 'result' ? 'Virement effectué.' : '';
   });
   protected readonly source = computed<Account | null>(() => {
     if (this.isAdmin()) {
@@ -325,7 +317,7 @@ export class TransferPage {
     }
     this.outcome.set({
       kind: 'error',
-      message: getOperationErrorMessage(error),
+      message: getOperationErrorMessage(error, this.isAdmin()),
       isRetryable,
     });
     this.step.set('result');

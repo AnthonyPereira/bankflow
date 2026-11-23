@@ -47,6 +47,9 @@
       }}</span>
     </p>
     <div aria-live="polite">
+      @if (statusMessage(); as message) {
+        <p class="form-info">{{ message }}</p>
+      }
       @if (statusError(); as message) {
         <p class="form-error" role="alert">{{ message }}</p>
       }

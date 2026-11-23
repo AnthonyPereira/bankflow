@@ -14,7 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterLink } from '@angular/router';
 import { debounceTime } from 'rxjs';
-import { getRangeLabel } from '../../core/format/page-range';
+import { Pager } from '../../core/pagination/pager';
 import { STATUS_LABELS } from '../profile/profile.models';
 import {
   CUSTOMERS_TITLE,
@@ -37,6 +37,7 @@ export const SEARCH_DELAY_MS = 300;
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    Pager,
     ReactiveFormsModule,
     RouterLink,
   ],
@@ -71,7 +72,6 @@ export class Customers {
   });
 
   protected readonly getName = getCustomerName;
-  protected readonly getRangeLabel = getRangeLabel;
 
   constructor() {
     this.searchControl.valueChanges

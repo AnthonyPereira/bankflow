@@ -43,6 +43,8 @@ import {
 import { CustomersService, getCustomerErrorMessage } from './customers.service';
 
 export const ACCOUNT_OPENED_MESSAGE = 'Le compte a été ouvert.';
+export const SUSPENDED_MESSAGE = 'Client suspendu.';
+export const REACTIVATED_MESSAGE = 'Client réactivé.';
 export const DEMO_CUSTOMER_NOTICE =
   'Il s’agit d’un compte de démonstration : il ne peut pas être suspendu.';
 const NOT_PROVIDED = 'Non renseigné';
@@ -104,6 +106,7 @@ export class CustomerDetail {
   protected readonly isConfirmingSuspension = signal(false);
   protected readonly isChangingStatus = signal(false);
   protected readonly statusError = signal<string | null>(null);
+  protected readonly statusMessage = signal<string | null>(null);
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     currency: ['EUR' as Currency],
@@ -135,6 +138,7 @@ export class CustomerDetail {
   private resetClientState(): void {
     this.form.reset({ currency: 'EUR', label: '' });
     this.statusError.set(null);
+    this.statusMessage.set(null);
     this.successMessage.set(null);
     this.errorMessage.set(null);
     this.isConfirmingSuspension.set(false);
@@ -209,6 +213,7 @@ export class CustomerDetail {
     }
     this.isChangingStatus.set(true);
     this.statusError.set(null);
+    this.statusMessage.set(null);
     const customerId = this.id();
     this.service
       .changeStatus(customerId, status)
@@ -222,6 +227,7 @@ export class CustomerDetail {
             return;
           }
           this.customer.set(updated);
+          this.statusMessage.set(status === 'SUSPENDED' ? SUSPENDED_MESSAGE : REACTIVATED_MESSAGE);
           this.isConfirmingSuspension.set(false);
           afterNextRender(() => this.statusButton()?.nativeElement.focus(), {
             injector: this.injector,
