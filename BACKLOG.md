@@ -200,26 +200,26 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 **Objectif pédagogique :** premier consommateur métier et référence inter-services sans relation SQL.
 
 ### Tâches
-- [ ] BF-006-01 — Migration Flyway : table `customers` (`id`, `user_id` unique, `first_name`, `last_name`, `email`, `phone`, `address`, `status`, timestamps). L'inscription ne demande que l'email et le mot de passe : `first_name`, `last_name`, `phone` et `address` sont donc facultatifs, et le client les complète depuis son profil (BF-006-04, BF-016-11)
-- [ ] BF-006-02 — Consumer `UserRegistered` qui crée le profil client (idempotent sur `user_id`)
-- [ ] BF-006-03 — `GET /customers/me`
-- [ ] BF-006-04 — `PUT /customers/me` : modification des coordonnées avec validation
-- [ ] BF-006-05 — `GET /customers/{id}` : réservé au propriétaire ou à un administrateur
-- [ ] BF-006-06 — `GET /customers` : liste paginée et filtrable, réservée à `ROLE_ADMIN`
-- [ ] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…). La suspension doit refuser les comptes de démonstration (`User.disable` de l'Auth Service lève `DemoAccountCannotBeDisabledException`)
-- [ ] BF-006-08 — Publier `CustomerCreated` et `CustomerUpdated` sur `bank.customers` (payload minimal)
-- [ ] BF-006-09 — Documenter les contrats d'événements
-- [ ] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
-- [ ] BF-006-11 — Rattraper les profils manquants. Seule l'inscription publie `UserRegistered` : le compte administrateur initial, les comptes de démonstration et les comptes créés avant la MVP 2 n'ont pas de profil, et une panne de Kafka à l'inscription en fait perdre un jusqu'à l'Outbox (BF-011). Mécanisme à décider (création du profil au premier `GET /customers/me` à partir du JWT, ou publication de `UserRegistered` au démarrage de l'Auth Service pour les comptes sans profil), avec un test pour chaque cas
+- [x] BF-006-01 — Migration Flyway : table `customers` (`id`, `user_id` unique, `first_name`, `last_name`, `email`, `phone`, `address`, `status`, timestamps). L'inscription ne demande que l'email et le mot de passe : `first_name`, `last_name`, `phone` et `address` sont donc facultatifs, et le client les complète depuis son profil (BF-006-04, BF-016-11)
+- [x] BF-006-02 — Consumer `UserRegistered` qui crée le profil client (idempotent sur `user_id`)
+- [x] BF-006-03 — `GET /customers/me`
+- [x] BF-006-04 — `PUT /customers/me` : modification des coordonnées avec validation
+- [x] BF-006-05 — `GET /customers/{id}` : réservé au propriétaire ou à un administrateur
+- [x] BF-006-06 — `GET /customers` : liste paginée et filtrable, réservée à `ROLE_ADMIN`
+- [x] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…). La suspension doit refuser les comptes de démonstration (`User.disable` de l'Auth Service lève `DemoAccountCannotBeDisabledException`)
+- [x] BF-006-08 — Publier `CustomerCreated` et `CustomerUpdated` sur `bank.customers` (payload minimal)
+- [x] BF-006-09 — Documenter les contrats d'événements
+- [x] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
+- [x] BF-006-11 — Rattraper les profils manquants. Seule l'inscription publie `UserRegistered` : le compte administrateur initial, les comptes de démonstration et les comptes créés avant la MVP 2 n'ont pas de profil, et une panne de Kafka à l'inscription en fait perdre un jusqu'à l'Outbox (BF-011). Mécanisme à décider (création du profil au premier `GET /customers/me` à partir du JWT, ou publication de `UserRegistered` au démarrage de l'Auth Service pour les comptes sans profil), avec un test pour chaque cas
 
 ### Tests
-- [ ] Tests unitaires : droits d'accès et validations
-- [ ] Test d'intégration : `UserRegistered` crée un `Customer`, et le même événement reçu deux fois ne crée pas de doublon
+- [x] Tests unitaires : droits d'accès et validations
+- [x] Test d'intégration : `UserRegistered` crée un `Customer`, et le même événement reçu deux fois ne crée pas de doublon
 
 ### Critères de validation
-- [ ] Une inscription crée automatiquement un profil client
-- [ ] Les comptes de démonstration et les comptes inscrits avant la MVP 2 ont aussi un profil
-- [ ] Un client ne peut pas consulter le profil d'un autre client
+- [x] Une inscription crée automatiquement un profil client
+- [x] Les comptes de démonstration et les comptes inscrits avant la MVP 2 ont aussi un profil
+- [x] Un client ne peut pas consulter le profil d'un autre client
 
 ---
 
@@ -229,24 +229,24 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 **Objectif pédagogique :** modélisation financière (BigDecimal, DECIMAL(19,4)) et contrôle d'appartenance.
 
 ### Tâches
-- [ ] BF-007-01 — Migrations Flyway : `accounts`, `transfers`, `transactions`, `ledger_entries`, `idempotency_keys`
-- [ ] BF-007-02 — Entité `Account` (`customer_id`, `account_number` unique, `currency`, `balance DECIMAL(19,4)`, `status`, `version` pour le verrouillage optimiste)
-- [ ] BF-007-03 — Générer un numéro de compte unique (format IBAN fictif)
-- [ ] BF-007-04 — Résoudre `customerId` depuis le JWT (`userId` vers `customerId` : appel REST au Customer Service ou projection locale alimentée par `CustomerCreated`, à décider dans l'ADR-004)
-- [ ] BF-007-05 — `POST /accounts` : création avec devise, solde initial à 0 et statut ACTIVE
-- [ ] BF-007-06 — `GET /accounts` : seulement les comptes du client, ou tous pour un administrateur
-- [ ] BF-007-07 — `GET /accounts/{id}` et `GET /accounts/{id}/balance` avec contrôle d'appartenance
-- [ ] BF-007-08 — Clôturer un compte (endpoint ou action dédiée) : interdite si le solde est différent de 0
-- [ ] BF-007-09 — Ajouter un value object `Money` (BigDecimal et devise), en interdisant `double` et `float`
-- [ ] BF-007-10 — Ajouter un gestionnaire d'erreurs métier (`AccountNotFound`, `AccountClosed`…) au format `ProblemDetail`
+- [x] BF-007-01 — Migrations Flyway : `accounts`, `transfers`, `transactions`, `ledger_entries`, `idempotency_keys`
+- [x] BF-007-02 — Entité `Account` (`customer_id`, `account_number` unique, `currency`, `balance DECIMAL(19,4)`, `status`, `version` pour le verrouillage optimiste)
+- [x] BF-007-03 — Générer un numéro de compte unique (format IBAN fictif)
+- [x] BF-007-04 — Résoudre `customerId` depuis le JWT (`userId` vers `customerId` : appel REST au Customer Service ou projection locale alimentée par `CustomerCreated`, à décider dans l'ADR-004)
+- [x] BF-007-05 — `POST /accounts` : création avec devise, solde initial à 0 et statut ACTIVE
+- [x] BF-007-06 — `GET /accounts` : seulement les comptes du client, ou tous pour un administrateur
+- [x] BF-007-07 — `GET /accounts/{id}` et `GET /accounts/{id}/balance` avec contrôle d'appartenance
+- [x] BF-007-08 — Clôturer un compte (endpoint ou action dédiée) : interdite si le solde est différent de 0
+- [x] BF-007-09 — Ajouter un value object `Money` (BigDecimal et devise), en interdisant `double` et `float`
+- [x] BF-007-10 — Ajouter un gestionnaire d'erreurs métier (`AccountNotFound`, `AccountClosed`…) au format `ProblemDetail`
 
 ### Tests
-- [ ] Tests unitaires : création, clôture, règles de statut, `Money`
-- [ ] Test d'intégration : isolation des comptes entre deux clients
+- [x] Tests unitaires : création, clôture, règles de statut, `Money`
+- [x] Test d'intégration : isolation des comptes entre deux clients
 
 ### Critères de validation
-- [ ] Création et consultation des comptes fonctionnelles
-- [ ] Accès interdit au compte d'un autre client (403 ou 404)
+- [x] Création et consultation des comptes fonctionnelles
+- [x] Accès interdit au compte d'un autre client (403 ou 404)
 
 ---
 
@@ -467,9 +467,9 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 - [x] BF-016-09 — Layout (menu client et admin, en-tête, déconnexion)
 - [x] BF-016-10 — Dashboard réduit pour la MVP 1 : informations du compte (`/auth/me`) et sections « bientôt disponible », sans donnée fictive
 - [ ] BF-016-10b — Dashboard complet (MVP 2) : synthèse des comptes, dernières opérations et notifications récentes
-- [ ] BF-016-11 — Écran de profil (`/customers/me`) (reporté à la MVP 2, avec BF-006)
+- [x] BF-016-11 — Écran de profil (`/customers/me`) (reporté à la MVP 2, avec BF-006)
 - [x] BF-016-12 — `shared/models` (interfaces TypeScript)
-- [ ] BF-016-12b — `shared/pipes` (montant ou devise, date) (reporté à la MVP 2, avec les premiers montants affichés)
+- [x] BF-016-12b — Pipes `amount` et `dateFr`, rangés dans `core/format/` (et non `shared/`, interdit par les conventions)
 - [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
 - [x] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
 - [x] BF-016-15 — Afficher sur la page de connexion un tableau des comptes de démonstration (client et administrateur, mots de passe publics). Ils sont créés au démarrage de l'Auth Service et servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire après 5 échecs compris, `demo.admin` est un vrai `ROLE_ADMIN`), sauf qu'ils ne peuvent jamais être désactivés définitivement (colonne `users.demo`). `DEMO_ACCOUNTS_ENABLED=false` masque la liste et ne crée plus les comptes absents, sans désactiver ceux qui existent déjà. Le compte administrateur initial (`ADMIN_PASSWORD`) reste secret
@@ -488,13 +488,13 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 **Objectif fonctionnel :** gérer ses comptes et effectuer des virements depuis l'interface.
 
 ### Tâches
-- [ ] BF-017-01 — Écran « Mes comptes » : liste, solde et création d'un compte
+- [x] BF-017-01 — Écran « Mes comptes » : liste, solde et création d'un compte
 - [ ] BF-017-02 — Écran « Détail compte » : solde, historique paginé, dépôt, retrait et clôture
 - [ ] BF-017-03 — Écran « Nouveau virement » : formulaire (source, destination, montant, description), validations et confirmation
 - [ ] BF-017-04 — Générer une `Idempotency-Key` (UUID) par soumission et empêcher le double clic
 - [ ] BF-017-05 — Écran « Mes transactions » : historique filtrable (compte, période, type)
 - [ ] BF-017-06 — Afficher les erreurs métier (solde insuffisant, devise différente, compte clôturé)
-- [ ] BF-017-07 — Pipe de formatage des montants sans erreur d'arrondi (montants transmis en chaîne ou décimal)
+- [x] BF-017-07 — Pipe de formatage des montants sans erreur d'arrondi (montants transmis en chaîne ou décimal)
 
 ### Tests
 - [ ] Tests Vitest : services comptes et virements, formulaire de virement, gestion des erreurs

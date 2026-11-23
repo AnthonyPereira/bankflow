@@ -2,6 +2,20 @@
 
 Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+
+- **Customer Service** : la fiche client est créée à l'inscription, à partir de l'événement `UserRegistered`. Le client consulte et modifie son profil (`/customers/me`). L'administrateur liste, recherche et suspend les clients, mais jamais un compte de démonstration. Les événements `CustomerCreated` et `CustomerUpdated` sont publiés sur `bank.customers`. #62
+- **Rattrapage des fiches client** : à chaque démarrage, l'Auth Service republie `UserRegistered` pour tous les comptes. Les comptes de démonstration, le compte admin, les inscrits d'avant la 0.2.0 et les événements perdus pendant une panne de Kafka reçoivent ainsi leur fiche. Ce rejeu tourne en arrière-plan et ne retarde pas le démarrage. #59
+- **Banking Service, comptes** :
+  - ouverture de comptes en EUR ou en USD, avec un numéro IBAN fictif valide, et au plus 5 comptes ouverts par client ;
+  - consultation, solde et clôture d'un compte, uniquement si son solde est nul ;
+  - les montants sont des décimaux exacts, sans aucun nombre à virgule flottante ;
+  - le Banking Service garde une copie locale des clients, alimentée par Kafka ([ADR-004](docs/adr/ADR-004-reference-client-banking.md)). Un événement plus ancien que l'état connu est ignoré. #61 #58
+- **Frontend** : écrans « Mon profil » (avec nouvel essai si la fiche est encore en cours de création) et « Mes comptes », pipes de montants et de dates en français. #60
+- **Contrats** : `CustomerCreated` v1, `CustomerUpdated` v1, et champ facultatif `demo` dans `UserRegistered`. #58
+
 ## [0.1.1] — 2026-11-23
 
 ### Corrigé
@@ -83,5 +97,6 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 - Seuls le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka sont déployés : les routes des quatre autres services répondent 503.
 - Le Customer Service, le Banking Service, le Notification Service et l'Analytics & Fraud Service ne sont que des squelettes sécurisés, sans fonctionnalité métier.
 
+[Non publié]: https://github.com/AnthonyPereira/bankflow/compare/v0.1.1...develop
 [0.1.1]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.0
