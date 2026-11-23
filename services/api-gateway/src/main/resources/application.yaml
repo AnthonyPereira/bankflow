@@ -20,9 +20,11 @@ spring:
     gateway:
       server:
         webmvc:
-          # Proxys de confiance (adresses privées et de boucle) dont les en-têtes X-Forwarded-* sont
-          # repris, pour que les services en aval construisent leurs URL avec l'adresse publique
-          trusted-proxies: ${TRUSTED_PROXIES:(127\..*|10\..*|192\.168\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|::1|0:0:0:0:0:0:0:1|f[cd][0-9a-f]{2}:.*)}
+          # Active le filtre X-Forwarded-* ; la regex n'est pas la frontière de confiance. Le filtre
+          # régénère les en-têtes depuis l'URI déjà réécrite par la valve Tomcat
+          # (server.forward-headers-strategy: native), dont server.tomcat.remoteip.internal-proxies
+          # fait foi, et nginx écrase les en-têtes envoyés par le client.
+          trusted-proxies: ${TRUSTED_PROXIES:(127\..*|10\..*|192\.168\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\..*|::1|0:0:0:0:0:0:0:1|f[cd][0-9a-f]{2}:.*)}
           routes:
             - id: auth-service
               uri: ${AUTH_SERVICE_URL:http://localhost:8081}

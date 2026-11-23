@@ -347,11 +347,13 @@ class GatewayIntegrationTests {
                         .header("Authorization", formatBearer(createValidToken()))
                         .header("X-Forwarded-Host", "bankflow.example")
                         .header("X-Forwarded-Proto", "https")
-                        .header("X-Forwarded-Port", "443"));
+                        .header("X-Forwarded-Port", "443")
+                        .header("X-Forwarded-For", "203.0.113.9"));
 
         var received = LAST_REQUEST.get();
         assertThat(received.findHeader("X-Forwarded-Host")).startsWith("bankflow.example");
         assertThat(received.findHeader("X-Forwarded-Proto")).startsWith("https");
+        assertThat(received.findHeader("X-Forwarded-Port")).startsWith("443");
         assertThat(received.findHeader("X-Forwarded-Prefix")).isEqualTo("/api");
     }
 
