@@ -1,0 +1,99 @@
+<h1>Mes comptes</h1>
+<p class="intro">Consultez vos comptes et ouvrez-en un nouveau.</p>
+
+<section class="panel" aria-labelledby="list-title">
+  <h2 id="list-title">{{ isAdmin() ? 'Tous les comptes' : 'Vos comptes' }}</h2>
+
+  @if (accounts.isLoading()) {
+    <mat-spinner diameter="32" aria-label="Chargement de vos comptes" />
+  } @else if (accounts.error()) {
+    <p role="alert">Vos comptes n'ont pas pu être chargés.</p>
+    <button matButton="outlined" type="button" (click)="accounts.reload()">Réessayer</button>
+  } @else if (accounts.value(); as page) {
+    @if (page.content.length === 0) {
+      <p>Vous n'avez pas encore de compte.</p>
+    } @else {
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Compte</th>
+              <th scope="col">IBAN</th>
+              <th scope="col">Devise</th>
+              <th scope="col" class="numeric">Solde</th>
+              <th scope="col">Statut</th>
+              @if (isAdmin()) {
+                <th scope="col">Client</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (account of page.content; track account.id) {
+              <tr>
+                <th scope="row">{{ account.label || defaultLabel }}</th>
+                <td class="iban">{{ formatIban(account.accountNumber) }}</td>
+                <td>{{ account.currency }}</td>
+                <td class="numeric">{{ account.balance | amount: account.currency }}</td>
+                <td>
+                  @if (account.status === 'CLOSED') {
+                    <span class="badge closed">Clôturé</span>
+                  } @else {
+                    <span class="badge">Actif</span>
+                  }
+                </td>
+                @if (isAdmin()) {
+                  <td class="iban" [attr.title]="account.customerId">
+                    {{ getShortCustomerId(account.customerId) }}
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (page.totalElements > pageSize) {
+        <mat-paginator
+          [length]="page.totalElements"
+          [pageSize]="pageSize"
+          [pageIndex]="pageIndex()"
+          [hidePageSize]="true"
+          aria-label="Pagination des comptes"
+          (page)="changePage($event)"
+        />
+      }
+    }
+  }
+</section>
+
+<section class="panel" aria-labelledby="open-title">
+  <h2 id="open-title">Ouvrir un compte</h2>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (successMessage(); as message) {
+      <p class="form-info" role="status">{{ message }}</p>
+    }
+    @if (errorMessage(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Devise</mat-label>
+      <select matNativeControl formControlName="currency">
+        @for (currency of currencies; track currency) {
+          <option [value]="currency">{{ currency }}</option>
+        }
+      </select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Libellé (facultatif)</mat-label>
+      <input matInput formControlName="label" maxlength="50" />
+      @if (form.controls.label.hasError('maxlength')) {
+        <mat-error>Le libellé ne peut pas dépasser 50 caractères.</mat-error>
+      }
+    </mat-form-field>
+
+    <button matButton="filled" class="submit" type="submit" [disabled]="isSubmitting()">
+      {{ isSubmitting() ? 'Ouverture…' : 'Ouvrir le compte' }}
+    </button>
+  </form>
+</section>

@@ -47,6 +47,28 @@
         <mat-icon matListItemIcon aria-hidden="true" svgIcon="dashboard" />
         <span matListItemTitle>Tableau de bord</span>
       </a>
+      <a
+        mat-list-item
+        routerLink="/comptes"
+        routerLinkActive
+        #accountsLink="routerLinkActive"
+        [activated]="accountsLink.isActive"
+        (click)="closeMenu()"
+      >
+        <mat-icon matListItemIcon aria-hidden="true" svgIcon="account_balance_wallet" />
+        <span matListItemTitle>Mes comptes</span>
+      </a>
+      <a
+        mat-list-item
+        routerLink="/profil"
+        routerLinkActive
+        #profileLink="routerLinkActive"
+        [activated]="profileLink.isActive"
+        (click)="closeMenu()"
+      >
+        <mat-icon matListItemIcon aria-hidden="true" svgIcon="person" />
+        <span matListItemTitle>Mon profil</span>
+      </a>
       @if (isAdmin()) {
         <a
           mat-list-item
