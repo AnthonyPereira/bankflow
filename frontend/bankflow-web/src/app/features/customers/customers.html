@@ -1,0 +1,97 @@
+<h1>{{ title }}</h1>
+<p class="intro">Recherchez un client, consultez sa fiche et ses comptes.</p>
+
+<section class="panel" aria-labelledby="list-title">
+  <h2 id="list-title">Liste des clients</h2>
+
+  <form class="filters" role="search" (submit)="submitSearch($event)" novalidate>
+    <mat-form-field appearance="outline" class="search">
+      <mat-label>Nom ou adresse email</mat-label>
+      <input matInput type="search" maxlength="100" [formControl]="searchControl" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="status">
+      <mat-label>Statut</mat-label>
+      <select matNativeControl [value]="status()" (change)="changeStatus($event)">
+        @for (filter of statusFilters; track filter.value) {
+          <option [value]="filter.value" [selected]="filter.value === status()">
+            {{ filter.label }}
+          </option>
+        }
+      </select>
+    </mat-form-field>
+    <button matButton="outlined" class="submit" type="submit">Rechercher</button>
+  </form>
+
+  @if (customers.error()) {
+    <p role="alert">Les clients n'ont pas pu être chargés.</p>
+    <button matButton="outlined" type="button" (click)="customers.reload()">Réessayer</button>
+  } @else if (page(); as current) {
+    <p class="result-count" aria-live="polite">
+      {{
+        current.totalElements === 0
+          ? 'Aucun client trouvé.'
+          : current.totalElements === 1
+            ? '1 client trouvé.'
+            : current.totalElements + ' clients trouvés.'
+      }}
+    </p>
+    @if (current.content.length > 0) {
+      <div class="table-wrapper">
+        <table [attr.aria-busy]="customers.isLoading()">
+          <thead>
+            <tr>
+              <th scope="col">Client</th>
+              <th scope="col">Adresse email</th>
+              <th scope="col">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (customer of current.content; track customer.id) {
+              <tr>
+                <th scope="row">
+                  <a [routerLink]="['/administration/clients', customer.id]">{{
+                    getName(customer) ?? unnamed
+                  }}</a>
+                </th>
+                <td>{{ customer.email }}</td>
+                <td>
+                  <span class="badge" [class.suspended]="customer.status === 'SUSPENDED'">{{
+                    statusLabels[customer.status]
+                  }}</span>
+                  @if (customer.demo) {
+                    <span class="badge demo">Démo</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (current.totalElements > pageSize) {
+        <nav class="pager" aria-label="Pagination des clients">
+          <span class="pager-range" aria-live="polite">{{
+            getRangeLabel(pageIndex(), pageSize, current.totalElements)
+          }}</span>
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="pageIndex() === 0"
+            (click)="changePage(pageIndex() - 1)"
+          >
+            Page précédente
+          </button>
+          <button
+            matButton="outlined"
+            type="button"
+            [disabled]="pageIndex() >= current.totalPages - 1"
+            (click)="changePage(pageIndex() + 1)"
+          >
+            Page suivante
+          </button>
+        </nav>
+      }
+    }
+  } @else {
+    <mat-spinner diameter="32" aria-label="Chargement des clients" />
+  }
+</section>
