@@ -8,6 +8,10 @@ Microservice BankFlow, projet Spring Boot **indépendant** (aucun code partagé 
 | Base de données | aucune |
 | Package racine | `com.bankflow.gateway` |
 
+## Configuration
+
+`TRUSTED_PROXIES` : regex des proxys dont les en-têtes `X-Forwarded-*` sont transmis aux services (plages privées par défaut).
+
 ## Commandes
 
 ```bash
