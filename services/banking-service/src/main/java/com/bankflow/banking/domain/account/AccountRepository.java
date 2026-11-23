@@ -1,8 +1,10 @@
 package com.bankflow.banking.domain.account;
 
+import com.bankflow.banking.domain.money.Currency;
 import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,28 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     Page<Account> findByCustomerId(UUID customerId, Pageable pageable);
 
     long countByCustomerIdAndStatus(UUID customerId, AccountStatus status);
+
+    long countByStatus(AccountStatus status);
+
+    /** Total des soldes et nombre de comptes ouverts par devise, calculés par la base. */
+    @Query(
+            """
+            select a.currency as currency, sum(a.balance) as balance, count(a) as openAccounts
+            from Account a
+            where a.status = com.bankflow.banking.domain.account.AccountStatus.ACTIVE
+            group by a.currency
+            order by a.currency
+            """)
+    List<CurrencyTotal> sumOpenBalancesByCurrency();
+
+    /** Agrégat d'une devise : projection de la requête ci-dessus. */
+    interface CurrencyTotal {
+        Currency getCurrency();
+
+        BigDecimal getBalance();
+
+        long getOpenAccounts();
+    }
 
     /** Verrouille le compte pour sérialiser ses modifications (clôture, puis opérations). */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

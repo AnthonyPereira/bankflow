@@ -52,9 +52,22 @@ export const routes: Routes = [
       },
       {
         path: 'administration',
-        title: 'Administration · BankFlow',
         canActivate: [adminGuard],
-        loadComponent: () => import('./features/admin/admin').then((m) => m.Admin),
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'clients' },
+          {
+            path: 'clients',
+            title: 'Clients · BankFlow',
+            loadComponent: () => import('./features/customers/customers').then((m) => m.Customers),
+          },
+          {
+            // Le titre définitif (nom du client) est posé par la fiche une fois le client chargé.
+            path: 'clients/:id',
+            title: 'Fiche client · BankFlow',
+            loadComponent: () =>
+              import('./features/customers/customer-detail').then((m) => m.CustomerDetail),
+          },
+        ],
       },
     ],
   },

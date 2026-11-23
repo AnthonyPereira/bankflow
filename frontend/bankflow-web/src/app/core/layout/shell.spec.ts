@@ -31,7 +31,7 @@ describe('Shell', () => {
         importProvidersFrom(MatIconTestingModule),
         provideRouter([
           { path: 'tableau-de-bord', component: StubPage },
-          { path: 'administration', component: StubPage },
+          { path: 'administration/clients', component: StubPage },
         ]),
         { provide: AuthService, useValue: auth },
         { provide: NotificationUiService, useValue: notifications },
@@ -46,17 +46,20 @@ describe('Shell', () => {
     return screen.getByRole('main');
   }
 
-  it("n'affiche pas l'administration à un client", async () => {
+  it("n'affiche pas « Clients » à un client", async () => {
     await setup();
 
     expect(screen.getByRole('link', { name: 'Tableau de bord' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Clients' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Administration' })).toBeNull();
   });
 
-  it("affiche l'administration à un administrateur", async () => {
+  it('affiche « Clients » à un administrateur, vers la liste des clients', async () => {
     await setup({ isAdmin: true });
 
-    expect(screen.getByRole('link', { name: 'Administration' })).toBeTruthy();
+    const link = screen.getByRole('link', { name: 'Clients' });
+    expect(link.getAttribute('href')).toBe('/administration/clients');
+    expect(screen.queryByRole('link', { name: 'Administration' })).toBeNull();
   });
 
   it('nomme le menu des comptes selon le rôle', async () => {
@@ -144,7 +147,7 @@ describe('Shell', () => {
     await router.navigateByUrl('/tableau-de-bord');
     expect(document.activeElement).not.toBe(main);
 
-    await router.navigateByUrl('/administration');
+    await router.navigateByUrl('/administration/clients');
     expect(document.activeElement).toBe(main);
   });
 });

@@ -83,14 +83,14 @@
       @if (isAdmin()) {
         <a
           mat-list-item
-          routerLink="/administration"
+          routerLink="/administration/clients"
           routerLinkActive
-          #adminLink="routerLinkActive"
-          [activated]="adminLink.isActive"
+          #customersLink="routerLinkActive"
+          [activated]="customersLink.isActive"
           (click)="closeMenu()"
         >
           <mat-icon matListItemIcon aria-hidden="true" svgIcon="admin_panel_settings" />
-          <span matListItemTitle>Administration</span>
+          <span matListItemTitle>Clients</span>
         </a>
       }
     </mat-nav-list>
