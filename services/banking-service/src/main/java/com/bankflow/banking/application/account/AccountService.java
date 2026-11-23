@@ -6,6 +6,7 @@ import com.bankflow.banking.domain.account.AccountRepository;
 import com.bankflow.banking.domain.account.AccountStatus;
 import com.bankflow.banking.domain.customer.CustomerRef;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
+import com.bankflow.banking.domain.customer.CustomerStatus;
 import com.bankflow.banking.domain.money.Currency;
 import java.time.Clock;
 import java.util.Optional;
@@ -43,13 +44,27 @@ public class AccountService {
         this.clock = clock;
     }
 
-    /** Ouvre un compte pour l'appelant lui-même, même s'il est administrateur. */
+    /** Ouvre un compte pour l'appelant lui-même (un client). */
     @Transactional
     public Account openAccount(UUID userId, Currency currency, String label) {
         var customer =
                 customerRefs
                         .findByUserIdForUpdate(userId)
                         .orElseThrow(CustomerNotReadyException::new);
+        return openAccountFor(customer, currency, label);
+    }
+
+    /** Ouvre un compte au nom d'un client, à la demande d'un conseiller. */
+    @Transactional
+    public Account openAccountForCustomer(UUID customerId, Currency currency, String label) {
+        var customer =
+                customerRefs
+                        .findByCustomerIdForUpdate(customerId)
+                        .orElseThrow(CustomerNotFoundException::new);
+        return openAccountFor(customer, currency, label);
+    }
+
+    private Account openAccountFor(CustomerRef customer, Currency currency, String label) {
         if (customer.isSuspended()) {
             throw new CustomerSuspendedException();
         }
@@ -62,15 +77,40 @@ public class AccountService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Account> listAccounts(UUID userId, boolean admin, int page, int size) {
+    public Page<Account> listAccounts(
+            UUID userId, boolean admin, UUID customerFilter, int page, int size) {
         var pageable = PageRequest.of(page, size, NEWEST_FIRST);
         if (admin) {
-            return accounts.findAll(pageable);
+            return customerFilter == null
+                    ? accounts.findAll(pageable)
+                    : accounts.findByCustomerId(customerFilter, pageable);
         }
         return customerRefs
                 .findByUserId(userId)
                 .map(customer -> accounts.findByCustomerId(customer.getCustomerId(), pageable))
                 .orElseGet(() -> Page.empty(pageable));
+    }
+
+    /** Vue d'ensemble de la banque, réservée aux administrateurs (contrôlé par l'API). */
+    @Transactional(readOnly = true)
+    public AccountSummary getSummary() {
+        var totals =
+                accounts.sumOpenBalancesByCurrency().stream()
+                        .map(total ->
+                                new AccountSummary.CurrencyTotal(
+                                        total.getCurrency(),
+                                        total.getBalance(),
+                                        total.getOpenAccounts()))
+                        .toList();
+        var active = customerRefs.countByStatus(CustomerStatus.ACTIVE);
+        var suspended = customerRefs.countByStatus(CustomerStatus.SUSPENDED);
+        return new AccountSummary(
+                active + suspended,
+                active,
+                suspended,
+                accounts.countByStatus(AccountStatus.ACTIVE),
+                accounts.countByStatus(AccountStatus.CLOSED),
+                totals);
     }
 
     @Transactional(readOnly = true)
