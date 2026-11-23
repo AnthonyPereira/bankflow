@@ -27,7 +27,7 @@ export interface OpenAccountRequest {
 }
 
 export const CURRENCIES: readonly Currency[] = ['EUR', 'USD'];
-export const DEFAULT_ACCOUNT_LABEL = 'Compte courant';
+export const DEFAULT_ACCOUNT_LABEL = 'Compte sans libellé';
 
 /** Regroupe l'IBAN par blocs de quatre caractères pour la lecture. */
 export function formatIban(accountNumber: string): string {

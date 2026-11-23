@@ -13,7 +13,10 @@ describe('DateFrPipe', () => {
     expect(pipe.transform(iso, 'date')).toBe('23/11/2026');
   });
 
-  it.each([null, undefined, '', 'pas une date'])('affiche un tiret pour %j', (value) => {
-    expect(pipe.transform(value)).toBe('—');
-  });
+  it.each([null, undefined, '', 'pas une date', '2026-13-45T99:00:00Z'])(
+    'affiche un tiret pour %j',
+    (value) => {
+      expect(pipe.transform(value)).toBe('—');
+    },
+  );
 });

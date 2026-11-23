@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { render, screen } from '@testing-library/angular';
+import { fireEvent, render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { AuthService } from '../../core/auth/auth.service';
 import { Account, PageResponse } from './accounts.models';
@@ -29,7 +29,7 @@ describe('Accounts', () => {
 
   async function setup(response: PageResponse<Account>, admin = false) {
     isAdmin.set(admin);
-    await render(Accounts, {
+    const { container } = await render(Accounts, {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -38,13 +38,13 @@ describe('Accounts', () => {
     });
     const http = TestBed.inject(HttpTestingController);
     http.expectOne((r) => r.url === '/api/accounts').flush(response);
-    return { http, user: userEvent.setup() };
+    return { http, container, user: userEvent.setup() };
   }
 
   it('affiche les comptes avec IBAN groupé, solde formaté et libellé par défaut', async () => {
     await setup(page([ACCOUNT, { ...ACCOUNT, id: 'a2', label: 'Vacances', status: 'CLOSED' }]));
 
-    expect(await screen.findByText('Compte courant')).toBeTruthy();
+    expect(await screen.findByText('Compte sans libellé')).toBeTruthy();
     expect(screen.getByText('Vacances')).toBeTruthy();
     expect(screen.getAllByText('FR76 9999 9000 0101 2345 6789 012')).toHaveLength(2);
     expect(screen.getAllByText(/1\s234,50\s€/).length).toBe(2);
@@ -58,6 +58,94 @@ describe('Accounts', () => {
     expect(await screen.findByText("Vous n'avez pas encore de compte.")).toBeTruthy();
   });
 
+  it("affiche un état vide neutre à l'administrateur", async () => {
+    await setup(page([]), true);
+
+    expect(await screen.findByText('Aucun compte pour le moment.')).toBeTruthy();
+  });
+
+  it('affiche le spinner au premier chargement seulement', async () => {
+    isAdmin.set(false);
+    await render(Accounts, {
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { isAdmin } },
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    http.expectOne((r) => r.url === '/api/accounts').flush(page([ACCOUNT]));
+    await screen.findByRole('table');
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
+  it('signale une erreur de chargement de la liste puis la recharge', async () => {
+    isAdmin.set(false);
+    await render(Accounts, {
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: AuthService, useValue: { isAdmin } },
+      ],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    http
+      .expectOne((r) => r.url === '/api/accounts')
+      .flush(null, { status: 500, statusText: 'Server Error' });
+
+    expect((await screen.findByRole('alert')).textContent).toContain('pas pu être chargés');
+    screen.getByRole('button', { name: 'Réessayer' }).click();
+    const reload = await vi.waitFor(() => http.expectOne((r) => r.url === '/api/accounts'));
+    reload.flush(page([ACCOUNT]));
+    expect(await screen.findByRole('table')).toBeTruthy();
+  });
+
+  it('change de page en gardant la table affichée pendant le chargement', async () => {
+    const { http, user } = await setup(page([ACCOUNT], 42));
+    await screen.findByRole('table');
+
+    expect(screen.getByText('1 – 20 sur 42')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Page suivante' }));
+
+    const request = http.expectOne((r) => r.url === '/api/accounts');
+    expect(request.request.params.get('page')).toBe('1');
+    expect(screen.getByRole('table').getAttribute('aria-busy')).toBe('true');
+    expect(screen.getByRole('navigation', { name: 'Pagination des comptes' })).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+
+    request.flush({ ...page([{ ...ACCOUNT, label: 'Page deux' }], 42), page: 1 });
+    expect(await screen.findByText('Page deux')).toBeTruthy();
+    expect(screen.getByRole('table').getAttribute('aria-busy')).toBe('false');
+  });
+
+  it("revient à la première page avec un seul rechargement après l'ouverture", async () => {
+    const { http, user } = await setup(page([ACCOUNT], 42));
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'Page suivante' }));
+    http.expectOne((r) => r.url === '/api/accounts').flush({ ...page([ACCOUNT], 42), page: 1 });
+    await screen.findByText('21 – 40 sur 42');
+
+    await user.click(screen.getByRole('button', { name: 'Ouvrir le compte' }));
+    http.expectOne((r) => r.url === '/api/accounts' && r.method === 'POST').flush(ACCOUNT);
+
+    await screen.findByText(OPENED_MESSAGE);
+    const reload = http.expectOne((r) => r.url === '/api/accounts' && r.method === 'GET');
+    expect(reload.request.params.get('page')).toBe('0');
+    http.expectNone((r) => r.url === '/api/accounts');
+  });
+
+  it('ignore une deuxième soumission pendant la première', async () => {
+    const { http, container } = await setup(page([]));
+    const form = container.querySelector('form') as HTMLFormElement;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    http.expectOne((r) => r.url === '/api/accounts' && r.method === 'POST');
+  });
+
   it('montre la colonne Client à un administrateur', async () => {
     await setup(page([ACCOUNT]), true);
 
@@ -68,14 +156,14 @@ describe('Accounts', () => {
   it('affiche la pagination au-delà de 20 comptes seulement', async () => {
     await setup(page([ACCOUNT], 42));
 
-    expect(await screen.findByRole('group', { name: 'Pagination des comptes' })).toBeTruthy();
+    expect(await screen.findByRole('navigation', { name: 'Pagination des comptes' })).toBeTruthy();
   });
 
   it("n'affiche pas la pagination jusqu'à 20 comptes", async () => {
     await setup(page([ACCOUNT], 20));
 
-    await screen.findByText('Compte courant');
-    expect(screen.queryByRole('group', { name: 'Pagination des comptes' })).toBeNull();
+    await screen.findByText('Compte sans libellé');
+    expect(screen.queryByRole('navigation', { name: 'Pagination des comptes' })).toBeNull();
   });
 
   it('ouvre un compte puis rafraîchit la liste', async () => {
@@ -94,7 +182,7 @@ describe('Accounts', () => {
       { status: 201, statusText: 'Created' },
     );
 
-    expect((await screen.findByRole('status')).textContent).toContain(OPENED_MESSAGE);
+    expect(await screen.findByText(OPENED_MESSAGE)).toBeTruthy();
     http
       .expectOne((r) => r.url === '/api/accounts' && r.method === 'GET')
       .flush(page([{ ...ACCOUNT, currency: 'USD', label: 'Voyage' }]));
@@ -126,12 +214,12 @@ describe('Accounts', () => {
       .flush({ code, detail: 'autre' }, { status, statusText: 'Erreur' });
 
     expect((await screen.findByRole('alert')).textContent).toContain(message);
+    expect(screen.getByRole('button', { name: 'Ouvrir le compte' })).toBeTruthy();
   });
 
   it('refuse un libellé de plus de 50 caractères', async () => {
     const { http, user } = await setup(page([]));
     const input = screen.getByLabelText('Libellé (facultatif)');
-    input.removeAttribute('maxlength');
 
     await user.click(input);
     await user.paste('a'.repeat(51));

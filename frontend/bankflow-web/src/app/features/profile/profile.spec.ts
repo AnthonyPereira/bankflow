@@ -1,10 +1,17 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { render, screen } from '@testing-library/angular';
+import { fireEvent, render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { Customer } from './profile.models';
-import { MAX_RETRIES, Profile, RETRY_DELAY_MS, SAVED_MESSAGE, SAVE_ERROR_MESSAGE } from './profile';
+import {
+  MAX_RETRIES,
+  PROFILE_CREATING_MESSAGE,
+  Profile,
+  RETRY_DELAY_MS,
+  SAVED_MESSAGE,
+  SAVE_ERROR_MESSAGE,
+} from './profile';
 
 const URL = '/api/customers/me';
 const CUSTOMER: Customer = {
@@ -28,9 +35,11 @@ describe('Profile', () => {
   });
 
   async function setup() {
-    await render(Profile, { providers: [provideHttpClient(), provideHttpClientTesting()] });
+    const { container, fixture } = await render(Profile, {
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     const http = TestBed.inject(HttpTestingController);
-    return { http, user: userEvent.setup() };
+    return { http, container, fixture, user: userEvent.setup() };
   }
 
   async function setupLoaded(customer: Customer = CUSTOMER) {
@@ -106,6 +115,78 @@ describe('Profile', () => {
     http.expectNone(URL);
   });
 
+  it('teste le téléphone sur la valeur sans espaces de bord', async () => {
+    const { http, user } = await setupLoaded();
+
+    await user.type(screen.getByLabelText('Téléphone'), ' 0612345678 ');
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(http.expectOne(URL).request.body.phone).toBe('0612345678');
+  });
+
+  it('ne programme rien si le composant est détruit pendant la requête', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    const { http, fixture } = await setup();
+    const request = http.expectOne(URL);
+    const timersBefore = vi.getTimerCount();
+
+    fixture.destroy();
+
+    expect(request.cancelled).toBe(true);
+    expect(vi.getTimerCount()).toBeLessThanOrEqual(timersBefore);
+    vi.advanceTimersByTime(RETRY_DELAY_MS * 3);
+    http.expectNone(URL);
+  });
+
+  it("n'envoie aucune requête si le composant est détruit pendant l'attente", async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] });
+    const { http, fixture } = await setup();
+    http.expectOne(URL).flush(null, NOT_FOUND);
+    await screen.findByText('Votre profil est en cours de création…');
+
+    fixture.destroy();
+    vi.advanceTimersByTime(RETRY_DELAY_MS * 3);
+
+    http.expectNone(URL);
+  });
+
+  it('ignore une deuxième soumission pendant la première', async () => {
+    const { http, container } = await setupLoaded();
+    const form = container.querySelector('form') as HTMLFormElement;
+
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    http.expectOne(URL);
+  });
+
+  it('place le focus sur le premier champ refusé par le serveur', async () => {
+    const { http, user } = await setupLoaded();
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    http.expectOne(URL).flush(
+      {
+        code: 'VALIDATION_ERROR',
+        errors: { address: 'Adresse refusée.', lastName: 'Nom refusé.' },
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
+
+    await screen.findByText('Nom refusé.');
+    expect(document.activeElement).toBe(screen.getByLabelText('Nom'));
+  });
+
+  it("annonce que le profil est en cours de création sur un 404 à l'enregistrement", async () => {
+    const { http, user } = await setupLoaded();
+
+    await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    http
+      .expectOne(URL)
+      .flush({ code: 'CUSTOMER_NOT_FOUND' }, { status: 404, statusText: 'Not Found' });
+
+    expect((await screen.findByRole('alert')).textContent).toContain(PROFILE_CREATING_MESSAGE);
+  });
+
   it('refuse un prénom de plus de 100 caractères', async () => {
     const { http, user } = await setupLoaded();
     const input = screen.getByLabelText('Prénom');
@@ -139,7 +220,10 @@ describe('Profile', () => {
     ).toBe(true);
     request.flush({ ...CUSTOMER, firstName: null, phone: '+33 6 12 34 56 78' });
 
-    expect((await screen.findByRole('status')).textContent).toContain(SAVED_MESSAGE);
+    expect(await screen.findByText(SAVED_MESSAGE)).toBeTruthy();
+    expect(screen.getByText(SAVED_MESSAGE).closest('div')?.getAttribute('aria-live')).toBe(
+      'polite',
+    );
     expect(
       (screen.getByRole('button', { name: 'Enregistrer' }) as HTMLButtonElement).disabled,
     ).toBe(false);

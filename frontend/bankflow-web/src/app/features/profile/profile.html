@@ -46,9 +46,11 @@
       <section class="panel" aria-labelledby="details-title">
         <h2 id="details-title">Coordonnées</h2>
         <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          @if (savedMessage(); as message) {
-            <p class="form-info" role="status">{{ message }}</p>
-          }
+          <div aria-live="polite">
+            @if (savedMessage(); as message) {
+              <p class="form-info">{{ message }}</p>
+            }
+          </div>
           @if (errorMessage(); as message) {
             <p class="form-error" role="alert">{{ message }}</p>
           }
@@ -78,9 +80,7 @@
             <input matInput type="tel" formControlName="phone" autocomplete="tel" />
             @if (form.controls.phone.hasError('server')) {
               <mat-error>{{ form.controls.phone.getError('server') }}</mat-error>
-            } @else if (
-              form.controls.phone.hasError('pattern') || form.controls.phone.hasError('maxlength')
-            ) {
+            } @else if (form.controls.phone.hasError('pattern')) {
               <mat-error
                 >Le numéro doit contenir de 6 à 20 chiffres, espaces, points ou tirets (un + est
                 accepté au début).</mat-error

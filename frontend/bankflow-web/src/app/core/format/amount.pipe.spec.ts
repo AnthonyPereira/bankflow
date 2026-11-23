@@ -26,7 +26,20 @@ describe('AmountPipe', () => {
     );
   });
 
-  it.each([null, undefined, ''])('affiche un tiret pour %j', (value) => {
+  it.each([null, undefined, '', 'abc', '12,5', '1e5'])('affiche un tiret pour %j', (value) => {
     expect(pipe.transform(value, 'EUR')).toBe('—');
+  });
+
+  it('affiche un tiret pour une devise invalide, y compris à la deuxième demande', () => {
+    expect(pipe.transform('10.00', 'XYZ1')).toBe('—');
+    expect(pipe.transform('10.00', 'XYZ1')).toBe('—');
+  });
+
+  it('affiche un tiret sans devise', () => {
+    expect(pipe.transform('10.00', null)).toBe('—');
+  });
+
+  it('formate un montant négatif', () => {
+    expect(normalize(pipe.transform('-5.00', 'EUR'))).toBe('-5,00 €');
   });
 });
