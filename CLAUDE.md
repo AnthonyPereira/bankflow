@@ -78,6 +78,7 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 - l'administrateur agit en **conseiller au nom des clients** (ouverture, dépôt, retrait, virement, clôture) sans jamais avoir de compte à son nom, et seul lui fait une écriture compensatrice ;
 - plafond de 10 000,00 par opération, au plus 5 comptes actifs par client ;
 - `demo.client` reçoit des comptes et un historique de démonstration, recréés s'ils disparaissent.
+- un administrateur n'a jamais de fiche client, et `demo.admin` (mot de passe public) est restreint aux clients de démonstration par le claim `demo`, pour protéger les données des vrais inscrits.
 
 Reste à faire :
 1. Revue globale de `release/0.2.0` (Customer, Banking, Auth et infra, front), corrections, puis vérification finale (tests, Docker local, parcours dans un navigateur).

@@ -58,3 +58,20 @@ La clé d'idempotence est rattachée à la **personne qui agit** (`actor_user_id
 - Les contrôles d'accès se complexifient : titulaire ou administrateur, selon l'endpoint.
 - Un administrateur peut déplacer de l'argent au nom d'un client. C'est voulu, tracé, et limité par les mêmes plafonds.
 - L'identifiant de l'administrateur est stocké en base mais jamais exposé.
+
+## 5. Mise à jour du 2026-11-23
+
+Deux précisions, décidées après la revue globale de la release `0.2.0`.
+
+### Un administrateur n'a jamais de fiche client
+
+L'Auth Service ajoute un champ facultatif `role` (`ROLE_CLIENT` ou `ROLE_ADMIN`) à l'événement `UserRegistered` v1, un ajout compatible. Le Customer Service ignore l'événement quand `role` vaut `ROLE_ADMIN` : aucune fiche, aucun événement publié, une simple trace INFO sans contenu. Un `role` absent est traité comme un client. Le profil fictif de `demo.admin` est supprimé, et « Mon profil » disparaît pour tout administrateur.
+
+### Deux sortes d'administrateur
+
+| Sorte | Reconnu à | Périmètre |
+|---|---|---|
+| Administrateur réel | `ROLE_ADMIN`, claim `demo` faux | Tous les clients et tous les comptes |
+| Administrateur de démonstration (`demo.admin`) | `ROLE_ADMIN`, claim `demo` vrai | Les seuls clients de démonstration |
+
+Le claim booléen `demo` est ajouté au jeton d'accès par l'Auth Service. Pour l'administrateur de démonstration, les clients et comptes réels sont invisibles (404, jamais 403, pour ne pas révéler leur existence), dans les listes comme en consultation, en ouverture de compte, en virement (depuis un compte de client de démonstration seulement) et en compensation. `GET /accounts/summary` reste global : ce ne sont que des totaux.

@@ -30,8 +30,8 @@ Ces étapes se font une seule fois, dans cet ordre.
 ### 2. Sur le serveur
 
 ```bash
-ssh anthony@192.168.1.25
-sudo rm -f /etc/sudoers.d/claude-temp
+ssh <utilisateur>@<ip-du-serveur>
+# Retirer la règle sudo temporaire créée pour l'opération
 ajouter-runner AnthonyPereira/deploy-platform <jeton>
 ```
 
@@ -80,8 +80,8 @@ La matrice de `deploy.yml` publie aussi les images `customer-service` et `bankin
 
 Ordre à respecter :
 
-1. Fusionner la PR de `deploy-platform` qui ajoute les deux services au compose, **juste avant** de fusionner la release `0.2.0` dans `main`. Le compose exige alors les images `customer-service` et `banking-service`, qui n'existent sur GHCR qu'à partir de la `0.2.0` : après cette fusion, un retour arrière vers une version antérieure (`0.1.1`) échoue au téléchargement des images. Pour revenir en arrière, il faut aussi annuler la PR de `deploy-platform`.
-2. Fusionner la release dans `main`, puis attendre la mise en ligne (ou lancer `Déploiement` dans `deploy-platform`).
+1. Fusionner la release `0.2.0` dans `main`, puis attendre la fin de la CI de `main` : `deploy.yml` publie alors les images sur GHCR.
+2. Fusionner la PR de `deploy-platform` qui ajoute les deux services au compose **seulement à ce moment** : la release doit être prête et les images publiées. Entre la fusion de la PR et la publication des images, un déploiement échouerait au téléchargement. Une fois la PR fusionnée, un retour arrière vers une version antérieure (`0.1.1`) échoue aussi, car le compose exige les images `customer-service` et `banking-service`, qui n'existent sur GHCR qu'à partir de la `0.2.0` : il faut alors annuler la PR de `deploy-platform`. La mise en ligne suit dans les cinq minutes (ou lancer `Déploiement` dans `deploy-platform`).
 
 Variables à connaître (toutes ont une valeur par défaut, rien à ajouter au `.env` en temps normal) :
 
@@ -89,7 +89,6 @@ Variables à connaître (toutes ont une valeur par défaut, rien à ajouter au `
 |---|---|---|
 | `EVENTS_REPLAY_ON_STARTUP` | Auth Service | `true` par défaut : au démarrage, l'Auth Service republie `UserRegistered` pour tous les utilisateurs, ce qui crée les profils manquants dans le Customer Service (rattrapage, ADR-004). Au premier démarrage de la MVP 2, c'est ce qui crée les profils des comptes existants. |
 | `DEMO_ACCOUNTS_ENABLED` | Auth Service et Banking Service | `false` masque le tableau des comptes de démonstration et cesse de les créer, sans les désactiver. Banking Service lit la même variable pour créer les comptes bancaires de démonstration : une seule valeur pilote les deux. |
-| `TRUSTED_PROXIES` | Gateway | Expression régulière des adresses de proxys dont la Gateway croit `CF-Connecting-IP`. Par défaut, les réseaux privés, ce qui couvre Traefik. |
 
 ### Vérifier après la mise en ligne
 

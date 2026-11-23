@@ -38,3 +38,11 @@ Le mécanisme est idempotent : tant que `demo.client` a au moins un compte actif
 - Les données de démo ne sont restaurées qu'au redémarrage du Banking Service, pas en continu.
 - Le solde de `demo.client` peut dériver entre deux redémarrages, puisque tout le monde peut y agir.
 - Le plafond s'applique aussi aux vrais comptes.
+
+## 5. Mise à jour du 2026-11-23 : garde-fou de `demo.admin`
+
+Le mot de passe de `demo.admin` est public : n'importe quel visiteur peut s'y connecter. Un administrateur ordinaire verrait les données personnelles des vrais inscrits (nom, email, téléphone, adresse) et pourrait suspendre leur compte ou agir sur leurs comptes bancaires.
+
+**Garde-fou** : `demo.admin` est un administrateur **restreint aux clients de démonstration** (voir ADR-005, section 5). Le jeton porte `demo = true` ; le Customer Service et le Banking Service ne lui montrent que les clients marqués `demo`, et répondent 404 pour tout le reste. Le vrai administrateur, dont le mot de passe reste secret, n'est pas limité.
+
+**Limites** : `demo.admin` voit les clients de démonstration en entier, ce qui est voulu. Le résumé global de la banque ne contient que des totaux. La limitation de débit de la Gateway s'applique aussi aux opérations (dépôt, retrait, ouverture, clôture, compensation) : 60 par minute et par IP.
