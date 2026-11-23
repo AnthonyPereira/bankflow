@@ -1,6 +1,6 @@
 name: Déploiement
 
-# Construit les images, puis demande leur mise en ligne au dépôt privé deploy-platform.
+# Construit les images et les publie sur GHCR. Le dépôt privé deploy-platform repère seul ce run réussi (il interroge l'API toutes les 5 minutes) et met la version en ligne : ce dépôt public ne détient aucun jeton vers lui.
 # Ce dépôt est public : aucun job ne doit s'exécuter sur le serveur maison.
 #
 # Le déploiement part d'un push dans main, et seulement une fois la CI de ce même commit verte : le
@@ -106,19 +106,3 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
             ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ needs.verifier.outputs.version }}
-
-  deployer:
-    name: demande de mise en ligne
-    needs: [verifier, build]
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Prévenir deploy-platform
-        env:
-          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
-          VERSION: ${{ needs.verifier.outputs.version }}
-        run: |
-          gh api "repos/${GITHUB_REPOSITORY_OWNER}/deploy-platform/dispatches" \
-            -f event_type=deployer \
-            -f "client_payload[app]=bankflow" \
-            -f "client_payload[version]=$VERSION"
