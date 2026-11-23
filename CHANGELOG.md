@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.2.0] — 2026-11-23
 
 ### Ajouté
 
@@ -111,6 +111,6 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 - Seuls le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka sont déployés : les routes des quatre autres services répondent 503.
 - Le Customer Service, le Banking Service, le Notification Service et l'Analytics & Fraud Service ne sont que des squelettes sécurisés, sans fonctionnalité métier.
 
-[Non publié]: https://github.com/AnthonyPereira/bankflow/compare/v0.1.1...develop
+[0.2.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.0
