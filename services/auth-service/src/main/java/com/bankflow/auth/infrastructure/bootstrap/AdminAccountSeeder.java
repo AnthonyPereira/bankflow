@@ -29,9 +29,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Order(AdminAccountSeeder.ORDER)
-class AdminAccountSeeder implements ApplicationRunner {
+public class AdminAccountSeeder implements ApplicationRunner {
 
-    static final int ORDER = 1;
+    public static final int ORDER = 1;
 
     private static final Logger log = LoggerFactory.getLogger(AdminAccountSeeder.class);
     private static final int MINIMUM_PASSWORD_LENGTH = 12;

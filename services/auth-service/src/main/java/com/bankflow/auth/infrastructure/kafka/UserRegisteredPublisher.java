@@ -34,6 +34,11 @@ class UserRegisteredPublisher {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     void publish(UserRegistered event) {
+        send(event);
+    }
+
+    /** Envoie l'événement sur Kafka, sans jamais lever : la panne est journalisée. */
+    void send(UserRegistered event) {
         var key = event.userId().toString();
         try {
             kafkaTemplate
@@ -52,6 +57,7 @@ class UserRegisteredPublisher {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("userId", event.userId());
         payload.put("email", event.email());
+        payload.put("demo", event.demo());
 
         var envelope = new LinkedHashMap<String, Object>();
         envelope.put("eventId", UUID.randomUUID());
