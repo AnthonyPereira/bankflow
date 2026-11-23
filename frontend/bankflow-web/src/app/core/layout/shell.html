@@ -60,6 +60,17 @@
       </a>
       <a
         mat-list-item
+        routerLink="/operations"
+        routerLinkActive
+        #operationsLink="routerLinkActive"
+        [activated]="operationsLink.isActive"
+        (click)="closeMenu()"
+      >
+        <mat-icon matListItemIcon aria-hidden="true" svgIcon="receipt_long" />
+        <span matListItemTitle>{{ operationsTitle() }}</span>
+      </a>
+      <a
+        mat-list-item
         routerLink="/profil"
         routerLinkActive
         #profileLink="routerLinkActive"

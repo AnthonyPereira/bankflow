@@ -1,0 +1,149 @@
+h1 {
+  font: var(--mat-sys-headline-medium);
+}
+
+h2 {
+  font: var(--mat-sys-title-medium);
+}
+
+.intro {
+  margin: 4px 0 24px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.panel {
+  box-sizing: border-box;
+  margin-bottom: 16px;
+  padding: 24px;
+  border-radius: var(--mat-sys-corner-large);
+  background: var(--mat-sys-surface);
+  box-shadow: var(--mat-sys-level1);
+}
+
+.panel > :not(h2) {
+  margin-top: 16px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+}
+
+thead th {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+tbody th {
+  font: var(--mat-sys-body-large);
+  font-weight: 500;
+}
+
+.numeric {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.iban {
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--mat-sys-corner-full);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font: var(--mat-sys-label-medium);
+}
+
+.badge.closed {
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+.form-error,
+.form-info {
+  margin: 0 0 8px;
+  padding: 12px;
+  border-radius: var(--mat-sys-corner-small);
+}
+
+.form-error {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.form-info {
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.submit {
+  align-self: flex-start;
+  height: 48px;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pager-range {
+  margin-right: 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  max-width: none;
+}
+
+.filters mat-form-field {
+  width: auto;
+  min-width: 180px;
+}
+
+.advisor {
+  display: block;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.credit {
+  color: var(--mat-sys-primary);
+}
+
+.debit {
+  color: var(--mat-sys-error);
+}

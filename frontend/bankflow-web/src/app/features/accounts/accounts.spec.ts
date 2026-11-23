@@ -70,6 +70,13 @@ describe('Accounts', () => {
     expect(screen.queryByRole('columnheader', { name: 'Client' })).toBeNull();
   });
 
+  it('fait de chaque compte un lien vers son détail', async () => {
+    await setup(page([ACCOUNT]));
+
+    const link = await screen.findByRole('link', { name: 'Compte sans libellé' });
+    expect(link.getAttribute('href')).toBe('/comptes/a1');
+  });
+
   it("affiche l'état vide", async () => {
     await setup(page([]));
 

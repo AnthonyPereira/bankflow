@@ -1,0 +1,296 @@
+<p class="back"><a routerLink="/comptes">← Retour aux comptes</a></p>
+
+@if (isNotFound()) {
+  <section class="panel">
+    <h1>Compte</h1>
+    <p role="alert">{{ notFoundMessage }}</p>
+  </section>
+} @else if (account.error()) {
+  <section class="panel">
+    <h1>Compte</h1>
+    <p role="alert">Le compte n'a pas pu être chargé.</p>
+    <button matButton="outlined" type="button" (click)="account.reload()">Réessayer</button>
+  </section>
+} @else if (account.hasValue()) {
+  @let current = account.value();
+  <h1>{{ current.label || defaultLabel }}</h1>
+
+  <section class="panel" aria-labelledby="summary-title">
+    <h2 id="summary-title">Détail du compte</h2>
+    <dl>
+      <div>
+        <dt>IBAN</dt>
+        <dd class="iban">{{ formatIban(current.accountNumber) }}</dd>
+      </div>
+      <div>
+        <dt>Devise</dt>
+        <dd>{{ current.currency }}</dd>
+      </div>
+      <div>
+        <dt>Statut</dt>
+        <dd>
+          @if (current.status === 'CLOSED') {
+            <span class="badge closed">Clôturé</span>
+          } @else {
+            <span class="badge">Actif</span>
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>Solde</dt>
+        <dd class="balance">{{ current.balance | amount: current.currency }}</dd>
+      </div>
+    </dl>
+
+    <div aria-live="polite">
+      @if (closeMessage(); as message) {
+        <p class="form-info">{{ message }}</p>
+      }
+    </div>
+    @if (closeError(); as message) {
+      <p class="form-error" role="alert">{{ message }}</p>
+    }
+
+    @if (current.status === 'ACTIVE') {
+      @if (isConfirmingClose()) {
+        <div class="confirm" role="group" aria-label="Confirmation de la clôture">
+          <p>Clôturer définitivement ce compte ? Cette action est irréversible.</p>
+          <button
+            matButton="filled"
+            class="confirm-close"
+            type="button"
+            [disabled]="isClosing()"
+            (click)="confirmClose()"
+          >
+            {{ isClosing() ? 'Clôture…' : 'Confirmer la clôture' }}
+          </button>
+          <button matButton="outlined" type="button" (click)="cancelClose()">Annuler</button>
+        </div>
+      } @else {
+        <button
+          matButton="outlined"
+          class="close-button"
+          type="button"
+          aria-describedby="close-hint"
+          disabledInteractive
+          [disabled]="!isZeroBalance(current)"
+          (click)="askCloseConfirmation(current)"
+        >
+          Clôturer le compte
+        </button>
+        @if (!isZeroBalance(current)) {
+          <p id="close-hint" class="hint">Le solde doit être à zéro pour clôturer le compte.</p>
+        }
+      }
+    }
+  </section>
+
+  @if (current.status === 'ACTIVE') {
+    @if (isAdmin()) {
+      <p class="intro">Vous agissez au nom du client : les opérations sont tracées comme telles.</p>
+    }
+    <div class="forms">
+      @for (draft of drafts; track draft.kind) {
+        <section class="panel" [attr.aria-labelledby]="draft.kind + '-title'">
+          <h2 [id]="draft.kind + '-title'">{{ draft.title }}</h2>
+          <form
+            [formGroup]="draft.form"
+            [attr.data-form]="draft.kind"
+            (ngSubmit)="submitOperation(draft)"
+            novalidate
+          >
+            <div aria-live="polite">
+              @if (draft.successMessage(); as message) {
+                <p class="form-info">{{ message }}</p>
+              }
+            </div>
+            @if (draft.errorMessage(); as message) {
+              <p class="form-error" role="alert">{{ message }}</p>
+            }
+
+            <mat-form-field appearance="outline">
+              <mat-label>Montant ({{ current.currency }})</mat-label>
+              <input matInput inputmode="decimal" autocomplete="off" formControlName="amount" />
+              @if (draft.form.controls.amount.hasError('server')) {
+                <mat-error>{{ draft.form.controls.amount.getError('server') }}</mat-error>
+              } @else if (draft.form.controls.amount.hasError('amount')) {
+                <mat-error>{{ draft.form.controls.amount.getError('amount') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Description (facultatif)</mat-label>
+              <input matInput autocomplete="off" formControlName="description" />
+              @if (draft.form.controls.description.hasError('server')) {
+                <mat-error>{{ draft.form.controls.description.getError('server') }}</mat-error>
+              } @else if (draft.form.controls.description.hasError('maxlength')) {
+                <mat-error
+                  >La description ne peut pas dépasser {{ maxDescription }} caractères.</mat-error
+                >
+              }
+            </mat-form-field>
+
+            <button
+              matButton="filled"
+              class="submit"
+              type="submit"
+              [disabled]="draft.isSubmitting()"
+            >
+              {{ draft.isSubmitting() ? 'Envoi…' : draft.submitLabel }}
+            </button>
+          </form>
+        </section>
+      }
+    </div>
+  } @else {
+    <p class="intro">Ce compte est clôturé : aucune opération n'est possible.</p>
+  }
+
+  <section class="panel" aria-labelledby="history-title">
+    <h2 id="history-title">Historique des opérations</h2>
+
+    <div aria-live="polite">
+      @if (compensationMessage(); as message) {
+        <p class="form-info compensation-status" tabindex="-1">{{ message }}</p>
+      }
+    </div>
+
+    @if (transactions.error()) {
+      <p role="alert">Les opérations n'ont pas pu être chargées.</p>
+      <button matButton="outlined" type="button" (click)="transactions.reload()">Réessayer</button>
+    } @else if (page(); as history) {
+      @if (history.content.length === 0) {
+        <p>Aucune opération sur ce compte pour le moment.</p>
+      } @else {
+        <div class="table-wrapper">
+          <table [attr.aria-busy]="transactions.isLoading()">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Type</th>
+                <th scope="col">Description</th>
+                <th scope="col" class="numeric">Montant</th>
+                <th scope="col" class="numeric">Solde après</th>
+                @if (isAdmin()) {
+                  <th scope="col">Action</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (transaction of history.content; track transaction.id) {
+                <tr>
+                  <td>{{ transaction.createdAt | dateFr }}</td>
+                  <th scope="row">
+                    {{ typeLabels[transaction.type] }}
+                    @if (transaction.compensatedByTransactionId) {
+                      <span class="badge closed">Annulée</span>
+                    }
+                  </th>
+                  <td>
+                    {{ transaction.description }}
+                    @if (transaction.performedBy === 'ADMIN') {
+                      <span class="advisor">Effectuée par un conseiller</span>
+                    }
+                  </td>
+                  <td
+                    class="numeric"
+                    [class.credit]="transaction.direction === 'CREDIT'"
+                    [class.debit]="transaction.direction === 'DEBIT'"
+                  >
+                    {{ getAmountSign(transaction)
+                    }}{{ transaction.amount | amount: transaction.currency }}
+                  </td>
+                  <td class="numeric">
+                    {{ transaction.balanceAfter | amount: transaction.currency }}
+                  </td>
+                  @if (isAdmin()) {
+                    <td>
+                      @if (canCompensate(transaction)) {
+                        <button
+                          matButton="outlined"
+                          type="button"
+                          [attr.data-compensate]="transaction.id"
+                          [attr.aria-label]="
+                            'Annuler l\'opération du ' +
+                            (transaction.createdAt | dateFr) +
+                            ' : ' +
+                            typeLabels[transaction.type]
+                          "
+                          (click)="startCompensation(transaction)"
+                        >
+                          Annuler l'opération
+                        </button>
+                      }
+                    </td>
+                  }
+                </tr>
+                @if (compensatingId() === transaction.id) {
+                  <tr class="compensation-row">
+                    <td [attr.colspan]="6">
+                      <form
+                        class="compensation-form"
+                        (submit)="confirmCompensation($event)"
+                        novalidate
+                      >
+                        @if (compensationError(); as message) {
+                          <p class="form-error" role="alert">{{ message }}</p>
+                        }
+                        <mat-form-field appearance="outline">
+                          <mat-label>Motif de l'annulation</mat-label>
+                          <input
+                            matInput
+                            class="reason-input"
+                            autocomplete="off"
+                            [formControl]="reason"
+                          />
+                          @if (reason.touched && reason.invalid) {
+                            <mat-error>{{ reasonMessage }}</mat-error>
+                          }
+                        </mat-form-field>
+                        <div class="actions">
+                          <button matButton="filled" type="submit" [disabled]="isCompensating()">
+                            {{ isCompensating() ? 'Annulation…' : "Confirmer l'annulation" }}
+                          </button>
+                          <button matButton="outlined" type="button" (click)="cancelCompensation()">
+                            Renoncer
+                          </button>
+                        </div>
+                      </form>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (history.totalElements > pageSize) {
+          <nav class="pager" aria-label="Pagination des opérations">
+            <span class="pager-range" aria-live="polite">{{
+              getRangeLabel(pageIndex(), pageSize, history.totalElements)
+            }}</span>
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="pageIndex() === 0"
+              (click)="changePage(pageIndex() - 1)"
+            >
+              Page précédente
+            </button>
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="pageIndex() >= history.totalPages - 1"
+              (click)="changePage(pageIndex() + 1)"
+            >
+              Page suivante
+            </button>
+          </nav>
+        }
+      }
+    } @else {
+      <mat-spinner diameter="32" aria-label="Chargement des opérations" />
+    }
+  </section>
+} @else {
+  <mat-spinner diameter="32" aria-label="Chargement du compte" />
+}

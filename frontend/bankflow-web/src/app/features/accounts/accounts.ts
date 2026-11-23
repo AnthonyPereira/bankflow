@@ -12,6 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AmountPipe } from '../../core/format/amount.pipe';
@@ -40,6 +41,7 @@ const CUSTOMER_ID_PREFIX_LENGTH = 8;
     MatInputModule,
     MatProgressSpinnerModule,
     ReactiveFormsModule,
+    RouterLink,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './accounts.html',
