@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, linkedSignal, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,6 +22,7 @@ import {
   Currency,
   DEFAULT_ACCOUNT_LABEL,
   formatIban,
+  getAccountsTitle,
   PageResponse,
 } from './accounts.models';
 import { AccountsService, getAccountErrorMessage } from './accounts.service';
@@ -41,6 +49,7 @@ export class Accounts {
   private readonly service = inject(AccountsService);
 
   protected readonly isAdmin = inject(AuthService).isAdmin;
+  protected readonly title = computed(() => getAccountsTitle(this.isAdmin()));
   protected readonly pageSize = PAGE_SIZE;
   protected readonly currencies = CURRENCIES;
   protected readonly defaultLabel = DEFAULT_ACCOUNT_LABEL;

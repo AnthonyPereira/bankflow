@@ -1,4 +1,7 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
+import { AuthService } from './core/auth/auth.service';
+import { getAccountsTitle } from './features/accounts/accounts.models';
 import { adminGuard, authGuard, guestGuard } from './core/auth/auth.guards';
 
 export const routes: Routes = [
@@ -27,7 +30,7 @@ export const routes: Routes = [
       },
       {
         path: 'comptes',
-        title: 'Mes comptes · BankFlow',
+        title: () => `${getAccountsTitle(inject(AuthService).isAdmin())} · BankFlow`,
         loadComponent: () => import('./features/accounts/accounts').then((m) => m.Accounts),
       },
       {
