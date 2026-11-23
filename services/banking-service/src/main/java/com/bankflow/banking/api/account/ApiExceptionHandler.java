@@ -3,6 +3,7 @@ package com.bankflow.banking.api.account;
 import com.bankflow.banking.application.account.AccountLimitReachedException;
 import com.bankflow.banking.application.account.AccountNotFoundException;
 import com.bankflow.banking.application.account.AccountNumberUnavailableException;
+import com.bankflow.banking.application.account.CustomerNotFoundException;
 import com.bankflow.banking.application.account.CustomerNotReadyException;
 import com.bankflow.banking.application.account.CustomerSuspendedException;
 import com.bankflow.banking.domain.account.AccountBalanceNotZeroException;
@@ -35,6 +36,20 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(AccountNotFoundException.class)
     ProblemDetail handleAccountNotFound(AccountNotFoundException exception) {
         return buildProblem(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", exception);
+    }
+
+    @ExceptionHandler(CustomerNotFoundException.class)
+    ProblemDetail handleCustomerNotFound(CustomerNotFoundException exception) {
+        return buildProblem(HttpStatus.NOT_FOUND, "CUSTOMER_NOT_FOUND", exception);
+    }
+
+    @ExceptionHandler(FieldValidationException.class)
+    ResponseEntity<Object> handleFieldValidation(
+            FieldValidationException exception, WebRequest request) {
+        var errors = new LinkedHashMap<String, String>();
+        errors.put(exception.getField(), exception.getMessage());
+        return buildValidationResponse(
+                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(CustomerNotReadyException.class)
