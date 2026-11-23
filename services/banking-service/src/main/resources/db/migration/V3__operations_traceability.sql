@@ -35,3 +35,7 @@ CREATE TRIGGER ledger_entries_immutable BEFORE UPDATE OR DELETE ON ledger_entrie
     FOR EACH ROW EXECUTE FUNCTION forbid_ledger_change();
 CREATE TRIGGER ledger_entries_no_truncate BEFORE TRUNCATE ON ledger_entries
     FOR EACH STATEMENT EXECUTE FUNCTION forbid_ledger_change();
+
+-- Historique trié du plus récent au plus ancien, et lecture des écritures d une opération
+CREATE INDEX ix_transactions_created ON transactions (created_at DESC, id DESC);
+CREATE INDEX ix_ledger_entries_transaction ON ledger_entries (transaction_id);

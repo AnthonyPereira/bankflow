@@ -1,5 +1,6 @@
 package com.bankflow.banking.api.operation;
 
+import com.bankflow.banking.api.security.JwtActors;
 import com.bankflow.banking.api.transaction.TransactionResponse;
 import com.bankflow.banking.application.idempotency.IdempotencyExecutor;
 import com.bankflow.banking.application.idempotency.IdempotencyKeys;
@@ -7,8 +8,8 @@ import com.bankflow.banking.application.idempotency.IdempotencyResult;
 import com.bankflow.banking.application.idempotency.RequestFingerprint;
 import com.bankflow.banking.application.idempotency.StoredResponse;
 import com.bankflow.banking.application.operation.OperationService;
-import com.bankflow.banking.domain.transaction.Actor;
-import com.bankflow.banking.domain.transaction.Transaction;
+import com.bankflow.banking.application.transaction.TransactionView;
+import com.bankflow.banking.domain.transaction.TransactionType;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.UUID;
@@ -31,7 +32,6 @@ import tools.jackson.databind.json.JsonMapper;
 @RequestMapping("/accounts/{id}")
 class OperationController {
 
-    private static final String ADMIN_ROLE = "ROLE_ADMIN";
     private static final String REPLAYED_HEADER = "Idempotent-Replayed";
 
     private final OperationService operationService;
@@ -51,7 +51,7 @@ class OperationController {
             @PathVariable UUID id,
             @RequestHeader(value = IdempotencyKeys.HEADER, required = false) String key,
             @Valid @RequestBody OperationRequest request) {
-        return performOperation(jwt, id, key, request, "deposits");
+        return performOperation(jwt, id, key, request, TransactionType.DEPOSIT);
     }
 
     @PostMapping("/withdrawals")
@@ -60,19 +60,22 @@ class OperationController {
             @PathVariable UUID id,
             @RequestHeader(value = IdempotencyKeys.HEADER, required = false) String key,
             @Valid @RequestBody OperationRequest request) {
-        return performOperation(jwt, id, key, request, "withdrawals");
+        return performOperation(jwt, id, key, request, TransactionType.WITHDRAWAL);
     }
 
     private ResponseEntity<String> performOperation(
-            Jwt jwt, UUID accountId, String key, OperationRequest request, String kind) {
+            Jwt jwt, UUID accountId, String key, OperationRequest request, TransactionType type) {
         IdempotencyKeys.validate(key, false);
-        var actor = Actor.createFrom(UUID.fromString(jwt.getSubject()), isAdmin(jwt));
+        var actor = JwtActors.createFrom(jwt);
         var amount = request.readAmount();
         var body = new HashMap<String, Object>();
         body.put("amount", amount.toPlainString());
         body.put("description", request.description());
-        var hash =
-                RequestFingerprint.createHash("POST", "/accounts/" + accountId + "/" + kind, body);
+        var path =
+                "/accounts/"
+                        + accountId
+                        + (type == TransactionType.DEPOSIT ? "/deposits" : "/withdrawals");
+        var hash = RequestFingerprint.createHash("POST", path, body);
 
         var result =
                 idempotency.execute(
@@ -80,8 +83,8 @@ class OperationController {
                         key,
                         hash,
                         () -> {
-                            Transaction transaction =
-                                    "deposits".equals(kind)
+                            var transaction =
+                                    type == TransactionType.DEPOSIT
                                             ? operationService.deposit(
                                                     actor, accountId, amount, request.description())
                                             : operationService.withdraw(
@@ -89,7 +92,9 @@ class OperationController {
                                                     accountId,
                                                     amount,
                                                     request.description());
-                            var response = TransactionResponse.createFrom(transaction, null);
+                            var response =
+                                    TransactionResponse.createFrom(
+                                            TransactionView.createFor(transaction, null, null));
                             return new StoredResponse(
                                     HttpStatus.CREATED.value(), json.writeValueAsString(response));
                         });
@@ -112,9 +117,5 @@ class OperationController {
             builder.header(REPLAYED_HEADER, "true");
         }
         return builder.body(stored.body());
-    }
-
-    private static boolean isAdmin(Jwt jwt) {
-        return ADMIN_ROLE.equals(jwt.getClaimAsString("role"));
     }
 }

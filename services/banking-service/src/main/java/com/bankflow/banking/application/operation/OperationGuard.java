@@ -5,6 +5,7 @@ import com.bankflow.banking.application.account.CustomerSuspendedException;
 import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountClosedException;
 import com.bankflow.banking.domain.account.AccountRepository;
+import com.bankflow.banking.domain.customer.CustomerRef;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.transaction.Actor;
 import java.util.UUID;
@@ -31,7 +32,7 @@ public class OperationGuard {
                 accounts.findByIdForUpdate(accountId).orElseThrow(AccountNotFoundException::new);
         requireVisible(actor, account);
         var owner = customerRefs.findById(account.getCustomerId());
-        if (owner.map(ref -> ref.isSuspended()).orElse(false)) {
+        if (owner.map(CustomerRef::isSuspended).orElse(false)) {
             throw new CustomerSuspendedException();
         }
         if (account.isClosed()) {
@@ -40,7 +41,11 @@ public class OperationGuard {
         return account;
     }
 
-    /** Un client ne voit que ses comptes : celui d'un autre est « introuvable ». */
+    /**
+     * Un client ne voit que ses comptes : celui d'un autre est « introuvable ». Même règle que
+     * {@code AccountService.requireVisible}, qui est privée et prend un {@code Optional} déjà lu :
+     * la partager obligerait à modifier ce service, d'où cette version qui prend un {@code Actor}.
+     */
     public void requireVisible(Actor actor, Account account) {
         if (actor.isAdmin()) {
             return;

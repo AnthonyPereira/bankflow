@@ -41,7 +41,7 @@ public class CompensationService {
 
     /** Réservé aux administrateurs (contrôlé par l'API) : {@code actor} est l'un d'eux. */
     @Transactional
-    public Transaction compensate(Actor actor, UUID transactionId, String reason) {
+    public TransactionView compensate(Actor actor, UUID transactionId, String reason) {
         var original =
                 transactions.findById(transactionId).orElseThrow(TransactionNotFoundException::new);
         if (original.getType() != TransactionType.DEPOSIT
@@ -69,6 +69,7 @@ public class CompensationService {
                         reason,
                         actor,
                         clock.instant().truncatedTo(ChronoUnit.MICROS));
-        return ledgerWriter.saveWithEntries(compensation, direction);
+        var saved = ledgerWriter.saveWithEntries(compensation, direction);
+        return new TransactionView(saved, null, direction);
     }
 }

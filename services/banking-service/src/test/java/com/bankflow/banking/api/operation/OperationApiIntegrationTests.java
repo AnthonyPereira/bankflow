@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.bankflow.banking.BankingApiTestSupport;
 import com.bankflow.banking.domain.customer.CustomerStatus;
+import java.math.BigDecimal;
 import java.net.http.HttpResponse;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -200,6 +203,100 @@ class OperationApiIntegrationTests extends BankingApiTestSupport {
     }
 
     @Test
+    void unMontantAvecTroisDecimalesMemeNullesOuNonNumeriqueEstRefuse() throws Exception {
+        var holder = createHolder(CustomerStatus.ACTIVE);
+
+        assertAmountError(deposit(holder, "150.000"), "Le montant a au plus 2 décimales.");
+        assertAmountError(
+                deposit(holder, "abc"),
+                "Le montant doit être un nombre décimal, par exemple 150.00.");
+        assertAmountError(
+                deposit(holder, "1e2"),
+                "Le montant doit être un nombre décimal, par exemple 150.00.");
+        assertThat(deposit(holder, "150").statusCode()).isEqualTo(201);
+    }
+
+    @Test
+    void lesOperationsPortentLeurSensPourLeCompte() throws Exception {
+        var holder = createHolder(CustomerStatus.ACTIVE);
+        var adminToken = createToken(UUID.randomUUID(), ADMIN);
+        var deposit = parseJson(deposit(holder, "50.00"));
+        var withdrawal =
+                parseJson(
+                        operate(
+                                holder.token(),
+                                holder.accountId(),
+                                "withdrawals",
+                                "{\"amount\":\"10.00\"}",
+                                null));
+        var compensatedWithdrawal =
+                parseJson(
+                        send(
+                                "POST",
+                                "/transactions/"
+                                        + withdrawal.get("id").asString()
+                                        + "/compensations",
+                                adminToken,
+                                "{\"reason\":\"Retrait contesté\"}"));
+        var compensatedDeposit =
+                parseJson(
+                        send(
+                                "POST",
+                                "/transactions/" + deposit.get("id").asString() + "/compensations",
+                                adminToken,
+                                "{\"reason\":\"Erreur de saisie\"}"));
+
+        assertThat(deposit.get("direction").asString()).isEqualTo("CREDIT");
+        assertThat(withdrawal.get("direction").asString()).isEqualTo("DEBIT");
+        assertThat(compensatedDeposit.get("direction").asString()).isEqualTo("DEBIT");
+        assertThat(compensatedWithdrawal.get("direction").asString()).isEqualTo("CREDIT");
+        var history =
+                parseJson(
+                        send(
+                                "GET",
+                                "/transactions?accountId=" + holder.accountId(),
+                                holder.token(),
+                                null));
+        assertThat(history.get("content").valueStream().map(n -> n.get("direction").asString()))
+                .containsExactly("DEBIT", "CREDIT", "DEBIT", "CREDIT");
+        var single =
+                parseJson(
+                        send(
+                                "GET",
+                                "/transactions/" + compensatedDeposit.get("id").asString(),
+                                holder.token(),
+                                null));
+        assertThat(single.get("direction").asString()).isEqualTo("DEBIT");
+    }
+
+    @Test
+    void unClientQuiEnvoieUnJsonIllisibleSurUneCompensationRecoitUn403() throws Exception {
+        var holder = createHolder(CustomerStatus.ACTIVE);
+
+        var response =
+                send(
+                        "POST",
+                        "/transactions/" + UUID.randomUUID() + "/compensations",
+                        holder.token(),
+                        "{pas du json");
+
+        assertThat(response.statusCode()).isEqualTo(403);
+        assertThat(codeOf(response)).isEqualTo("ACCESS_DENIED");
+    }
+
+    @Test
+    void unDepotSansCleDIdempotenceEstAccepte() throws Exception {
+        var holder = createHolder(CustomerStatus.ACTIVE);
+
+        var first = deposit(holder, "10.00");
+        var second = deposit(holder, "10.00");
+
+        assertThat(first.statusCode()).isEqualTo(201);
+        assertThat(second.statusCode()).isEqualTo(201);
+        assertThat(parseJson(second).get("balanceAfter").asString()).isEqualTo("20.00");
+    }
+
+    @Test
     void lAuthentificationEstObligatoire() throws Exception {
         var response = send("POST", "/accounts/" + UUID.randomUUID() + "/deposits", null, "{}");
         assertThat(response.statusCode()).isEqualTo(401);
@@ -296,7 +393,7 @@ class OperationApiIntegrationTests extends BankingApiTestSupport {
                                 "/transactions?type=DEPOSIT&accountId=" + holder.accountId(),
                                 holder.token(),
                                 null));
-        var today = java.time.LocalDate.now(java.time.ZoneId.of("Europe/Paris")).toString();
+        var today = LocalDate.now(ZoneId.of("Europe/Paris")).toString();
         var period =
                 parseJson(
                         send(
@@ -576,19 +673,19 @@ class OperationApiIntegrationTests extends BankingApiTestSupport {
         var accountBalance =
                 jdbc.queryForObject(
                         "SELECT balance FROM accounts WHERE id = ?::uuid",
-                        java.math.BigDecimal.class,
+                        BigDecimal.class,
                         holder.accountId());
         var ledgerBalance =
                 jdbc.queryForObject(
                         "SELECT COALESCE(SUM(CASE direction WHEN 'CREDIT' THEN amount ELSE -amount"
                                 + " END), 0) FROM ledger_entries WHERE account_id = ?::uuid",
-                        java.math.BigDecimal.class,
+                        BigDecimal.class,
                         holder.accountId());
         var imbalance =
                 jdbc.queryForObject(
                         "SELECT COALESCE(SUM(CASE direction WHEN 'DEBIT' THEN amount ELSE -amount"
                                 + " END), 0) FROM ledger_entries",
-                        java.math.BigDecimal.class);
+                        BigDecimal.class);
         assertThat(accountBalance).isEqualByComparingTo("50.00");
         assertThat(ledgerBalance).isEqualByComparingTo(accountBalance);
         assertThat(imbalance).isEqualByComparingTo("0");

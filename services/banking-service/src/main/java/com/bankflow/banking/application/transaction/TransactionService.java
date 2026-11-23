@@ -8,10 +8,14 @@ import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.transaction.Actor;
 import com.bankflow.banking.domain.transaction.Transaction;
 import com.bankflow.banking.domain.transaction.TransactionRepository;
+import com.bankflow.banking.domain.transaction.TransactionType;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
@@ -64,21 +68,36 @@ public class TransactionService {
             ownerCustomerId = customer.get().getCustomerId();
         }
         var page = transactions.findAll(createFilter(query, ownerCustomerId), pageable);
-        var ids = page.getContent().stream().map(Transaction::getId).toList();
-        var compensatedBy =
-                ids.isEmpty()
-                        ? java.util.Map.<UUID, UUID>of()
-                        : transactions.findByCompensatesTransactionIdIn(ids).stream()
-                                .collect(
-                                        Collectors.toMap(
-                                                Transaction::getCompensatesTransactionId,
-                                                Transaction::getId));
-        return new PageImpl<>(
-                page.getContent().stream()
-                        .map(tx -> new TransactionView(tx, compensatedBy.get(tx.getId())))
-                        .toList(),
-                pageable,
-                page.getTotalElements());
+        return new PageImpl<>(createViews(page.getContent()), pageable, page.getTotalElements());
+    }
+
+    /** Deux requêtes pour toute la page : écritures compensatrices et opérations compensées. */
+    private List<TransactionView> createViews(List<Transaction> page) {
+        if (page.isEmpty()) {
+            return List.of();
+        }
+        var ids = page.stream().map(Transaction::getId).toList();
+        Map<UUID, UUID> compensatedBy =
+                transactions.findByCompensatesTransactionIdIn(ids).stream()
+                        .collect(
+                                Collectors.toMap(
+                                        Transaction::getCompensatesTransactionId,
+                                        Transaction::getId));
+        var compensatedIds =
+                page.stream()
+                        .map(Transaction::getCompensatesTransactionId)
+                        .filter(Objects::nonNull)
+                        .toList();
+        Map<UUID, TransactionType> compensatedTypes =
+                transactions.findAllById(compensatedIds).stream()
+                        .collect(Collectors.toMap(Transaction::getId, Transaction::getType));
+        return page.stream()
+                .map(tx ->
+                        TransactionView.createFor(
+                                tx,
+                                compensatedBy.get(tx.getId()),
+                                compensatedTypes.get(tx.getCompensatesTransactionId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -94,9 +113,7 @@ public class TransactionService {
         } catch (AccountNotFoundException exception) {
             throw new TransactionNotFoundException();
         }
-        var compensatedBy =
-                transactions.findByCompensatesTransactionId(transactionId).map(Transaction::getId);
-        return new TransactionView(transaction, compensatedBy.orElse(null));
+        return createViews(List.of(transaction)).getFirst();
     }
 
     private Account findAccount(UUID accountId) {
