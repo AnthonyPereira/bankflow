@@ -69,6 +69,7 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
   - **Gateway** : le quota par IP compte un préfixe /64 en IPv6 ; un service injoignable ne remplit plus les logs de piles d'appels.
   - **Frontend** : les guards attendent un refresh en cours ; la déconnexion est propagée aux autres onglets et signale un échec du serveur ; plusieurs 401 simultanés ne redirigent qu'une fois ; accessibilité du menu (lien d'évitement, focus, `aria-expanded`).
   - **Infra** : Dependabot ne propose plus de montée majeure des images (une PostgreSQL 19 aurait démarré sur une base vide) ; healthcheck Kafka allégé ; images locales alignées sur la prod ; empreinte SHA-256 vérifiée pour Maven ; `/actuator/prometheus` n'est plus exposé.
+  - **Déploiement** : le dépôt public ne détient plus de jeton vers deploy-platform, qui repère lui-même les nouvelles versions ; nginx relaie vers `bankflow-api-gateway`, un nom propre à l'application.
 
 ### Limites connues
 

@@ -59,7 +59,7 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 ## Mise en ligne
 
 - **Cible** : `https://bankflow.anthonypereira.dpdns.org`, sur le serveur maison (Traefik et tunnel Cloudflare).
-- **Déclenchement** : une fusion dans `main` lance la CI et `.github/workflows/deploy.yml`, qui attend que la CI de ce commit soit verte. Il publie les images sur GHCR puis envoie un signal `deployer` au dépôt **privé** `AnthonyPereira/deploy-platform`, qui porte le runner auto-hébergé `serveur-maison-deploy-platform`.
+- **Déclenchement** : une fusion dans `main` lance la CI et `.github/workflows/deploy.yml`, qui attend une CI verte puis publie les images sur GHCR. Le dépôt **privé** `AnthonyPereira/deploy-platform` interroge l'API toutes les 5 minutes depuis son runner auto-hébergé `serveur-maison-deploy-platform`, et met en ligne la dernière version publiée. bankflow ne détient aucun jeton vers deploy-platform.
 - **Runner** : il ne doit **jamais** être enregistré sur `bankflow`, car le dépôt est public.
 - **Procédure** : [docs/runbooks/deploiement.md](docs/runbooks/deploiement.md).
 
@@ -72,7 +72,7 @@ Les dernières étapes, toutes fusionnées dans `develop` avec une CI verte :
 - **#36** : packages rangés par fonctionnalité dans chaque couche.
 - **#37** : comptes de démonstration sur la page de connexion (BF-016-15). Ils sont créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire compris, `demo.admin` est un vrai administrateur), mais ne peuvent jamais être désactivés définitivement. `DEMO_ACCOUNTS_ENABLED=false` masque le tableau et ne les crée plus, sans les désactiver. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_PASSWORD`) reste secret.
 
-Les secrets `DEPLOY_DISPATCH_TOKEN` (bankflow) et `GHCR_PULL_TOKEN` (deploy-platform) sont en place, et le runner est en ligne.
+Seul `GHCR_PULL_TOKEN` (deploy-platform) est nécessaire, et le runner est en ligne.
 
 ### Prochaines étapes
 

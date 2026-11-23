@@ -1,6 +1,6 @@
 # Déploiement sur le serveur maison
 
-BankFlow est publié sur `https://bankflow.anthonypereira.dpdns.org`. Chaque fusion dans `main` déclenche la CI et le workflow `Déploiement`. Celui-ci attend la fin de la CI du même commit, puis, **seulement si elle est verte**, construit les images et les publie sur GHCR. Le dépôt privé `AnthonyPereira/deploy-platform` lance ensuite la mise en ligne depuis le runner du serveur. Un lancement manuel de `Déploiement` (Run workflow, sur `main`) reconstruit le dernier commit de `main`, avec la même attente de sa CI.
+BankFlow est publié sur `https://bankflow.anthonypereira.dpdns.org`. Chaque fusion dans `main` déclenche la CI et le workflow `Déploiement`. Celui-ci attend la fin de la CI du même commit, puis, **seulement si elle est verte**, construit les images et les publie sur GHCR. Le dépôt privé `AnthonyPereira/deploy-platform` interroge l'API GitHub toutes les 5 minutes environ (parfois plus, car GitHub retarde les tâches planifiées) : il repère ce run vert de `Déploiement` et met en ligne la dernière version publiée, depuis le runner du serveur. Pour forcer la mise en ligne sans attendre, lancer à la main le workflow `Déploiement` de deploy-platform (input `app=bankflow`, `version` vide ou un SHA). Aucun signal ni jeton ne part de bankflow vers deploy-platform. Un lancement manuel de `Déploiement` (Run workflow, sur `main`) reconstruit le dernier commit de `main`, avec la même attente de sa CI.
 
 ### Conditions de départ
 
@@ -24,7 +24,7 @@ Ces étapes se font une seule fois, dans cet ordre.
 ### 1. Sur GitHub
 
 1. Créer un jeton **classic** avec le seul droit `read:packages`, puis l'ajouter au dépôt `deploy-platform` dans le secret `GHCR_PULL_TOKEN`.
-2. Créer un jeton **fine-grained** limité au dépôt `deploy-platform`, avec le droit `Contents: Read and write`, puis l'ajouter au dépôt `bankflow` dans le secret `DEPLOY_DISPATCH_TOKEN`.
+2. Plus aucun jeton n'est nécessaire dans bankflow : supprimer le secret `DEPLOY_DISPATCH_TOKEN` s'il existe et révoquer le jeton correspondant.
 3. Copier le jeton du runner : `deploy-platform` → Settings → Actions → Runners → New self-hosted runner → Linux x64, valeur après `--token`. Il reste valable une heure.
 
 ### 2. Sur le serveur
@@ -87,7 +87,9 @@ Ne modifiez pas `~/apps/bankflow/docker-compose.yml` sur le serveur : il est rem
 
 ## Retour arrière
 
-Dans `deploy-platform` → Actions → Déploiement → Run workflow, indiquer `bankflow` et le SHA complet de la dernière version saine. Corrigez ensuite le problème avec un hotfix selon `CONTRIBUTING.md`, pour que `main` ne redéploie pas la version fautive.
+Dans `deploy-platform` → Actions → Déploiement → Run workflow, indiquer `bankflow` et le SHA complet de la dernière version saine. Cette version reste en ligne jusqu'à la prochaine publication réussie de `main` : corrigez ensuite le problème avec un hotfix selon `CONTRIBUTING.md`, dont la fusion remettra la mise en ligne automatique en route. Pour revenir tout de suite à la dernière version publiée, relancer le même workflow avec `version` vide.
+
+Si une nouvelle version ne démarre pas, `deploy-platform` ne la retente pas toutes les 5 minutes : le run échoue une fois, puis attend la publication suivante ou un lancement manuel.
 
 Une migration Flyway déjà appliquée n'est pas annulée par ce retour arrière. Sauvegardez la base avant une release qui modifie le schéma :
 
@@ -104,7 +106,7 @@ docker compose -p bankflow exec -T postgres pg_dump -U bankflow_admin auth_db > 
 | Le job `mise en ligne` reste en attente | Runner arrêté ou serveur éteint |
 | `à définir dans ~/apps/bankflow/.env` | Secret manquant, voir l'étape 4 |
 | `denied` sur `ghcr.io` | Secret `GHCR_PULL_TOKEN` absent ou expiré |
-| `demande de mise en ligne` échoue | Secret `DEPLOY_DISPATCH_TOKEN` absent ou expiré |
+| Images publiées mais rien n'est mis en ligne | Le workflow planifié de deploy-platform n'a pas tourné ou le runner est arrêté : vérifier ses runs, ou le lancer à la main |
 | Job `sonarqube` rouge sur `main`, tests verts | Quality Gate rouge : ouvrir le lien SonarCloud du job, corriger le code par un hotfix (`CONTRIBUTING.md`) ; la fusion du correctif relance le déploiement |
 | Job `sonarqube` en erreur ou en délai dépassé sans Quality Gate | Panne de SonarCloud : consulter la page de statut de SonarCloud, puis relancer le job depuis le run de CI (Re-run failed jobs). Une fois la CI verte, relancer aussi `Déploiement` (Re-run ou lancement manuel) : son job `CI verte sur main` a déjà échoué et ne repart pas seul |
 | `La CI de <sha> a échoué` | Le commit de `main` n'a pas de CI verte (job `sonarqube` compris) : la rendre verte, puis relancer `Déploiement` |
