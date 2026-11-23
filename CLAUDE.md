@@ -74,5 +74,8 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 
 ### Prochaines étapes
 
-1. **Maven 3.10.2 (PR Dependabot)** : vérifier que chaque PR met aussi à jour `distributionSha256Sum`, sinon le build des images casse.
-2. **MVP 2 (`0.2.0`)** : BF-006 (Customer Service), puis BF-007 à BF-009 (comptes, dépôts et retraits, virements), puis BF-017 (écrans Angular).
+**MVP 2 (`0.2.0`)** : le contenu est listé dans le jalon du [BACKLOG](BACKLOG.md#mise-en-ligne-sur-le-serveur-maison).
+1. ADR-004 (résolution du `customerId`), puis BF-006, rattrapage des profils compris (BF-006-11).
+2. BF-007, BF-008 et BF-009, avec les données de démonstration (BF-009-08).
+3. BF-017 et le reste de BF-016 (10b, 11, 12b). Les écrans des comptes peuvent démarrer dès que BF-007 est fusionné.
+4. BF-023-17 (mise en ligne de customer-service et banking-service), puis `release/0.2.0` avec une revue de code complète.
