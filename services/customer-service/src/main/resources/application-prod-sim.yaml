@@ -5,6 +5,13 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+# La documentation de l'API n'est pas exposée en production simulée
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 logging:
   structured:
     format:
