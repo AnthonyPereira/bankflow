@@ -36,6 +36,18 @@ public class CustomerRefSynchronizer {
     @Transactional
     public void syncCustomer(
             UUID customerId, UUID userId, String email, CustomerStatus status, Instant occurredAt) {
+        syncCustomer(customerId, userId, email, status, null, occurredAt);
+    }
+
+    /** {@code demo} nul (absent de l'événement) : la valeur déjà connue est conservée. */
+    @Transactional
+    public void syncCustomer(
+            UUID customerId,
+            UUID userId,
+            String email,
+            CustomerStatus status,
+            Boolean demo,
+            Instant occurredAt) {
         customerRefs
                 .findById(customerId)
                 .ifPresentOrElse(
@@ -44,11 +56,17 @@ public class CustomerRefSynchronizer {
                                 log.debug("Événement client périmé ignoré");
                                 return;
                             }
-                            existing.applyState(userId, email, status, occurredAt);
+                            existing.applyState(userId, email, status, demo, occurredAt);
                         },
                         () -> {
                             customerRefs.saveAndFlush(
-                                    new CustomerRef(customerId, userId, email, status, occurredAt));
+                                    new CustomerRef(
+                                            customerId,
+                                            userId,
+                                            email,
+                                            status,
+                                            Boolean.TRUE.equals(demo),
+                                            occurredAt));
                             events.publishEvent(new CustomerRefCreated(customerId));
                         });
     }

@@ -1,9 +1,9 @@
 package com.bankflow.banking.application.transfer;
 
+import com.bankflow.banking.application.account.AccountAccess;
 import com.bankflow.banking.application.account.AccountNotFoundException;
 import com.bankflow.banking.application.account.CustomerSuspendedException;
 import com.bankflow.banking.application.operation.LedgerWriter;
-import com.bankflow.banking.application.operation.OperationGuard;
 import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountClosedException;
 import com.bankflow.banking.domain.account.AccountRepository;
@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TransferService {
 
-    private final OperationGuard guard;
+    private final AccountAccess access;
     private final AccountRepository accounts;
     private final CustomerRefRepository customerRefs;
     private final TransferRepository transfers;
@@ -42,13 +41,13 @@ public class TransferService {
     private final Clock clock;
 
     TransferService(
-            OperationGuard guard,
+            AccountAccess access,
             AccountRepository accounts,
             CustomerRefRepository customerRefs,
             TransferRepository transfers,
             LedgerWriter ledgerWriter,
             Clock clock) {
-        this.guard = guard;
+        this.access = access;
         this.accounts = accounts;
         this.customerRefs = customerRefs;
         this.transfers = transfers;
@@ -74,7 +73,7 @@ public class TransferService {
         if (source == null) {
             throw new AccountNotFoundException();
         }
-        guard.requireVisible(actor, source);
+        access.requireVisible(actor, source);
         var destination = destinationId == null ? null : locked.get(destinationId);
         if (destination == null || destination.isClosed()) {
             throw new DestinationAccountNotFoundException();
@@ -130,17 +129,12 @@ public class TransferService {
         var transfer = transfers.findById(transferId).orElseThrow(TransferNotFoundException::new);
         var source = accounts.findById(transfer.getSourceAccountId()).orElseThrow();
         var destination = accounts.findById(transfer.getDestinationAccountId()).orElseThrow();
-        var ownerId = customerRefs.findByUserId(actor.userId()).map(CustomerRef::getCustomerId);
-        var sourceVisible = actor.isAdmin() || isOwner(ownerId, source);
-        if (!sourceVisible && !isOwner(ownerId, destination)) {
+        var sourceVisible = access.isVisible(actor, source);
+        if (!sourceVisible && !access.isVisible(actor, destination)) {
             throw new TransferNotFoundException();
         }
         return new TransferView(
                 transfer, source.getAccountNumber(), destination.getAccountNumber(), sourceVisible);
-    }
-
-    private static boolean isOwner(Optional<UUID> ownerId, Account account) {
-        return ownerId.map(id -> id.equals(account.getCustomerId())).orElse(false);
     }
 
     /**

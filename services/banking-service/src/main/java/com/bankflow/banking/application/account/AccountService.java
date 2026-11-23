@@ -8,18 +8,18 @@ import com.bankflow.banking.domain.customer.CustomerRef;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.customer.CustomerStatus;
 import com.bankflow.banking.domain.money.Currency;
+import com.bankflow.banking.domain.transaction.Actor;
 import java.time.Clock;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Cas d'usage des comptes. Un client n'accède qu'aux siens (un compte d'autrui est « introuvable
- * »), un administrateur accède à tous.
+ * Cas d'usage des comptes. La visibilité d'un compte suit la règle unique de {@link AccountAccess}.
  */
 @Service
 public class AccountService {
@@ -30,16 +30,19 @@ public class AccountService {
 
     private final AccountRepository accounts;
     private final CustomerRefRepository customerRefs;
+    private final AccountAccess access;
     private final AccountNumberGenerator numberGenerator;
     private final Clock clock;
 
     AccountService(
             AccountRepository accounts,
             CustomerRefRepository customerRefs,
+            AccountAccess access,
             AccountNumberGenerator numberGenerator,
             Clock clock) {
         this.accounts = accounts;
         this.customerRefs = customerRefs;
+        this.access = access;
         this.numberGenerator = numberGenerator;
         this.clock = clock;
     }
@@ -54,12 +57,17 @@ public class AccountService {
         return openAccountFor(customer, currency, label);
     }
 
-    /** Ouvre un compte au nom d'un client, à la demande d'un conseiller. */
+    /**
+     * Ouvre un compte au nom d'un client, à la demande d'un conseiller. Un conseiller de
+     * démonstration ne connaît que les clients de démonstration.
+     */
     @Transactional
-    public Account openAccountForCustomer(UUID customerId, Currency currency, String label) {
+    public Account openAccountForCustomer(
+            Actor actor, UUID customerId, Currency currency, String label) {
         var customer =
                 customerRefs
                         .findByCustomerIdForUpdate(customerId)
+                        .filter(found -> access.isCustomerVisible(actor, found))
                         .orElseThrow(CustomerNotFoundException::new);
         return openAccountFor(customer, currency, label);
     }
@@ -77,21 +85,20 @@ public class AccountService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Account> listAccounts(
-            UUID userId, boolean admin, UUID customerFilter, int page, int size) {
+    public Page<Account> listAccounts(Actor actor, UUID customerFilter, int page, int size) {
         var pageable = PageRequest.of(page, size, NEWEST_FIRST);
-        if (admin) {
-            return customerFilter == null
-                    ? accounts.findAll(pageable)
-                    : accounts.findByCustomerId(customerFilter, pageable);
+        var scope = access.createScope(actor, customerFilter);
+        if (scope.empty()) {
+            return Page.empty(pageable);
         }
-        return customerRefs
-                .findByUserId(userId)
-                .map(customer -> accounts.findByCustomerId(customer.getCustomerId(), pageable))
-                .orElseGet(() -> Page.empty(pageable));
+        return accounts.findAll(
+                (root, query, builder) ->
+                        scope.createPredicate(builder, query, root.get("customerId")),
+                pageable);
     }
 
-    /** Vue d'ensemble de la banque, réservée aux administrateurs (contrôlé par l'API). */
+    /** Vue d'ensemble de la banque : des totaux globaux, sans donnée personnelle. */
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @Transactional(readOnly = true)
     public AccountSummary getSummary() {
         var totals =
@@ -114,39 +121,28 @@ public class AccountService {
     }
 
     @Transactional(readOnly = true)
-    public Account getAccount(UUID userId, boolean admin, UUID accountId) {
-        return findVisibleAccount(userId, admin, accountId);
+    public Account getAccount(Actor actor, UUID accountId) {
+        var account = accounts.findById(accountId).orElseThrow(AccountNotFoundException::new);
+        access.requireVisible(actor, account);
+        return account;
     }
 
     /** Clôture un compte de solde nul. Un client suspendu ne peut plus rien modifier. */
     @Transactional
-    public Account closeAccount(UUID userId, boolean admin, UUID accountId) {
+    public Account closeAccount(Actor actor, UUID accountId) {
         // Le verrou sérialise deux clôtures simultanées : la seconde voit le compte déjà clôturé
         var account =
                 accounts.findByIdForUpdate(accountId).orElseThrow(AccountNotFoundException::new);
-        var customer = customerRefs.findByUserId(userId);
-        requireVisible(account, admin, customer);
-        if (!admin && customer.map(CustomerRef::isSuspended).orElse(false)) {
+        access.requireVisible(actor, account);
+        if (!actor.isAdmin()
+                && customerRefs
+                        .findById(account.getCustomerId())
+                        .map(CustomerRef::isSuspended)
+                        .orElse(false)) {
             throw new CustomerSuspendedException();
         }
         account.close(clock.instant());
         return accounts.saveAndFlush(account);
-    }
-
-    private Account findVisibleAccount(UUID userId, boolean admin, UUID accountId) {
-        var account = accounts.findById(accountId).orElseThrow(AccountNotFoundException::new);
-        requireVisible(account, admin, customerRefs.findByUserId(userId));
-        return account;
-    }
-
-    private static void requireVisible(
-            Account account, boolean admin, Optional<CustomerRef> customer) {
-        var ownsAccount =
-                customer.map(ref -> ref.getCustomerId().equals(account.getCustomerId()))
-                        .orElse(false);
-        if (!admin && !ownsAccount) {
-            throw new AccountNotFoundException();
-        }
     }
 
     /**

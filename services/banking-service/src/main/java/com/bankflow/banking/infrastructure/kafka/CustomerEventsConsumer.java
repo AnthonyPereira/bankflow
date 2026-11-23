@@ -47,6 +47,7 @@ class CustomerEventsConsumer {
                                 event.userId(),
                                 event.email(),
                                 event.status(),
+                                event.demo(),
                                 event.occurredAt()));
     }
 
@@ -94,6 +95,7 @@ class CustomerEventsConsumer {
                         UUID.fromString(userId),
                         email,
                         CustomerStatus.valueOf(status),
+                        readDemo(payload),
                         occurredAt));
     }
 
@@ -106,6 +108,12 @@ class CustomerEventsConsumer {
         return Instant.parse(text).truncatedTo(ChronoUnit.MICROS);
     }
 
+    /** Champ facultatif : absent ou non booléen, il vaut nul et la valeur connue est gardée. */
+    private static Boolean readDemo(JsonNode payload) {
+        var value = payload.path("demo");
+        return value.isBoolean() ? value.asBoolean() : null;
+    }
+
     private static String readText(JsonNode node, String field) {
         var value = node.path(field);
         return value.isString() ? value.asString() : null;
@@ -116,5 +124,6 @@ class CustomerEventsConsumer {
             UUID userId,
             String email,
             CustomerStatus status,
+            Boolean demo,
             Instant occurredAt) {}
 }

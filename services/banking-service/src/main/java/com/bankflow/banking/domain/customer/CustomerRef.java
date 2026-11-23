@@ -31,6 +31,9 @@ public class CustomerRef {
     @Column(nullable = false, length = 16)
     private CustomerStatus status;
 
+    @Column(nullable = false)
+    private boolean demo;
+
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
@@ -42,10 +45,21 @@ public class CustomerRef {
      */
     public CustomerRef(
             UUID customerId, UUID userId, String email, CustomerStatus status, Instant occurredAt) {
+        this(customerId, userId, email, status, false, occurredAt);
+    }
+
+    public CustomerRef(
+            UUID customerId,
+            UUID userId,
+            String email,
+            CustomerStatus status,
+            boolean demo,
+            Instant occurredAt) {
         this.customerId = customerId;
         this.userId = userId;
         this.email = email;
         this.status = status;
+        this.demo = demo;
         this.updatedAt = occurredAt;
     }
 
@@ -57,17 +71,37 @@ public class CustomerRef {
         return occurredAt.isBefore(updatedAt);
     }
 
-    /** Aligne la projection sur l'état complet publié à la date {@code occurredAt}. */
+    /** Aligne la projection sur l'état publié ; le statut démo est conservé s'il est absent. */
     public void applyState(
             UUID newUserId, String newEmail, CustomerStatus newStatus, Instant occurredAt) {
+        applyState(newUserId, newEmail, newStatus, null, occurredAt);
+    }
+
+    /**
+     * Aligne la projection sur l'état complet publié à la date {@code occurredAt}. {@code newDemo}
+     * nul (champ absent de l'événement) : la valeur connue est conservée.
+     */
+    public void applyState(
+            UUID newUserId,
+            String newEmail,
+            CustomerStatus newStatus,
+            Boolean newDemo,
+            Instant occurredAt) {
         this.userId = newUserId;
         this.email = newEmail;
         this.status = newStatus;
+        if (newDemo != null) {
+            this.demo = newDemo;
+        }
         this.updatedAt = occurredAt;
     }
 
     public boolean isSuspended() {
         return status == CustomerStatus.SUSPENDED;
+    }
+
+    public boolean isDemo() {
+        return demo;
     }
 
     public UUID getCustomerId() {

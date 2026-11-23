@@ -141,7 +141,7 @@ class DemoAccountsSeederIntegrationTests extends BankingApiTestSupport {
         for (var account : findAccounts(customer)) {
             var balance = account.getBalance().amount();
             operations.withdraw(actor, account.getId(), balance, "Solde à zéro");
-            accountService.closeAccount(customer.getUserId(), false, account.getId());
+            accountService.closeAccount(actor, account.getId());
         }
         assertThat(
                         accounts.countByCustomerIdAndStatus(

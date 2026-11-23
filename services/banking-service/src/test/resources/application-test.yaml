@@ -6,3 +6,10 @@ spring:
 logging:
   level:
     com.bankflow: INFO
+
+bankflow:
+  kafka:
+    retry:
+      # Attentes raccourcies : les tests ne patientent pas 2 minutes sur un message en erreur
+      initial-interval-ms: 20
+      max-interval-ms: 100

@@ -58,10 +58,8 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(FieldValidationException.class)
     ResponseEntity<Object> handleFieldValidation(
             FieldValidationException exception, WebRequest request) {
-        var errors = new LinkedHashMap<String, String>();
-        errors.put(exception.getField(), exception.getMessage());
-        return buildValidationResponse(
-                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+        return buildFieldErrorResponse(
+                exception, exception.getField(), exception.getMessage(), request);
     }
 
     @ExceptionHandler(CustomerNotReadyException.class)
@@ -123,10 +121,8 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(SameAccountTransferException.class)
     ResponseEntity<Object> handleSameAccountTransfer(
             SameAccountTransferException exception, WebRequest request) {
-        var errors = new LinkedHashMap<String, String>();
-        errors.put("destinationIban", exception.getMessage());
-        return buildValidationResponse(
-                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+        return buildFieldErrorResponse(
+                exception, "destinationIban", exception.getMessage(), request);
     }
 
     @ExceptionHandler(CompensationNotAllowedException.class)
@@ -147,19 +143,14 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(InvalidIdempotencyKeyException.class)
     ResponseEntity<Object> handleInvalidIdempotencyKey(
             InvalidIdempotencyKeyException exception, WebRequest request) {
-        var errors = new LinkedHashMap<String, String>();
-        errors.put(IdempotencyKeys.HEADER, exception.getMessage());
-        return buildValidationResponse(
-                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+        return buildFieldErrorResponse(
+                exception, IdempotencyKeys.HEADER, exception.getMessage(), request);
     }
 
     @ExceptionHandler(InvalidPeriodException.class)
     ResponseEntity<Object> handleInvalidPeriod(
             InvalidPeriodException exception, WebRequest request) {
-        var errors = new LinkedHashMap<String, String>();
-        errors.put("from", exception.getMessage());
-        return buildValidationResponse(
-                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+        return buildFieldErrorResponse(exception, "from", exception.getMessage(), request);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
@@ -260,6 +251,15 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                                                                 .getParameterName()),
                                                 String.valueOf(error.getDefaultMessage()))));
         return buildValidationResponse(exception, errors, headers, status, request);
+    }
+
+    /** 400 {@code VALIDATION_ERROR} portant une seule erreur de champ. */
+    private ResponseEntity<Object> buildFieldErrorResponse(
+            Exception exception, String field, String message, WebRequest request) {
+        var errors = new LinkedHashMap<String, String>();
+        errors.put(field, message);
+        return buildValidationResponse(
+                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
     private ResponseEntity<Object> buildValidationResponse(

@@ -1,5 +1,6 @@
 package com.bankflow.banking.application.operation;
 
+import com.bankflow.banking.application.account.AccountAccess;
 import com.bankflow.banking.application.account.AccountNotFoundException;
 import com.bankflow.banking.application.account.CustomerSuspendedException;
 import com.bankflow.banking.domain.account.Account;
@@ -20,17 +21,20 @@ public class OperationGuard {
 
     private final AccountRepository accounts;
     private final CustomerRefRepository customerRefs;
+    private final AccountAccess access;
 
-    OperationGuard(AccountRepository accounts, CustomerRefRepository customerRefs) {
+    OperationGuard(
+            AccountRepository accounts, CustomerRefRepository customerRefs, AccountAccess access) {
         this.accounts = accounts;
         this.customerRefs = customerRefs;
+        this.access = access;
     }
 
     /** Verrouille le compte (les opérations d'un même compte sont ainsi sérialisées). */
     public Account lockUsableAccount(Actor actor, UUID accountId) {
         var account =
                 accounts.findByIdForUpdate(accountId).orElseThrow(AccountNotFoundException::new);
-        requireVisible(actor, account);
+        access.requireVisible(actor, account);
         var owner = customerRefs.findById(account.getCustomerId());
         if (owner.map(CustomerRef::isSuspended).orElse(false)) {
             throw new CustomerSuspendedException();
@@ -39,24 +43,5 @@ public class OperationGuard {
             throw new AccountClosedException();
         }
         return account;
-    }
-
-    /**
-     * Un client ne voit que ses comptes : celui d'un autre est « introuvable ». Même règle que
-     * {@code AccountService.requireVisible}, qui est privée et prend un {@code Optional} déjà lu :
-     * la partager obligerait à modifier ce service, d'où cette version qui prend un {@code Actor}.
-     */
-    public void requireVisible(Actor actor, Account account) {
-        if (actor.isAdmin()) {
-            return;
-        }
-        var ownsAccount =
-                customerRefs
-                        .findByUserId(actor.userId())
-                        .map(ref -> ref.getCustomerId().equals(account.getCustomerId()))
-                        .orElse(false);
-        if (!ownsAccount) {
-            throw new AccountNotFoundException();
-        }
     }
 }

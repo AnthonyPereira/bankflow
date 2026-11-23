@@ -49,6 +49,7 @@ class TransactionController {
             @RequestParam(required = false) UUID customerId,
             @RequestParam(defaultValue = "0")
                     @Min(value = 0, message = "La page doit être positive.")
+                    @Max(value = 10000, message = "La page doit être inférieure à 10 000.")
                     int page,
             @RequestParam(defaultValue = "20")
                     @Min(value = 1, message = "La taille doit être comprise entre 1 et 100.")

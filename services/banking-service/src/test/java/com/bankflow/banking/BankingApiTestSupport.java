@@ -85,12 +85,18 @@ public abstract class BankingApiTestSupport {
 
     /** Crée la référence d'un client, comme le ferait le consommateur Kafka. */
     protected CustomerRef createCustomerRef(UUID userId, CustomerStatus status) {
+        return createCustomerRef(userId, status, false);
+    }
+
+    /** Variante pour un client de démonstration ({@code demo} vrai). */
+    protected CustomerRef createCustomerRef(UUID userId, CustomerStatus status, boolean demo) {
         return customerRefs.saveAndFlush(
                 new CustomerRef(
                         UUID.randomUUID(),
                         userId,
                         userId + "@bankflow.test",
                         status,
+                        demo,
                         Instant.now()));
     }
 
@@ -127,8 +133,18 @@ public abstract class BankingApiTestSupport {
         return createToken(userId, role, ISSUER, AUDIENCE);
     }
 
+    /** Jeton d'un compte de démonstration : le claim {@code demo} est vrai. */
+    protected static String createDemoToken(UUID userId, String role) {
+        return createToken(userId, role, ISSUER, AUDIENCE, true);
+    }
+
     /** Jeton avec émetteur et audience au choix, pour tester les refus ; rôle nul = sans rôle. */
     protected static String createToken(UUID userId, String role, String issuer, String audience) {
+        return createToken(userId, role, issuer, audience, false);
+    }
+
+    private static String createToken(
+            UUID userId, String role, String issuer, String audience, boolean demo) {
         try {
             var claims =
                     new JWTClaimsSet.Builder()
@@ -136,6 +152,7 @@ public abstract class BankingApiTestSupport {
                             .issuer(issuer)
                             .audience(audience)
                             .claim("role", role)
+                            .claim("demo", demo)
                             .expirationTime(Date.from(Instant.now().plusSeconds(300)))
                             .build();
             var jwt =
