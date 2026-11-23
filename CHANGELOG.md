@@ -2,6 +2,12 @@
 
 Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent [SemVer](https://semver.org/lang/fr/).
 
+## [0.1.1] — 2026-11-23
+
+### Corrigé
+
+- Les images des services Spring se construisent à nouveau : sans `unzip`, le wrapper Maven téléchargeait le `.tar.gz`, dont l'empreinte ne correspond pas à celle vérifiée (`distributionSha256Sum`). La 0.1.0 n'a donc jamais été mise en ligne ; la 0.1.1 est la première version déployée.
+
 ## [0.1.0] — 2026-11-20
 
 Première version publiée : **MVP 1, socle et première mise en ligne**. On peut s'inscrire, se connecter et consulter un tableau de bord. Les données bancaires (comptes, virements) arrivent en 0.2.0.
@@ -77,4 +83,5 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 - Seuls le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka sont déployés : les routes des quatre autres services répondent 503.
 - Le Customer Service, le Banking Service, le Notification Service et l'Analytics & Fraud Service ne sont que des squelettes sécurisés, sans fonctionnalité métier.
 
+[0.1.1]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.0
