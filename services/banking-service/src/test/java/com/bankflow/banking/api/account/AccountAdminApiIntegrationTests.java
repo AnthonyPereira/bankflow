@@ -6,7 +6,10 @@ import com.bankflow.banking.BankingApiTestSupport;
 import com.bankflow.banking.domain.customer.CustomerStatus;
 import java.math.BigDecimal;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -169,6 +172,138 @@ class AccountAdminApiIntegrationTests extends BankingApiTestSupport {
                         .map(node -> node.get("currency").asString())
                         .toList();
         assertThat(currencies).isSorted();
+    }
+
+    @Test
+    void leResumeExposeLesMontantsEnChainesADeuxDecimales() throws Exception {
+        var before = parseJson(send("GET", "/accounts/summary", adminToken, null));
+        var customer = createCustomerRef(UUID.randomUUID(), CustomerStatus.ACTIVE);
+        var account = openAccountFor(adminToken, customer.getCustomerId(), "EUR");
+        setBalance(account, "100.5");
+
+        var after = parseJson(send("GET", "/accounts/summary", adminToken, null));
+
+        var expected =
+                totalBalance(before, "EUR")
+                        .add(new BigDecimal("100.50"))
+                        .setScale(2)
+                        .toPlainString();
+        var raw =
+                after.get("totalsByCurrency")
+                        .valueStream()
+                        .filter(node -> "EUR".equals(node.get("currency").asString()))
+                        .findFirst()
+                        .orElseThrow()
+                        .get("balance");
+        assertThat(raw.isString()).isTrue();
+        assertThat(raw.asString()).isEqualTo(expected).matches("-?\\d+\\.\\d{2}");
+    }
+
+    @Test
+    void leResumeNeListeQueLesDevisesAvecUnCompteOuvert() throws Exception {
+        var summary = parseJson(send("GET", "/accounts/summary", adminToken, null));
+
+        var expected =
+                jdbc.queryForList(
+                        "SELECT DISTINCT currency FROM accounts WHERE status = 'ACTIVE' ORDER BY 1",
+                        String.class);
+
+        var listed =
+                summary.get("totalsByCurrency")
+                        .valueStream()
+                        .map(node -> node.get("currency").asString())
+                        .toList();
+        assertThat(listed).containsExactlyElementsOf(expected);
+        assertThat(
+                        summary.get("totalsByCurrency")
+                                .valueStream()
+                                .allMatch(node -> node.get("openAccounts").asLong() > 0))
+                .isTrue();
+    }
+
+    @Test
+    void unClientAvecCustomerIdNulOuvreUnComptePourLuiMeme() throws Exception {
+        var customer = createCustomerRef(UUID.randomUUID(), CustomerStatus.ACTIVE);
+
+        var response =
+                openAccount(
+                        createToken(customer.getUserId(), CLIENT),
+                        "{\"currency\":\"EUR\",\"customerId\":null}");
+
+        assertThat(response.statusCode()).isEqualTo(201);
+        assertThat(parseJson(response).get("customerId").asString())
+                .isEqualTo(customer.getCustomerId().toString());
+    }
+
+    @Test
+    void unClientQuiEnvoieSonPropreCustomerIdRecoit400() throws Exception {
+        var customer = createCustomerRef(UUID.randomUUID(), CustomerStatus.ACTIVE);
+
+        var response =
+                openAccountFor(
+                        createToken(customer.getUserId(), CLIENT), customer.getCustomerId(), "EUR");
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(parseJson(response).get("errors").get("customerId").asString())
+                .isEqualTo("Ce champ est réservé aux conseillers.");
+    }
+
+    @Test
+    void unCustomerIdMalFormeDonne400ValidationError() throws Exception {
+        var response =
+                openAccount(adminToken, "{\"currency\":\"EUR\",\"customerId\":\"pas-un-uuid\"}");
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(parseJson(response).get("code").asString()).isEqualTo("VALIDATION_ERROR");
+    }
+
+    @Test
+    void unFiltreSurUnClientInconnuDonneUnePageVide() throws Exception {
+        var response = send("GET", "/accounts?customerId=" + UUID.randomUUID(), adminToken, null);
+
+        assertThat(response.statusCode()).isEqualTo(200);
+        var page = parseJson(response);
+        assertThat(page.get("content")).isEmpty();
+        assertThat(page.get("totalElements").asInt()).isZero();
+    }
+
+    @Test
+    void lAdminEtLeClientOuvrantEnParalleleLesCinquiemeEtSixiemeComptesNEnCreentQuUn()
+            throws Exception {
+        var customer = createCustomerRef(UUID.randomUUID(), CustomerStatus.ACTIVE);
+        var clientToken = createToken(customer.getUserId(), CLIENT);
+        for (int i = 0; i < 4; i++) {
+            assertThat(openAccountFor(adminToken, customer.getCustomerId(), "EUR").statusCode())
+                    .isEqualTo(201);
+        }
+        var start = new CountDownLatch(1);
+
+        List<HttpResponse<String>> responses;
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var byAdmin =
+                    executor.submit(() -> {
+                        start.await();
+                        return openAccountFor(adminToken, customer.getCustomerId(), "EUR");
+                    });
+            var byClient =
+                    executor.submit(() -> {
+                        start.await();
+                        return openAccount(clientToken, "{\"currency\":\"EUR\"}");
+                    });
+            start.countDown();
+            responses = List.of(byAdmin.get(), byClient.get());
+        }
+
+        assertThat(responses.stream().map(HttpResponse::statusCode))
+                .containsExactlyInAnyOrder(201, 409);
+        var conflict = responses.stream().filter(r -> r.statusCode() == 409).findFirst();
+        assertThat(parseJson(conflict.orElseThrow()).get("code").asString())
+                .isEqualTo("ACCOUNT_LIMIT_REACHED");
+        assertThat(
+                        parseJson(send("GET", "/accounts", clientToken, null))
+                                .get("totalElements")
+                                .asInt())
+                .isEqualTo(5);
     }
 
     @Test

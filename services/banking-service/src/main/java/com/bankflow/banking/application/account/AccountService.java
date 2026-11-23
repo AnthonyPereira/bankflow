@@ -105,7 +105,7 @@ public class AccountService {
         var active = customerRefs.countByStatus(CustomerStatus.ACTIVE);
         var suspended = customerRefs.countByStatus(CustomerStatus.SUSPENDED);
         return new AccountSummary(
-                active + suspended,
+                customerRefs.count(),
                 active,
                 suspended,
                 accounts.countByStatus(AccountStatus.ACTIVE),
