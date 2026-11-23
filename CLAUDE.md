@@ -74,8 +74,12 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 
 ### Prochaines étapes
 
-**MVP 2 (`0.2.0`)** : le contenu est listé dans le jalon du [BACKLOG](BACKLOG.md#mise-en-ligne-sur-le-serveur-maison).
-1. ADR-004 (résolution du `customerId`), puis BF-006, rattrapage des profils compris (BF-006-11).
-2. BF-007, BF-008 et BF-009, avec les données de démonstration (BF-009-08).
-3. BF-017 et le reste de BF-016 (10b, 11, 12b). Les écrans des comptes peuvent démarrer dès que BF-007 est fusionné.
-4. BF-023-17 (mise en ligne de customer-service et banking-service), puis `release/0.2.0` avec une revue de code complète.
+**MVP 2 (`0.2.0`)** : tout le code est fusionné dans `develop` (PR #57 à #75), avec les [ADR-005 à 007](docs/adr/). Décisions clés :
+- l'administrateur agit en **conseiller au nom des clients** (ouverture, dépôt, retrait, virement, clôture) sans jamais avoir de compte à son nom, et seul lui fait une écriture compensatrice ;
+- plafond de 10 000,00 par opération, au plus 5 comptes actifs par client ;
+- `demo.client` reçoit des comptes et un historique de démonstration, recréés s'ils disparaissent.
+
+Reste à faire :
+1. Revue globale de `release/0.2.0` (Customer, Banking, Auth et infra, front), corrections, puis vérification finale (tests, Docker local, parcours dans un navigateur).
+2. Tour de l'utilisateur en local, puis, **sur son feu vert seulement** : fusion de la PR `deploy-platform` #4 (juste avant), fusion de la release dans `main`, tag `v0.2.0`, report dans `develop`. Procédure : [deploiement.md](docs/runbooks/deploiement.md#mise-en-ligne-de-la-mvp-2-customer-service-et-banking-service).
+3. Suivis hors 0.2.0 : BF-008-11 (purge des clés d'idempotence) et BF-009-10 (limiter le débit des virements).
