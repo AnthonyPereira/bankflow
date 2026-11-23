@@ -40,7 +40,9 @@
           <tbody>
             @for (account of current.content; track account.id) {
               <tr>
-                <th scope="row">{{ account.label || defaultLabel }}</th>
+                <th scope="row">
+                  <a [routerLink]="['/comptes', account.id]">{{ account.label || defaultLabel }}</a>
+                </th>
                 <td class="iban">{{ formatIban(account.accountNumber) }}</td>
                 <td>{{ account.currency }}</td>
                 <td class="numeric">{{ account.balance | amount: account.currency }}</td>
