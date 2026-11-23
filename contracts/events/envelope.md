@@ -4,7 +4,7 @@ Chaque message Kafka de BankFlow est un document JSON qui respecte cette envelop
 
 | Champ | Type | Obligatoire | Description |
 |---|---|---|---|
-| `eventId` | UUID | Oui | Identifiant unique et stable de l'événement. Les consommateurs s'en servent pour dédupliquer. |
+| `eventId` | UUID | Oui | Identifiant unique de l'événement, pour la traçabilité. Un même fait peut être republié avec un nouvel `eventId` (rejeu) : les consommateurs dédupliquent sur la clé métier, jamais sur `eventId` (voir l'ADR-004). |
 | `eventType` | Texte | Oui | Nom de l'événement en PascalCase, par exemple `UserRegistered`. |
 | `eventVersion` | Entier ≥ 1 | Oui | Version du contrat du `payload`. |
 | `occurredAt` | Date ISO 8601 UTC | Oui | Moment où le fait métier s'est produit. |
@@ -31,3 +31,5 @@ Chaque message Kafka de BankFlow est un document JSON qui respecte cette envelop
 - Le `payload` reste minimal : jamais de mot de passe, de token ni de donnée personnelle inutile.
 - Les messages sont sérialisés en texte JSON avec `StringSerializer`, sans en-tête de type Java (ADR-001, section 2.6).
 - Ajouter un champ facultatif est compatible. Renommer ou supprimer un champ impose une nouvelle `eventVersion`.
+- Un consommateur ignore les champs inconnus du `payload` : c'est ce qui rend compatible l'ajout d'un champ facultatif.
+- Un message illisible, d'un `eventType` inconnu ou d'une `eventVersion` non prise en charge est journalisé sans son contenu puis ignoré : il ne bloque jamais la partition (DLQ prévue en BF-013).

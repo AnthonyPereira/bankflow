@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bankflow.local/contracts/events/CustomerCreated.v1.json",
+  "title": "CustomerCreated v1",
+  "description": "Payload publié sur bank.customers par customer-service, avec customerId comme clé de message. Il peut être republié pour un client existant (rejeu à la réception d'un UserRegistered) : les consommateurs doivent être idempotents sur customerId. Il ne contient ni nom, ni téléphone, ni adresse : ces données ne quittent pas le Customer Service. `occurredAt` de l'enveloppe est la date de l'état publié ; un consommateur ignore un événement plus ancien que l'état qu'il connaît.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["customerId", "userId", "email", "status"],
+  "properties": {
+    "customerId": { "type": "string", "format": "uuid" },
+    "userId": { "type": "string", "format": "uuid" },
+    "email": { "type": "string", "format": "email", "maxLength": 254 },
+    "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] }
+  }
+}
