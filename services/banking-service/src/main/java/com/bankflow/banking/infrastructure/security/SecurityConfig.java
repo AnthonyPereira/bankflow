@@ -67,6 +67,9 @@ class SecurityConfig {
                                 // Vue d'ensemble de la banque : administrateurs seulement
                                 .requestMatchers(HttpMethod.GET, "/accounts/summary")
                                 .hasAuthority("ROLE_ADMIN")
+                                // Annulation d'une opération : refusée avant toute lecture du corps
+                                .requestMatchers(HttpMethod.POST, "/transactions/*/compensations")
+                                .hasAuthority("ROLE_ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->

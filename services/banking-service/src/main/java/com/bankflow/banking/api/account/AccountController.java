@@ -1,6 +1,7 @@
 package com.bankflow.banking.api.account;
 
 import com.bankflow.banking.api.page.PageResponse;
+import com.bankflow.banking.api.security.JwtActors;
 import com.bankflow.banking.application.account.AccountService;
 import com.bankflow.banking.domain.account.Account;
 import jakarta.validation.Valid;
@@ -23,8 +24,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RestController
 @RequestMapping("/accounts")
 class AccountController {
-
-    private static final String ADMIN_ROLE = "ROLE_ADMIN";
 
     private final AccountService accountService;
     private final Clock clock;
@@ -103,10 +102,10 @@ class AccountController {
     }
 
     private static UUID readUserId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+        return JwtActors.createFrom(jwt).userId();
     }
 
     private static boolean isAdmin(Jwt jwt) {
-        return ADMIN_ROLE.equals(jwt.getClaimAsString("role"));
+        return JwtActors.createFrom(jwt).isAdmin();
     }
 }

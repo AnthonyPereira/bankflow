@@ -6,8 +6,16 @@ import com.bankflow.banking.application.account.AccountNumberUnavailableExceptio
 import com.bankflow.banking.application.account.CustomerNotFoundException;
 import com.bankflow.banking.application.account.CustomerNotReadyException;
 import com.bankflow.banking.application.account.CustomerSuspendedException;
+import com.bankflow.banking.application.idempotency.IdempotencyKeyReusedException;
+import com.bankflow.banking.application.idempotency.IdempotencyKeys;
+import com.bankflow.banking.application.idempotency.InvalidIdempotencyKeyException;
+import com.bankflow.banking.application.transaction.InvalidPeriodException;
+import com.bankflow.banking.application.transaction.TransactionNotFoundException;
 import com.bankflow.banking.domain.account.AccountBalanceNotZeroException;
 import com.bankflow.banking.domain.account.AccountClosedException;
+import com.bankflow.banking.domain.account.InsufficientFundsException;
+import com.bankflow.banking.domain.transaction.AlreadyCompensatedException;
+import com.bankflow.banking.domain.transaction.CompensationNotAllowedException;
 import java.util.LinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,6 +89,49 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail handleAccountNumberUnavailable(AccountNumberUnavailableException exception) {
         return buildProblem(
                 HttpStatus.SERVICE_UNAVAILABLE, "ACCOUNT_NUMBER_UNAVAILABLE", exception);
+    }
+
+    @ExceptionHandler(InsufficientFundsException.class)
+    ProblemDetail handleInsufficientFunds(InsufficientFundsException exception) {
+        return buildProblem(HttpStatus.CONFLICT, "INSUFFICIENT_FUNDS", exception);
+    }
+
+    @ExceptionHandler(TransactionNotFoundException.class)
+    ProblemDetail handleTransactionNotFound(TransactionNotFoundException exception) {
+        return buildProblem(HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", exception);
+    }
+
+    @ExceptionHandler(CompensationNotAllowedException.class)
+    ProblemDetail handleCompensationNotAllowed(CompensationNotAllowedException exception) {
+        return buildProblem(HttpStatus.CONFLICT, "COMPENSATION_NOT_ALLOWED", exception);
+    }
+
+    @ExceptionHandler(AlreadyCompensatedException.class)
+    ProblemDetail handleAlreadyCompensated(AlreadyCompensatedException exception) {
+        return buildProblem(HttpStatus.CONFLICT, "ALREADY_COMPENSATED", exception);
+    }
+
+    @ExceptionHandler(IdempotencyKeyReusedException.class)
+    ProblemDetail handleIdempotencyKeyReused(IdempotencyKeyReusedException exception) {
+        return buildProblem(HttpStatus.UNPROCESSABLE_CONTENT, "IDEMPOTENCY_KEY_REUSED", exception);
+    }
+
+    @ExceptionHandler(InvalidIdempotencyKeyException.class)
+    ResponseEntity<Object> handleInvalidIdempotencyKey(
+            InvalidIdempotencyKeyException exception, WebRequest request) {
+        var errors = new LinkedHashMap<String, String>();
+        errors.put(IdempotencyKeys.HEADER, exception.getMessage());
+        return buildValidationResponse(
+                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler(InvalidPeriodException.class)
+    ResponseEntity<Object> handleInvalidPeriod(
+            InvalidPeriodException exception, WebRequest request) {
+        var errors = new LinkedHashMap<String, String>();
+        errors.put("from", exception.getMessage());
+        return buildValidationResponse(
+                exception, errors, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
