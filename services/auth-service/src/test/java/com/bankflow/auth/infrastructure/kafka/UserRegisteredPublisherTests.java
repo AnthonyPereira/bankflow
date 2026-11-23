@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.UserRegistered;
 import java.time.Instant;
 import java.util.UUID;
@@ -18,7 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 class UserRegisteredPublisherTests {
 
     private static final UserRegistered EVENT =
-            new UserRegistered(UUID.randomUUID(), "a@bankflow.test", false, Instant.now());
+            new UserRegistered(
+                    UUID.randomUUID(), "a@bankflow.test", false, Role.ROLE_CLIENT, Instant.now());
 
     @SuppressWarnings("unchecked")
     private final KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);

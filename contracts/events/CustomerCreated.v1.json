@@ -10,6 +10,7 @@
     "customerId": { "type": "string", "format": "uuid" },
     "userId": { "type": "string", "format": "uuid" },
     "email": { "type": "string", "format": "email", "maxLength": 254 },
-    "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] }
+    "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED"] },
+    "demo": { "type": "boolean", "description": "Vrai pour un client de démonstration, toujours renseigné par le Customer Service. Absent = inconnu : un consommateur garde la valeur qu'il connaît." }
   }
 }

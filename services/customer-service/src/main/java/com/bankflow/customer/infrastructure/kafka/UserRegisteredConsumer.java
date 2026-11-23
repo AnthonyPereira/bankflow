@@ -41,6 +41,11 @@ class UserRegisteredConsumer {
         if (event == null) {
             return;
         }
+        if (event.admin()) {
+            // Un administrateur n'a jamais de dossier client : rien à créer ni à publier
+            log.info("UserRegistered ignoré (compte administrateur)");
+            return;
+        }
         try {
             registrationService.registerUser(event.userId(), event.email(), event.demo());
         } catch (DataIntegrityViolationException concurrentInsert) {
@@ -79,7 +84,9 @@ class UserRegisteredConsumer {
         if (!demo.isMissingNode() && !demo.isNull() && !demo.isBoolean()) {
             return skip(record, "demo invalide");
         }
-        return new ParsedEvent(userId, Customer.normalizeEmail(email), demo.asBoolean(false));
+        var admin = "ROLE_ADMIN".equals(payload.path("role").asString(""));
+        return new ParsedEvent(
+                userId, Customer.normalizeEmail(email), demo.asBoolean(false), admin);
     }
 
     private static UUID parseUuid(String text) {
@@ -99,5 +106,5 @@ class UserRegisteredConsumer {
         return null;
     }
 
-    private record ParsedEvent(UUID userId, String email, boolean demo) {}
+    private record ParsedEvent(UUID userId, String email, boolean demo, boolean admin) {}
 }

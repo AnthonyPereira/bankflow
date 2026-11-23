@@ -38,10 +38,11 @@ public class CustomerAdminService {
      */
     @Transactional(readOnly = true)
     public Page<Customer> searchCustomers(
-            int page, int size, CustomerStatus status, String searchText) {
+            int page, int size, CustomerStatus status, String searchText, boolean demoOnly) {
         var sort = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by("id"));
         return customers.findAll(
-                createSearchSpecification(status, searchText), PageRequest.of(page, size, sort));
+                createSearchSpecification(status, searchText, demoOnly),
+                PageRequest.of(page, size, sort));
     }
 
     /**
@@ -51,8 +52,12 @@ public class CustomerAdminService {
      *     client de démonstration
      */
     @Transactional
-    public Customer changeStatus(UUID customerId, CustomerStatus newStatus) {
-        var customer = customers.findById(customerId).orElseThrow(CustomerNotFoundException::new);
+    public Customer changeStatus(UUID customerId, CustomerStatus newStatus, boolean demoOnly) {
+        var customer =
+                customers
+                        .findById(customerId)
+                        .filter(found -> !demoOnly || found.isDemo())
+                        .orElseThrow(CustomerNotFoundException::new);
         var previousStatus = customer.getStatus();
         var now = clock.instant();
         if (newStatus == CustomerStatus.SUSPENDED) {
@@ -67,9 +72,12 @@ public class CustomerAdminService {
     }
 
     private static Specification<Customer> createSearchSpecification(
-            CustomerStatus status, String searchText) {
+            CustomerStatus status, String searchText, boolean demoOnly) {
         return (root, query, builder) -> {
             var predicates = new ArrayList<Predicate>();
+            if (demoOnly) {
+                predicates.add(builder.isTrue(root.get("demo")));
+            }
             if (status != null) {
                 predicates.add(builder.equal(root.get("status"), status));
             }

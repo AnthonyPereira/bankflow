@@ -35,6 +35,7 @@ public class AccessTokenService {
                         .audience(List.of(properties.audience()))
                         .subject(user.getId().toString())
                         .claim("role", user.getRole().name())
+                        .claim("demo", user.isDemo())
                         .issuedAt(now)
                         .expiresAt(now.plus(properties.accessTokenTtl()))
                         .build();

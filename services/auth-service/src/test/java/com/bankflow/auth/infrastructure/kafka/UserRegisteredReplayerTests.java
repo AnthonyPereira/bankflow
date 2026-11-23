@@ -91,7 +91,12 @@ class UserRegisteredReplayerTests {
 
         assertThat(captor.getValue())
                 .isEqualTo(
-                        new UserRegistered(demo.getId(), "demo@bankflow.local", true, CREATED_AT));
+                        new UserRegistered(
+                                demo.getId(),
+                                "demo@bankflow.local",
+                                true,
+                                Role.ROLE_CLIENT,
+                                CREATED_AT));
     }
 
     private UserRegisteredReplayer createReplayer(boolean enabled) {

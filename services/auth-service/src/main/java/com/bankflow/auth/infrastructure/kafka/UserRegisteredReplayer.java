@@ -118,6 +118,7 @@ class UserRegisteredReplayer {
                                             user.getId(),
                                             user.getEmail(),
                                             user.isDemo(),
+                                            user.getRole(),
                                             user.getCreatedAt()))
                             .getContent();
             return new EventsPage(events, slice.hasNext());

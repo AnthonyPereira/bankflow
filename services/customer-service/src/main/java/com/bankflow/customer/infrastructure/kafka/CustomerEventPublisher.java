@@ -43,6 +43,7 @@ class CustomerEventPublisher {
                 event.userId(),
                 event.email(),
                 event.status(),
+                event.demo(),
                 event.occurredAt());
     }
 
@@ -54,6 +55,7 @@ class CustomerEventPublisher {
                 event.userId(),
                 event.email(),
                 event.status(),
+                event.demo(),
                 event.occurredAt());
     }
 
@@ -63,6 +65,7 @@ class CustomerEventPublisher {
             UUID userId,
             String email,
             CustomerStatus status,
+            boolean demo,
             Instant occurredAt) {
         var key = customerId.toString();
         try {
@@ -71,6 +74,7 @@ class CustomerEventPublisher {
             payload.put("userId", userId);
             payload.put("email", email);
             payload.put("status", status);
+            payload.put("demo", demo);
             kafkaTemplate
                     .send(
                             TOPIC,

@@ -54,6 +54,7 @@ class CustomerController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     PageResponse<CustomerResponse> listCustomers(
+            JwtAuthenticationToken authentication,
             @RequestParam(defaultValue = "0")
                     @Min(value = 0, message = "La page doit être positive")
                     int page,
@@ -66,22 +67,32 @@ class CustomerController {
                     String q) {
         return PageResponse.createFrom(
                 adminService
-                        .searchCustomers(page, size, status, q)
+                        .searchCustomers(
+                                page,
+                                size,
+                                status,
+                                q,
+                                createCurrentUser(authentication).isRestrictedToDemo())
                         .map(CustomerResponse::createFrom));
     }
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     CustomerResponse updateStatus(
-            @PathVariable UUID id, @Valid @RequestBody UpdateStatusRequest body) {
-        return CustomerResponse.createFrom(adminService.changeStatus(id, body.status()));
+            JwtAuthenticationToken authentication,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateStatusRequest body) {
+        return CustomerResponse.createFrom(
+                adminService.changeStatus(
+                        id, body.status(), createCurrentUser(authentication).isRestrictedToDemo()));
     }
 
     private static CurrentUser createCurrentUser(JwtAuthenticationToken authentication) {
         var admin =
                 authentication.getAuthorities().stream()
                         .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
-        return new CurrentUser(parseUserId(authentication.getToken().getSubject()), admin);
+        var demo = Boolean.TRUE.equals(authentication.getToken().getClaimAsBoolean("demo"));
+        return new CurrentUser(parseUserId(authentication.getToken().getSubject()), admin, demo);
     }
 
     private static UUID parseUserId(String subject) {

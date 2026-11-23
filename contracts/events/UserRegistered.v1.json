@@ -9,6 +9,7 @@
   "properties": {
     "userId": { "type": "string", "format": "uuid" },
     "email": { "type": "string", "format": "email", "maxLength": 254 },
-    "demo": { "type": "boolean", "description": "Vrai pour un compte de démonstration ; absent = faux. Un consommateur ne repasse jamais un compte de démonstration à faux." }
+    "demo": { "type": "boolean", "description": "Vrai pour un compte de démonstration ; absent = faux. Un consommateur ne repasse jamais un compte de démonstration à faux." },
+    "role": { "type": "string", "enum": ["ROLE_CLIENT", "ROLE_ADMIN"], "description": "Rôle du compte, toujours renseigné par l'Auth Service. Absent = ROLE_CLIENT. Un compte ROLE_ADMIN n'a jamais de dossier client : le Customer Service l'ignore." }
   }
 }

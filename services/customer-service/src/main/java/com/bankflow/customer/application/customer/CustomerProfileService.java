@@ -40,7 +40,11 @@ public class CustomerProfileService {
     @Transactional(readOnly = true)
     public Customer getCustomer(UUID customerId, CurrentUser user) {
         var customer = customers.findById(customerId).orElseThrow(CustomerNotFoundException::new);
-        if (!user.admin() && !customer.getUserId().equals(user.userId())) {
+        var visible =
+                user.admin()
+                        ? !user.isRestrictedToDemo() || customer.isDemo()
+                        : customer.getUserId().equals(user.userId());
+        if (!visible) {
             throw new CustomerNotFoundException();
         }
         return customer;
