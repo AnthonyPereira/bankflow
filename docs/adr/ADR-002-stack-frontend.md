@@ -47,7 +47,7 @@ Plusieurs besoins de l'interface restent sans réponse dans le cahier des charge
 | Bibliothèque UI | **Angular Material** (thème Material 3) |
 | Primitives et comportements | **Angular CDK** : overlay, a11y, layout (`BreakpointObserver`), drag & drop si besoin, et harnesses de test |
 | Thème | Thème M3 personnalisé en **SCSS** (palette BankFlow, mode clair et sombre via les design tokens Material) |
-| Icônes | **Material Symbols**, auto-hébergées (paquet npm, pas d'appel à Google Fonts au runtime) |
+| Icônes | **Material Symbols**, auto-hébergées en **fichiers SVG** dans `public/icons` (la police complète pèse 4 Mo, pas d'appel à Google Fonts au runtime) |
 | Notifications UI | `MatSnackBar` encapsulé dans un `NotificationUiService` |
 | Tableaux | `MatTable`, `MatPaginator` et `MatSort`, avec pagination et tri **côté serveur** |
 
@@ -160,7 +160,7 @@ Plusieurs besoins de l'interface restent sans réponse dans le cahier des charge
 ## 5. Actions de suivi
 - [ ] Vérifier dans l'API Angular 22 les options exactes de `@Service` (`autoProvided`, `factory`).
 - [ ] Vérifier dans BF-016 le statut (stable ou expérimental) des Signal Forms et de `httpResource` dans Angular 22.
-- [ ] Figer les versions exactes dans `package.json` (Angular, Material, ng2-charts compatible Angular 22).
+- [x] Figer les versions dans `package-lock.json` : Angular 22.2, Angular Material 22.3, TypeScript 6.0 et Vitest 5.1 (2026-11-18). ng2-charts sera ajouté avec BF-018.
 - [x] Mettre à jour BF-016-01, BF-016-06 et BF-018-02 dans le backlog.
 - [x] Mettre à jour le cahier des charges (v1.1, section 3.2).
 - [ ] Aligner l'ADR de BF-005 (refresh token) sur la stratégie du cookie `HttpOnly`.

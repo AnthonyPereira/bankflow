@@ -1,0 +1,8 @@
+# Profil des tests automatisés
+spring:
+  main:
+    banner-mode: "off"
+
+logging:
+  level:
+    com.bankflow: INFO

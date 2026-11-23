@@ -1,0 +1,9 @@
+# Profil de développement local
+logging:
+  level:
+    com.bankflow: DEBUG
+
+management:
+  endpoint:
+    health:
+      show-details: always
