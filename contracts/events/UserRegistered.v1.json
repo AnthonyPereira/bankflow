@@ -9,6 +9,6 @@
   "properties": {
     "userId": { "type": "string", "format": "uuid" },
     "email": { "type": "string", "format": "email", "maxLength": 254 },
-    "demo": { "type": "boolean", "description": "Vrai pour un compte de démonstration ; absent = faux." }
+    "demo": { "type": "boolean", "description": "Vrai pour un compte de démonstration ; absent = faux. Un consommateur ne repasse jamais un compte de démonstration à faux." }
   }
 }

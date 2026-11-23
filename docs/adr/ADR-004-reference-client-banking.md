@@ -5,11 +5,11 @@
 | **Statut** | Accepté (2026-11-23) |
 | **Date** | 2026-11-23 |
 | **Lots concernés** | BF-006 (Customer Service), BF-007 (Banking Service) |
-| **Complète** | ADR-001 (un service ne lit jamais la base d'un autre) |
+| **Complète** | ADR-001 (services autonomes, aucune classe partagée) ; règle transverse du BACKLOG « aucun accès d'un service à la base d'un autre » |
 
 ## 1. Contexte
 
-Un compte bancaire appartient à un `customerId`, géré par le Customer Service. Le JWT ne porte que `sub` (le `userId`) et `role` : il ne contient pas l'email. Aucun service ne lit la base d'un autre. Le Banking Service doit pourtant, à chaque requête, retrouver le client de l'utilisateur connecté et savoir s'il est suspendu.
+Un compte bancaire appartient à un `customerId`, géré par le Customer Service. Le JWT ne porte que `sub` (le `userId`) et `role` : il ne contient pas l'email. Les services sont autonomes : aucun ne lit la base d'un autre (exigence transverse du BACKLOG, « aucun accès d'un service à la base d'un autre »). Le Banking Service doit pourtant, à chaque requête, retrouver le client de l'utilisateur connecté et savoir s'il est suspendu.
 
 ## 2. Options
 
@@ -33,6 +33,12 @@ Un événement peut manquer : compte seedé (admin et démo), compte inscrit ava
 - Le Customer Service est idempotent sur `userId` : il crée le client s'il n'existe pas, et republie `CustomerCreated` pour un client existant. Cela rattrape aussi un `CustomerCreated` perdu.
 - Le Banking Service fait un upsert de `customer_refs` : rejouer un événement est sans effet.
 
+### Ordre des événements
+
+`occurredAt` de `CustomerCreated` et `CustomerUpdated` est la date de l'état publié (`updated_at` du client), y compris lors d'une republication. Le Banking Service ignore un événement plus ancien que le dernier appliqué (stocké dans `customer_refs.updated_at`) : un ancien `CustomerCreated(ACTIVE)` rejoué ne réactive donc jamais un client suspendu. La clé `customerId` garantit l'ordre dans une partition ; la comparaison de dates couvre les republications concurrentes et les rejeux.
+
+Le Customer Service ne retire jamais l'indicateur `demo` : un `UserRegistered` sans `demo` ou avec `demo: false` ne le remet pas à faux.
+
 **Limite assumée** : le coût est linéaire au nombre d'utilisateurs à chaque démarrage de l'Auth Service. C'est acceptable pour une démonstration. L'Outbox (BF-011) remplacera ce mécanisme.
 
 ## 5. Alternatives écartées
@@ -41,14 +47,14 @@ Un événement peut manquer : compte seedé (admin et démo), compte inscrit ava
 |---|---|
 | Appel REST synchrone (option A) | Couplage temporel et perte de disponibilité du Banking Service. |
 | Créer la fiche client à la première visite | Le JWT ne contient pas l'email, que la fiche doit porter. |
-| Lire la base du Customer Service | Chaque service possède sa base : aucun service ne lit celle d'un autre. |
+| Lire la base du Customer Service | Chaque service possède sa base : règle transverse du BACKLOG, aucun accès d'un service à la base d'un autre. |
 
 ## 6. Conséquences
 
 **Positives**
 - Le Banking Service fonctionne même si le Customer Service est arrêté.
 - La suspension d'un client est propagée sans appel synchrone.
-- Peu de données personnelles circulent sur Kafka.
+- Seul l'email circule sur Kafka, jamais le nom, le téléphone ni l'adresse. Il sera aussi conservé dans la DLQ de BF-013 pour un message en échec.
 
 **Négatives et risques**
 - Un délai sépare l'inscription de la disponibilité de la fiche : le Banking Service répond 409 `CUSTOMER_NOT_READY`, le Customer Service 404 `CUSTOMER_NOT_FOUND`, et le front réessaie.
