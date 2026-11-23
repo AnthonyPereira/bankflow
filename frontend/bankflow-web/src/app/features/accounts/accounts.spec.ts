@@ -49,12 +49,13 @@ describe('Accounts', () => {
     expect(screen.getByRole('heading', { name: 'Ouvrir un compte' })).toBeTruthy();
   });
 
-  it('titre la page « Tous les comptes » pour un administrateur', async () => {
+  it('titre la page « Tous les comptes » et masque l’ouverture pour un administrateur', async () => {
     await setup(page([ACCOUNT]), true);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Tous les comptes' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Comptes des clients' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Ouvrir un compte à votre nom' })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /Ouvrir un compte/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ouvrir le compte' })).toBeNull();
     expect(screen.queryByText('Mes comptes')).toBeNull();
   });
 
