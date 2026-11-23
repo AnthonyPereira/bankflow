@@ -67,3 +67,4 @@ Ils sont testés :
 - Les tests ne peuvent pas nettoyer ces tables avec `DELETE` : ils utilisent des données isolées par test.
 - Les opérations d'un même compte sont sérialisées par le verrou. C'est acceptable à cette échelle.
 - Le compte `CASH` concentre toutes les écritures de dépôt et de retrait. Il est exclu des statistiques de la banque.
+- Les statuts `PENDING` et `REJECTED` d'un virement sont réservés à un traitement asynchrone futur (par exemple un contrôle antifraude) : aujourd'hui un virement est exécuté dans la requête et enregistré directement `COMPLETED`, ou refusé sans laisser de trace.

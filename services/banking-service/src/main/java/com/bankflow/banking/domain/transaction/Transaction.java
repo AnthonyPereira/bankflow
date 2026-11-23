@@ -71,6 +71,7 @@ public class Transaction implements Persistable<UUID> {
             TransactionType type,
             Money amount,
             Money balanceAfter,
+            UUID transferId,
             UUID compensatesTransactionId,
             String description,
             Actor actor,
@@ -81,6 +82,7 @@ public class Transaction implements Persistable<UUID> {
         this.amount = amount.amount();
         this.currency = amount.currency();
         this.balanceAfter = balanceAfter.amount();
+        this.transferId = transferId;
         this.compensatesTransactionId = compensatesTransactionId;
         this.description = description;
         this.performedByUserId = actor.userId();
@@ -98,7 +100,21 @@ public class Transaction implements Persistable<UUID> {
             Actor actor,
             Instant now) {
         return new Transaction(
-                accountId, type, amount, balanceAfter, null, description, actor, now);
+                accountId, type, amount, balanceAfter, null, null, description, actor, now);
+    }
+
+    /** Un côté d'un virement : {@code TRANSFER_OUT} sur la source, {@code TRANSFER_IN} ailleurs. */
+    public static Transaction createTransferLeg(
+            UUID accountId,
+            TransactionType type,
+            Money amount,
+            Money balanceAfter,
+            UUID transferId,
+            String description,
+            Actor actor,
+            Instant now) {
+        return new Transaction(
+                accountId, type, amount, balanceAfter, transferId, null, description, actor, now);
     }
 
     /** Écriture compensatrice : même compte et même montant que l'opération annulée. */
@@ -109,6 +125,7 @@ public class Transaction implements Persistable<UUID> {
                 TransactionType.COMPENSATION,
                 original.getAmount(),
                 balanceAfter,
+                null,
                 original.id,
                 reason,
                 actor,
