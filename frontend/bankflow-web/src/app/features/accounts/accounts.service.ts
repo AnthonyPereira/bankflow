@@ -3,7 +3,7 @@ import { inject, Service } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SILENT_ERRORS } from '../../core/http/api';
-import { Account, OpenAccountRequest, PageResponse } from './accounts.models';
+import { Account, AccountsSummary, OpenAccountRequest, PageResponse } from './accounts.models';
 
 const ACCOUNTS_URL = `${environment.apiUrl}/accounts`;
 
@@ -40,6 +40,11 @@ export class AccountsService {
   listAccounts(page: number, size: number): Observable<PageResponse<Account>> {
     const params = new HttpParams().set('page', page).set('size', size);
     return this.http.get<PageResponse<Account>>(ACCOUNTS_URL, { params });
+  }
+
+  /** Vue d'ensemble de la banque, réservée à l'administrateur. */
+  getSummary(): Observable<AccountsSummary> {
+    return this.http.get<AccountsSummary>(`${ACCOUNTS_URL}/summary`);
   }
 
   /** Les erreurs métier (403, 409) sont affichées par l'écran, pas par un message global. */

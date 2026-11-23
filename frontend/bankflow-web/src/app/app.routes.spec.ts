@@ -10,6 +10,13 @@ describe('routes', () => {
   const shell = routes.find((route) => route.path === '');
   const administration = findChild(shell, 'administration');
 
+  it('expose le virement dans le shell, en chargement différé', () => {
+    const transfer = findChild(shell, 'virement');
+
+    expect(transfer?.title).toBe('Faire un virement · BankFlow');
+    expect(transfer?.loadComponent).toBeTypeOf('function');
+  });
+
   it("réserve toute l'administration à l'administrateur", () => {
     expect(administration?.canActivate).toEqual([adminGuard]);
   });

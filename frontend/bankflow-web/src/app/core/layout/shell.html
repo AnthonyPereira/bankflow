@@ -69,6 +69,19 @@
         <mat-icon matListItemIcon aria-hidden="true" svgIcon="receipt_long" />
         <span matListItemTitle>{{ operationsTitle() }}</span>
       </a>
+      @if (!isAdmin()) {
+        <a
+          mat-list-item
+          routerLink="/virement"
+          routerLinkActive
+          #transferLink="routerLinkActive"
+          [activated]="transferLink.isActive"
+          (click)="closeMenu()"
+        >
+          <mat-icon matListItemIcon aria-hidden="true" svgIcon="swap_horiz" />
+          <span matListItemTitle>Faire un virement</span>
+        </a>
+      }
       <a
         mat-list-item
         routerLink="/profil"

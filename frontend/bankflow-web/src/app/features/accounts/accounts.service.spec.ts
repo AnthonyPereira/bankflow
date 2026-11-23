@@ -32,6 +32,14 @@ describe('AccountsService', () => {
     request.flush({ content: [], page: 2, size: 20, totalElements: 0, totalPages: 0 });
   });
 
+  it('lit la vue de la banque', () => {
+    service.getSummary().subscribe();
+
+    const request = http.expectOne('/api/accounts/summary');
+    expect(request.request.method).toBe('GET');
+    request.flush({});
+  });
+
   it("ouvre un compte avec la devise et le libellé, en gérant lui-même l'erreur", () => {
     service.openAccount({ currency: 'USD', label: 'Voyage' }).subscribe();
 

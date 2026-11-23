@@ -4,7 +4,7 @@ import {
   AMOUNT_NOT_A_NUMBER_MESSAGE,
   AMOUNT_POSITIVE_MESSAGE,
   parseAmount,
-} from './account-detail.models';
+} from './amount-input';
 
 describe('parseAmount', () => {
   it.each([

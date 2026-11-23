@@ -1,0 +1,198 @@
+<h1>Faire un virement</h1>
+
+@if (isAdmin() && !from()) {
+  <section class="panel">
+    <p>{{ chooseAccountFirstMessage }}</p>
+    <a matButton="filled" routerLink="/administration/clients">Voir les clients</a>
+  </section>
+} @else if (isAdmin() ? adminAccount.error() : accounts.error()) {
+  <section class="panel">
+    <p role="alert">Le compte source n'a pas pu être chargé.</p>
+    <button
+      matButton="outlined"
+      type="button"
+      (click)="isAdmin() ? adminAccount.reload() : accounts.reload()"
+    >
+      Réessayer
+    </button>
+  </section>
+} @else if (isAdmin() ? !adminAccount.hasValue() : !accounts.hasValue()) {
+  <mat-spinner diameter="32" aria-label="Chargement du compte" />
+} @else if (isAdmin() && source()?.status === 'CLOSED') {
+  <section class="panel">
+    <p role="alert">{{ closedSourceMessage }}</p>
+    <a matButton="outlined" [routerLink]="['/comptes', from()]">Retour au compte</a>
+  </section>
+} @else if (!isAdmin() && activeAccounts().length === 0) {
+  <section class="panel">
+    <p>Vous n'avez aucun compte actif pour faire un virement.</p>
+    <a matButton="outlined" routerLink="/comptes">Voir mes comptes</a>
+  </section>
+} @else {
+  <section class="panel" aria-labelledby="form-title" [hidden]="step() !== 'form'">
+    <h2 id="form-title" tabindex="-1">1. Saisir le virement</h2>
+    @if (isAdmin()) {
+      <p class="intro">Vous agissez au nom du client : le virement est tracé comme tel.</p>
+    }
+    <form [formGroup]="form" (ngSubmit)="goToReview()" novalidate>
+      @if (isAdmin()) {
+        @let account = source();
+        @if (account) {
+          <dl class="source">
+            <dt>Compte source</dt>
+            <dd>
+              {{ getAccountLabel(account) }} ·
+              <span class="iban">{{ formatIban(account.accountNumber) }}</span> · solde
+              {{ account.balance | amount: account.currency }}
+            </dd>
+          </dl>
+        }
+      } @else {
+        <mat-form-field appearance="outline">
+          <mat-label>Compte source</mat-label>
+          <select matNativeControl formControlName="sourceAccountId">
+            <option value="" disabled>Choisissez un compte</option>
+            @for (account of activeAccounts(); track account.id) {
+              <option [value]="account.id">
+                {{ getAccountLabel(account) }} ·
+                {{ account.balance | amount: account.currency }}
+              </option>
+            }
+          </select>
+          @if (form.controls.sourceAccountId.hasError('server')) {
+            <mat-error>{{ form.controls.sourceAccountId.getError('server') }}</mat-error>
+          } @else if (form.controls.sourceAccountId.hasError('required')) {
+            <mat-error>Choisissez le compte à débiter.</mat-error>
+          }
+        </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>IBAN du destinataire</mat-label>
+        <input matInput autocomplete="off" spellcheck="false" formControlName="destinationIban" />
+        @if (form.controls.destinationIban.hasError('server')) {
+          <mat-error>{{ form.controls.destinationIban.getError('server') }}</mat-error>
+        } @else if (form.controls.destinationIban.hasError('required')) {
+          <mat-error>Saisissez l'IBAN du destinataire.</mat-error>
+        } @else if (form.controls.destinationIban.hasError('iban')) {
+          <mat-error>{{ form.controls.destinationIban.getError('iban') }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Montant{{ source() ? ' (' + source()?.currency + ')' : '' }}</mat-label>
+        <input matInput inputmode="decimal" autocomplete="off" formControlName="amount" />
+        @if (form.controls.amount.hasError('server')) {
+          <mat-error>{{ form.controls.amount.getError('server') }}</mat-error>
+        } @else if (form.controls.amount.hasError('amount')) {
+          <mat-error>{{ form.controls.amount.getError('amount') }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Motif (facultatif)</mat-label>
+        <input matInput autocomplete="off" formControlName="description" />
+        @if (form.controls.description.hasError('server')) {
+          <mat-error>{{ form.controls.description.getError('server') }}</mat-error>
+        } @else if (form.controls.description.hasError('maxlength')) {
+          <mat-error>Le motif ne peut pas dépasser {{ maxDescription }} caractères.</mat-error>
+        }
+      </mat-form-field>
+
+      <button matButton="filled" class="submit" type="submit">Continuer</button>
+    </form>
+  </section>
+  @switch (step()) {
+    @case ('review') {
+      @let current = summary();
+      @if (current) {
+        <section class="panel" aria-labelledby="review-title">
+          <h2 id="review-title" tabindex="-1">2. Vérifier le virement</h2>
+          <dl class="recap">
+            <div>
+              <dt>Compte source</dt>
+              <dd>
+                {{ getAccountLabel(current.source) }}
+                <span class="iban">{{ formatIban(current.source.accountNumber) }}</span>
+              </dd>
+            </div>
+            <div>
+              <dt>IBAN du destinataire</dt>
+              <dd class="iban">{{ formatIban(current.destinationIban) }}</dd>
+            </div>
+            <div>
+              <dt>Montant</dt>
+              <dd class="balance">{{ current.amount | amount: current.source.currency }}</dd>
+            </div>
+            <div>
+              <dt>Motif</dt>
+              <dd>{{ current.description ?? '—' }}</dd>
+            </div>
+          </dl>
+          <div class="actions">
+            <button
+              matButton="filled"
+              class="confirm"
+              type="button"
+              [disabled]="isSubmitting()"
+              (click)="confirmTransfer()"
+            >
+              {{ isSubmitting() ? 'Envoi…' : 'Confirmer le virement' }}
+            </button>
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="isSubmitting()"
+              (click)="editTransfer()"
+            >
+              Modifier
+            </button>
+          </div>
+        </section>
+      }
+    }
+    @case ('result') {
+      <section class="panel" aria-labelledby="result-title">
+        <div aria-live="polite">
+          @if (outcome(); as result) {
+            @if (result.kind === 'success') {
+              <h2 id="result-title" tabindex="-1">Virement effectué</h2>
+              <p class="form-info">
+                Le virement de {{ result.transfer.amount | amount: result.transfer.currency }} vers
+                {{ formatIban(result.transfer.destinationIban) }} a été effectué.
+              </p>
+              <div class="actions">
+                <a matButton="filled" [routerLink]="['/comptes', summary()?.source?.id]"
+                  >Voir le compte source</a
+                >
+                <button matButton="outlined" type="button" (click)="startNewTransfer()">
+                  Faire un autre virement
+                </button>
+              </div>
+            } @else {
+              <h2 id="result-title" tabindex="-1">Virement non effectué</h2>
+              <p class="form-error" role="alert">
+                {{ result.message }}{{ result.isRetryable ? ' ' + retryHint : '' }}
+              </p>
+              <div class="actions">
+                @if (result.isRetryable) {
+                  <button
+                    matButton="filled"
+                    type="button"
+                    [disabled]="isSubmitting()"
+                    (click)="confirmTransfer()"
+                  >
+                    {{ isSubmitting() ? 'Envoi…' : 'Réessayer' }}
+                  </button>
+                }
+                <button matButton="outlined" type="button" (click)="editTransfer()">
+                  Modifier le virement
+                </button>
+              </div>
+            }
+          }
+        </div>
+      </section>
+    }
+  }
+}

@@ -96,7 +96,7 @@
                   }
                 </td>
                 <th scope="row">
-                  {{ typeLabels[transaction.type] }}
+                  {{ getTransactionLabel(transaction) }}
                   @if (transaction.compensatedByTransactionId) {
                     <span class="badge closed">Annulée</span>
                   }

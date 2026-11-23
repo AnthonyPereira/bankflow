@@ -31,6 +31,7 @@ import { finalize } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AmountPipe } from '../../core/format/amount.pipe';
 import { DateFrPipe } from '../../core/format/date-fr.pipe';
+import { parseAmount, validateAmount } from '../../core/format/amount-input';
 import { getRangeLabel } from '../../core/format/page-range';
 import {
   Account,
@@ -41,10 +42,11 @@ import {
 import {
   canCompensate,
   getAmountSign,
+  getTransactionLabel,
+  MAX_DESCRIPTION_LENGTH,
   OperationRequest,
   Transaction,
   TRANSACTIONS_PAGE_SIZE,
-  TYPE_LABELS,
 } from '../operations/operations.models';
 import {
   ACCOUNT_NOT_FOUND_MESSAGE,
@@ -54,12 +56,7 @@ import {
   isRetryableError,
   OperationsService,
 } from '../operations/operations.service';
-import {
-  MAX_DESCRIPTION_LENGTH,
-  MAX_REASON_LENGTH,
-  MIN_REASON_LENGTH,
-  parseAmount,
-} from './account-detail.models';
+import { MAX_REASON_LENGTH, MIN_REASON_LENGTH } from './account-detail.models';
 import { AccountDetailService } from './account-detail.service';
 
 export const CLOSED_MESSAGE = 'Le compte a été clôturé.';
@@ -79,12 +76,6 @@ export const SUCCESS_MESSAGES: Record<OperationKind, string> = {
   deposit: 'Le dépôt a été enregistré.',
   withdrawal: 'Le retrait a été enregistré.',
 };
-
-/** Le montant saisi suit les règles de l'API (positif, 2 décimales, 10 000 au plus). */
-export function validateAmount(control: AbstractControl<string>): ValidationErrors | null {
-  const result = parseAmount(control.value);
-  return 'error' in result ? { amount: result.error } : null;
-}
 
 function validateReason(control: AbstractControl<string>): ValidationErrors | null {
   const length = control.value.trim().length;
@@ -140,7 +131,7 @@ export class AccountDetail {
   protected readonly pageSize = TRANSACTIONS_PAGE_SIZE;
   protected readonly getAmountSign = getAmountSign;
   protected readonly defaultLabel = DEFAULT_ACCOUNT_LABEL;
-  protected readonly typeLabels = TYPE_LABELS;
+  protected readonly getTransactionLabel = getTransactionLabel;
   protected readonly maxDescription = MAX_DESCRIPTION_LENGTH;
   protected readonly maxReason = MAX_REASON_LENGTH;
   protected readonly reasonMessage = REASON_MESSAGE;

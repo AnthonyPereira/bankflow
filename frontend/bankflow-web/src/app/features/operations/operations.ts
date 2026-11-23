@@ -22,6 +22,7 @@ import { Account, DEFAULT_ACCOUNT_LABEL, PageResponse } from '../accounts/accoun
 import {
   getAmountSign,
   getOperationsTitle,
+  getTransactionLabel,
   Transaction,
   TRANSACTION_TYPES,
   TRANSACTIONS_PAGE_SIZE,
@@ -61,6 +62,7 @@ export class Operations {
   protected readonly getAmountSign = getAmountSign;
   protected readonly types = TRANSACTION_TYPES;
   protected readonly typeLabels = TYPE_LABELS;
+  protected readonly getTransactionLabel = getTransactionLabel;
   protected readonly defaultLabel = DEFAULT_ACCOUNT_LABEL;
   protected readonly periodMessage = INVALID_PERIOD_MESSAGE;
   protected readonly getRangeLabel = getRangeLabel;
