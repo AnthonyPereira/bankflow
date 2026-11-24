@@ -1,7 +1,11 @@
 package com.bankflow.banking.application.transaction;
 
 import com.bankflow.banking.application.account.AccountAccess;
-import com.bankflow.banking.application.account.AccountNotFoundException;
+import com.bankflow.banking.application.account.exception.AccountNotFoundException;
+import com.bankflow.banking.application.transaction.exception.InvalidPeriodException;
+import com.bankflow.banking.application.transaction.exception.TransactionNotFoundException;
+import com.bankflow.banking.application.transaction.model.TransactionQuery;
+import com.bankflow.banking.application.transaction.model.TransactionView;
 import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountRepository;
 import com.bankflow.banking.domain.transaction.Actor;

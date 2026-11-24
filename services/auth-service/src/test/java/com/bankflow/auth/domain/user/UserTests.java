@@ -3,6 +3,7 @@ package com.bankflow.auth.domain.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bankflow.auth.domain.user.exception.DemoAccountCannotBeDisabledException;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;

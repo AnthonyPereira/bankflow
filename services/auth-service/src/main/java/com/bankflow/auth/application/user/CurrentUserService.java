@@ -1,5 +1,6 @@
 package com.bankflow.auth.application.user;
 
+import com.bankflow.auth.application.user.exception.InvalidSessionException;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;
 import java.util.UUID;

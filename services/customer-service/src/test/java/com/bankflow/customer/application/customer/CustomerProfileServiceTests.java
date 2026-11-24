@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.bankflow.customer.application.customer.exception.CustomerNotFoundException;
+import com.bankflow.customer.application.customer.model.ContactDetails;
+import com.bankflow.customer.application.customer.model.CurrentUser;
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerRepository;
 import java.time.Clock;

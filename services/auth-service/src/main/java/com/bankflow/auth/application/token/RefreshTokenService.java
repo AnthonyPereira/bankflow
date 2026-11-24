@@ -1,5 +1,6 @@
 package com.bankflow.auth.application.token;
 
+import com.bankflow.auth.application.token.exception.InvalidRefreshTokenException;
 import com.bankflow.auth.domain.token.RefreshToken;
 import com.bankflow.auth.domain.token.RefreshTokenRepository;
 import com.bankflow.auth.domain.token.RevocationReason;

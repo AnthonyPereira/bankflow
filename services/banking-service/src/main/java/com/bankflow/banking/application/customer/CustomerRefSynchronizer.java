@@ -1,9 +1,9 @@
 package com.bankflow.banking.application.customer;
 
 import com.bankflow.banking.domain.customer.CustomerRef;
-import com.bankflow.banking.domain.customer.CustomerRefCreated;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.customer.CustomerStatus;
+import com.bankflow.banking.domain.customer.event.CustomerRefCreated;
 import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;

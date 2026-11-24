@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.bankflow.auth.application.token.exception.InvalidRefreshTokenException;
 import com.bankflow.auth.domain.token.RefreshToken;
 import com.bankflow.auth.domain.token.RefreshTokenRepository;
 import com.bankflow.auth.domain.user.Role;

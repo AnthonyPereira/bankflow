@@ -9,11 +9,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.bankflow.customer.application.customer.exception.CustomerNotFoundException;
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerRepository;
 import com.bankflow.customer.domain.customer.CustomerStatus;
-import com.bankflow.customer.domain.customer.CustomerUpdated;
-import com.bankflow.customer.domain.customer.DemoCustomerCannotBeSuspendedException;
+import com.bankflow.customer.domain.customer.event.CustomerUpdated;
+import com.bankflow.customer.domain.customer.exception.DemoCustomerCannotBeSuspendedException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;

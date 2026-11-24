@@ -1,5 +1,6 @@
 package com.bankflow.auth.application.token;
 
+import com.bankflow.auth.application.token.model.AccessToken;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.infrastructure.security.jwt.JwtProperties;
 import java.time.Clock;

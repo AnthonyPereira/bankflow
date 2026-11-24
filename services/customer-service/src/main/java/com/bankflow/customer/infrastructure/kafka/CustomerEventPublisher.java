@@ -1,8 +1,8 @@
 package com.bankflow.customer.infrastructure.kafka;
 
-import com.bankflow.customer.domain.customer.CustomerCreated;
 import com.bankflow.customer.domain.customer.CustomerStatus;
-import com.bankflow.customer.domain.customer.CustomerUpdated;
+import com.bankflow.customer.domain.customer.event.CustomerCreated;
+import com.bankflow.customer.domain.customer.event.CustomerUpdated;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;

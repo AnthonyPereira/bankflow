@@ -1,13 +1,14 @@
 package com.bankflow.banking.api.operation;
 
+import com.bankflow.banking.api.operation.dto.OperationRequest;
 import com.bankflow.banking.api.security.JwtActors;
-import com.bankflow.banking.api.transaction.TransactionResponse;
+import com.bankflow.banking.api.transaction.dto.TransactionResponse;
 import com.bankflow.banking.application.idempotency.IdempotencyExecutor;
 import com.bankflow.banking.application.idempotency.IdempotencyKeys;
 import com.bankflow.banking.application.idempotency.RequestFingerprint;
-import com.bankflow.banking.application.idempotency.StoredResponse;
+import com.bankflow.banking.application.idempotency.model.StoredResponse;
 import com.bankflow.banking.application.operation.OperationService;
-import com.bankflow.banking.application.transaction.TransactionView;
+import com.bankflow.banking.application.transaction.model.TransactionView;
 import com.bankflow.banking.domain.transaction.TransactionType;
 import jakarta.validation.Valid;
 import java.util.HashMap;

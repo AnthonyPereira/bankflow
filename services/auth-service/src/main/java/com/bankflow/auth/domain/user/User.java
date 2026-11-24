@@ -1,5 +1,6 @@
 package com.bankflow.auth.domain.user;
 
+import com.bankflow.auth.domain.user.exception.DemoAccountCannotBeDisabledException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

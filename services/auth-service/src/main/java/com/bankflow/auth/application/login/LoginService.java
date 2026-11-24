@@ -1,5 +1,6 @@
 package com.bankflow.auth.application.login;
 
+import com.bankflow.auth.application.login.exception.InvalidCredentialsException;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;
 import java.time.Clock;

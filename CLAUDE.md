@@ -21,7 +21,7 @@ Banque fictive pédagogique en microservices : 6 services Spring Boot indépenda
 - `docs/` : ADR, architecture, runbooks (`deploiement.md`, `sonarqube.md`).
 - `contracts/` : contrats d'événements Kafka.
 
-**Packages Java** : quatre couches (`api`, `application`, `domain`, `infrastructure`). Dans chaque couche, un seul niveau de sous-packages par fonctionnalité, par exemple `application/login`, `domain/user` ou `infrastructure/security/jwt`. La Gateway se range en `filter/`, `error/` et `security/`. Le détail est dans [services/README.md](services/README.md).
+**Packages Java** : quatre couches (`api`, `application`, `domain`, `infrastructure`). Dans chaque couche, un sous-package par fonctionnalité (`application/login`, `domain/user`, `infrastructure/security/jwt`). Dans une fonctionnalité, seuls les contrôleurs, services, entités et dépôts restent à la racine : les records et exceptions vont dans `dto/`, `validation/`, `model/`, `config/`, `event/` ou `exception/`, et les `ApiExceptionHandler` dans `api/error/`. La Gateway se range en `filter/`, `error/` et `security/`. Le détail est dans [services/README.md](services/README.md).
 
 ## Commandes
 

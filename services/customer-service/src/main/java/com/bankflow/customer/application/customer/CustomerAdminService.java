@@ -1,9 +1,10 @@
 package com.bankflow.customer.application.customer;
 
+import com.bankflow.customer.application.customer.exception.CustomerNotFoundException;
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerRepository;
 import com.bankflow.customer.domain.customer.CustomerStatus;
-import com.bankflow.customer.domain.customer.CustomerUpdated;
+import com.bankflow.customer.domain.customer.event.CustomerUpdated;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -48,8 +49,9 @@ public class CustomerAdminService {
     /**
      * Change le statut. {@code CustomerUpdated} n'est publié que si le statut change réellement.
      *
-     * @throws com.bankflow.customer.domain.customer.DemoCustomerCannotBeSuspendedException pour un
-     *     client de démonstration
+     * @throws
+     *     com.bankflow.customer.domain.customer.exception.DemoCustomerCannotBeSuspendedException
+     *     pour un client de démonstration
      */
     @Transactional
     public Customer changeStatus(UUID customerId, CustomerStatus newStatus, boolean demoOnly) {
