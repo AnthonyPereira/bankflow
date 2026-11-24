@@ -1,8 +1,13 @@
 package com.bankflow.customer.api.customer;
 
-import com.bankflow.customer.application.customer.CurrentUser;
+import com.bankflow.customer.api.customer.dto.CustomerResponse;
+import com.bankflow.customer.api.customer.dto.PageResponse;
+import com.bankflow.customer.api.customer.dto.UpdateContactRequest;
+import com.bankflow.customer.api.customer.dto.UpdateStatusRequest;
+import com.bankflow.customer.api.error.InvalidTokenException;
 import com.bankflow.customer.application.customer.CustomerAdminService;
 import com.bankflow.customer.application.customer.CustomerProfileService;
+import com.bankflow.customer.application.customer.model.CurrentUser;
 import com.bankflow.customer.domain.customer.CustomerStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -54,6 +59,7 @@ class CustomerController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     PageResponse<CustomerResponse> listCustomers(
+            JwtAuthenticationToken authentication,
             @RequestParam(defaultValue = "0")
                     @Min(value = 0, message = "La page doit être positive")
                     int page,
@@ -66,22 +72,32 @@ class CustomerController {
                     String q) {
         return PageResponse.createFrom(
                 adminService
-                        .searchCustomers(page, size, status, q)
+                        .searchCustomers(
+                                page,
+                                size,
+                                status,
+                                q,
+                                createCurrentUser(authentication).isRestrictedToDemo())
                         .map(CustomerResponse::createFrom));
     }
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     CustomerResponse updateStatus(
-            @PathVariable UUID id, @Valid @RequestBody UpdateStatusRequest body) {
-        return CustomerResponse.createFrom(adminService.changeStatus(id, body.status()));
+            JwtAuthenticationToken authentication,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateStatusRequest body) {
+        return CustomerResponse.createFrom(
+                adminService.changeStatus(
+                        id, body.status(), createCurrentUser(authentication).isRestrictedToDemo()));
     }
 
     private static CurrentUser createCurrentUser(JwtAuthenticationToken authentication) {
         var admin =
                 authentication.getAuthorities().stream()
                         .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
-        return new CurrentUser(parseUserId(authentication.getToken().getSubject()), admin);
+        var demo = Boolean.TRUE.equals(authentication.getToken().getClaimAsBoolean("demo"));
+        return new CurrentUser(parseUserId(authentication.getToken().getSubject()), admin, demo);
     }
 
     private static UUID parseUserId(String subject) {

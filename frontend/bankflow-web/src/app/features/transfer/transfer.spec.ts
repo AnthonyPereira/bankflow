@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { signal } from '@angular/core';
+import { ApplicationRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen } from '@testing-library/angular';
@@ -212,6 +212,52 @@ describe('TransferPage', () => {
     expect(screen.getByRole('link', { name: 'Voir le compte source' }).getAttribute('href')).toBe(
       '/comptes/a1',
     );
+    http.expectOne((r) => r.url === '/api/accounts').flush(page([ACCOUNT]));
+  });
+
+  it('garde le résultat affiché quand le rechargement des comptes échoue après un succès', async () => {
+    const { http, user } = await setup({ from: 'a1' });
+    await fillForm(user);
+    await goToReview(user);
+
+    await user.click(screen.getByRole('button', { name: 'Confirmer le virement' }));
+    http.expectOne('/api/transfers').flush(TRANSFER, { status: 201, statusText: 'Created' });
+    expect(await screen.findByRole('heading', { name: 'Virement effectué' })).toBeTruthy();
+    http
+      .expectOne((r) => r.url === '/api/accounts')
+      .flush(null, { status: 500, statusText: 'Server Error' });
+    await TestBed.inject(ApplicationRef).whenStable();
+
+    expect(screen.queryByText("Le compte source n'a pas pu être chargé.")).toBeNull();
+    expect(screen.queryByText(/Vous n'avez aucun compte actif/)).toBeNull();
+    expect(screen.getByRole('link', { name: 'Voir le compte source' })).toBeTruthy();
+  });
+
+  it('garde aussi le résultat pour un administrateur dont le rechargement échoue', async () => {
+    const { http, user } = await setup({ admin: true, from: 'a1' });
+    await fillForm(user);
+    await goToReview(user);
+
+    await user.click(screen.getByRole('button', { name: 'Confirmer le virement' }));
+    http.expectOne('/api/transfers').flush(TRANSFER, { status: 201, statusText: 'Created' });
+    expect(await screen.findByRole('heading', { name: 'Virement effectué' })).toBeTruthy();
+    http.expectOne('/api/accounts/a1').flush(null, { status: 500, statusText: 'Server Error' });
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(screen.queryByText("Le compte source n'a pas pu être chargé.")).toBeNull();
+  });
+
+  it("n'annonce un échec qu'une fois, par son seul rôle alert", async () => {
+    const { http, user } = await setup({ from: 'a1' });
+    await fillForm(user);
+    await goToReview(user);
+
+    await user.click(screen.getByRole('button', { name: 'Confirmer le virement' }));
+    http
+      .expectOne('/api/transfers')
+      .flush({ code: 'INSUFFICIENT_FUNDS' }, { status: 409, statusText: 'Conflict' });
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getAllByText(/Le solde est insuffisant/)).toHaveLength(1);
     http.expectOne((r) => r.url === '/api/accounts').flush(page([ACCOUNT]));
   });
 

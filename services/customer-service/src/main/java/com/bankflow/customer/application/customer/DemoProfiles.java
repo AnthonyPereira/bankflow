@@ -1,5 +1,6 @@
 package com.bankflow.customer.application.customer;
 
+import com.bankflow.customer.application.customer.model.ContactDetails;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,9 +16,7 @@ public final class DemoProfiles {
     private static final Map<String, ContactDetails> BY_EMAIL =
             Map.of(
                     "demo.client@bankflow.local",
-                    new ContactDetails("Camille", "Martin", PHONE, ADDRESS),
-                    "demo.admin@bankflow.local",
-                    new ContactDetails("Alex", "Conseiller", PHONE, ADDRESS));
+                    new ContactDetails("Camille", "Martin", PHONE, ADDRESS));
 
     private DemoProfiles() {}
 

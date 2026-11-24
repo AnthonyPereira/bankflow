@@ -10,7 +10,7 @@
     <p role="alert">{{ unknownSourceMessage }}</p>
     <a matButton="outlined" routerLink="/administration/clients">Voir les clients</a>
   </section>
-} @else if (isAdmin() ? adminAccount.error() : accounts.error()) {
+} @else if (step() === 'form' && (isAdmin() ? adminAccount.error() : accounts.error())) {
   <section class="panel">
     <p role="alert">Le compte source n'a pas pu être chargé.</p>
     <button
@@ -21,14 +21,14 @@
       Réessayer
     </button>
   </section>
-} @else if (isAdmin() ? !adminAccount.hasValue() : !accounts.hasValue()) {
+} @else if (step() === 'form' && (isAdmin() ? !adminAccount.hasValue() : !accounts.hasValue())) {
   <mat-spinner diameter="32" aria-label="Chargement du compte" />
-} @else if (isAdmin() && source()?.status === 'CLOSED') {
+} @else if (step() === 'form' && isAdmin() && source()?.status === 'CLOSED') {
   <section class="panel">
     <p role="alert">{{ closedSourceMessage }}</p>
     <a matButton="outlined" [routerLink]="['/comptes', from()]">Retour au compte</a>
   </section>
-} @else if (!isAdmin() && activeAccounts().length === 0) {
+} @else if (step() === 'form' && !isAdmin() && activeAccounts().length === 0) {
   <section class="panel">
     @if (isSourceUnknown()) {
       <p role="alert">{{ unknownSourceMessage }}</p>

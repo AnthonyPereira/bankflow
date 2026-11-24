@@ -38,38 +38,42 @@ public class OperationService {
 
     @Transactional
     public Transaction deposit(Actor actor, UUID accountId, BigDecimal amount, String description) {
-        var account = guard.lockUsableAccount(actor, accountId);
-        var money = new Money(amount, account.getCurrency());
-        account.credit(money);
-        accounts.saveAndFlush(account);
-        var transaction =
-                Transaction.createOperation(
-                        accountId,
-                        TransactionType.DEPOSIT,
-                        money,
-                        account.getBalance(),
-                        description,
-                        actor,
-                        clock.instant().truncatedTo(ChronoUnit.MICROS));
-        return ledgerWriter.saveWithEntries(transaction, LedgerDirection.CREDIT);
+        return apply(actor, accountId, amount, description, TransactionType.DEPOSIT);
     }
 
     @Transactional
     public Transaction withdraw(
             Actor actor, UUID accountId, BigDecimal amount, String description) {
+        return apply(actor, accountId, amount, description, TransactionType.WITHDRAWAL);
+    }
+
+    /** Verrouille le compte, met le solde à jour et écrit l'opération avec ses écritures. */
+    private Transaction apply(
+            Actor actor,
+            UUID accountId,
+            BigDecimal amount,
+            String description,
+            TransactionType type) {
         var account = guard.lockUsableAccount(actor, accountId);
         var money = new Money(amount, account.getCurrency());
-        account.debit(money);
+        LedgerDirection direction;
+        if (type == TransactionType.DEPOSIT) {
+            account.credit(money);
+            direction = LedgerDirection.CREDIT;
+        } else {
+            account.debit(money);
+            direction = LedgerDirection.DEBIT;
+        }
         accounts.saveAndFlush(account);
         var transaction =
                 Transaction.createOperation(
                         accountId,
-                        TransactionType.WITHDRAWAL,
+                        type,
                         money,
                         account.getBalance(),
                         description,
                         actor,
                         clock.instant().truncatedTo(ChronoUnit.MICROS));
-        return ledgerWriter.saveWithEntries(transaction, LedgerDirection.DEBIT);
+        return ledgerWriter.saveWithEntries(transaction, direction);
     }
 }

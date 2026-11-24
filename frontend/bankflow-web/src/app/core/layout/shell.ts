@@ -18,8 +18,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map, skip } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { NotificationUiService } from '../notifications/notification-ui.service';
-import { getAccountsTitle } from '../../features/accounts/accounts.models';
-import { getOperationsTitle } from '../../features/operations/operations.models';
+import { getAccountsTitle, getOperationsTitle } from './navigation-labels';
 
 const COMPACT_LAYOUT = '(max-width: 839.98px)';
 export const UNCONFIRMED_LOGOUT_MESSAGE =

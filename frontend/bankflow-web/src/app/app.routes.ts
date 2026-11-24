@@ -1,9 +1,8 @@
 import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { AuthService } from './core/auth/auth.service';
-import { getAccountsTitle } from './features/accounts/accounts.models';
-import { getOperationsTitle } from './features/operations/operations.models';
-import { adminGuard, authGuard, guestGuard } from './core/auth/auth.guards';
+import { adminGuard, authGuard, clientGuard, guestGuard } from './core/auth/auth.guards';
+import { getAccountsTitle, getOperationsTitle } from './core/layout/navigation-labels';
 
 export const routes: Routes = [
   {
@@ -53,6 +52,7 @@ export const routes: Routes = [
       {
         path: 'profil',
         title: 'Mon profil · BankFlow',
+        canActivate: [clientGuard],
         loadComponent: () => import('./features/profile/profile').then((m) => m.Profile),
       },
       {

@@ -2,11 +2,8 @@ import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { SILENT_ERRORS } from '../../core/http/api';
-import {
-  CustomersService,
-  getCustomerErrorMessage,
-  UNEXPECTED_CUSTOMER_ERROR,
-} from './customers.service';
+import { UNEXPECTED_ERROR_MESSAGE } from '../../core/http/problem-details';
+import { CustomersService, getCustomerErrorMessage } from './customers.service';
 
 describe('CustomersService', () => {
   let service: CustomersService;
@@ -107,7 +104,7 @@ describe('getCustomerErrorMessage', () => {
   });
 
   it('renvoie un message générique sans détail exploitable', () => {
-    expect(getCustomerErrorMessage(build(null))).toBe(UNEXPECTED_CUSTOMER_ERROR);
-    expect(getCustomerErrorMessage(new Error('x'))).toBe(UNEXPECTED_CUSTOMER_ERROR);
+    expect(getCustomerErrorMessage(build(null))).toBe(UNEXPECTED_ERROR_MESSAGE);
+    expect(getCustomerErrorMessage(new Error('x'))).toBe(UNEXPECTED_ERROR_MESSAGE);
   });
 });

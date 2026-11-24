@@ -40,7 +40,8 @@ class CustomerEventsIntegrationTests extends CustomerApiTestSupport {
     void apresUneSuspensionCustomerUpdatedEstPlusRecentQueCustomerCreated() {
         var customer = createCustomer(generateUniqueEmail(), false);
 
-        var suspended = adminService.changeStatus(customer.getId(), CustomerStatus.SUSPENDED);
+        var suspended =
+                adminService.changeStatus(customer.getId(), CustomerStatus.SUSPENDED, false);
 
         var key = customer.getId().toString();
         var created = awaitEvents(TOPIC, key, "CustomerCreated", 1).get(0);
@@ -57,7 +58,7 @@ class CustomerEventsIntegrationTests extends CustomerApiTestSupport {
     @Test
     void passerUnClientSuspenduEnDemonstrationLeReactiveEtPublieCustomerUpdated() {
         var customer = createCustomer(generateUniqueEmail(), false);
-        adminService.changeStatus(customer.getId(), CustomerStatus.SUSPENDED);
+        adminService.changeStatus(customer.getId(), CustomerStatus.SUSPENDED, false);
         var key = customer.getId().toString();
         awaitEvents(TOPIC, key, "CustomerUpdated", 1);
 
@@ -69,6 +70,7 @@ class CustomerEventsIntegrationTests extends CustomerApiTestSupport {
         var updates = awaitEvents(TOPIC, key, "CustomerUpdated", 2);
         var reactivation = updates.get(1);
         assertThat(reactivation.get("payload").get("status").asString()).isEqualTo("ACTIVE");
+        assertThat(reactivation.get("payload").get("demo").asBoolean()).isTrue();
         assertThat(occurredAt(reactivation)).isEqualTo(stored.getUpdatedAt());
         var republished = awaitEvents(TOPIC, key, "CustomerCreated", 2).get(1);
         assertThat(republished.get("payload").get("status").asString()).isEqualTo("ACTIVE");
@@ -108,7 +110,7 @@ class CustomerEventsIntegrationTests extends CustomerApiTestSupport {
         var customer = createCustomer(generateUniqueEmail(), false);
         // Copie détachée lue avant la modification concurrente
         var stale = customerRepository.findById(customer.getId()).orElseThrow();
-        adminService.changeStatus(customer.getId(), CustomerStatus.SUSPENDED);
+        adminService.changeStatus(customer.getId(), CustomerStatus.SUSPENDED, false);
         stale.updateContact("Alice", null, null, null, Instant.now());
 
         assertThatThrownBy(() -> customerRepository.saveAndFlush(stale))

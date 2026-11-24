@@ -21,7 +21,7 @@ Banque fictive pédagogique en microservices : 6 services Spring Boot indépenda
 - `docs/` : ADR, architecture, runbooks (`deploiement.md`, `sonarqube.md`).
 - `contracts/` : contrats d'événements Kafka.
 
-**Packages Java** : quatre couches (`api`, `application`, `domain`, `infrastructure`). Dans chaque couche, un seul niveau de sous-packages par fonctionnalité, par exemple `application/login`, `domain/user` ou `infrastructure/security/jwt`. La Gateway se range en `filter/`, `error/` et `security/`. Le détail est dans [services/README.md](services/README.md).
+**Packages Java** : quatre couches (`api`, `application`, `domain`, `infrastructure`). Dans chaque couche, un sous-package par fonctionnalité (`application/login`, `domain/user`, `infrastructure/security/jwt`). Dans une fonctionnalité, seuls les contrôleurs, services, entités et dépôts restent à la racine : les records et exceptions vont dans `dto/`, `validation/`, `model/`, `config/`, `event/` ou `exception/`, et les `ApiExceptionHandler` dans `api/error/`. La Gateway se range en `filter/`, `error/` et `security/`. Le détail est dans [services/README.md](services/README.md).
 
 ## Commandes
 
@@ -63,7 +63,7 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 - **Runner** : il ne doit **jamais** être enregistré sur `bankflow`, car le dépôt est public.
 - **Procédure** : [docs/runbooks/deploiement.md](docs/runbooks/deploiement.md).
 
-## État d'avancement (2026-11-23)
+## État d'avancement (2026-11-24)
 
 **MVP 1 en ligne en `0.1.1`** sur `https://bankflow.anthonypereira.dpdns.org`, avec les comptes de démonstration (voir [CHANGELOG](CHANGELOG.md)) : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005, BF-016 et BF-023-16 sont terminés.
 - `0.1.0` (tag `v0.1.0`, #39) : contenu de la MVP 1, après trois revues de code complètes. Elle n'a jamais été mise en ligne, car le build des images Spring échouait.
@@ -74,12 +74,15 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 
 ### Prochaines étapes
 
-**MVP 2 (`0.2.0`)** : tout le code est fusionné dans `develop` (PR #57 à #75), avec les [ADR-005 à 007](docs/adr/). Décisions clés :
+**MVP 2 (`0.2.0`)** : prête sur `release/0.2.0` (PR #77 vers `main`, non fusionnée). Le code vient de `develop` (PR #57 à #76), corrigé après la revue globale de la release (PR #78 à #82, fusionnées dans `release/0.2.0`), avec les [ADR-005 à 007](docs/adr/). Vérification finale faite : tous les tests verts, pile Docker locale, parcours API et navigateur. Décisions clés :
 - l'administrateur agit en **conseiller au nom des clients** (ouverture, dépôt, retrait, virement, clôture) sans jamais avoir de compte à son nom, et seul lui fait une écriture compensatrice ;
 - plafond de 10 000,00 par opération, au plus 5 comptes actifs par client ;
-- `demo.client` reçoit des comptes et un historique de démonstration, recréés s'ils disparaissent.
+- `demo.client` reçoit des comptes et un historique de démonstration, recréés s'ils disparaissent ;
+- un administrateur n'a jamais de fiche client, et `demo.admin` (mot de passe public) est restreint aux clients de démonstration par le claim `demo`, pour protéger les données des vrais inscrits ;
+- la Gateway limite les opérations (dépôt, retrait, ouverture, clôture, annulation) à 60 par minute et par IP, et les virements à 30.
 
 Reste à faire :
-1. Revue globale de `release/0.2.0` (Customer, Banking, Auth et infra, front), corrections, puis vérification finale (tests, Docker local, parcours dans un navigateur).
-2. Tour de l'utilisateur en local, puis, **sur son feu vert seulement** : fusion de la PR `deploy-platform` #4 (juste avant), fusion de la release dans `main`, tag `v0.2.0`, report dans `develop`. Procédure : [deploiement.md](docs/runbooks/deploiement.md#mise-en-ligne-de-la-mvp-2-customer-service-et-banking-service).
-3. Suivis hors 0.2.0 : BF-008-11 (purge des clés d'idempotence) et BF-009-10 (limiter le débit des virements).
+1. Tour de l'utilisateur en local.
+2. **Sur son feu vert seulement** : fusion de la PR #77 dans `main`, tag `v0.2.0`, attente de la CI de `main` (images publiées sur GHCR), **puis** fusion de la PR `deploy-platform` #4, report de la release dans `develop`, vérification du site en ligne et BF-023-17 coché. Procédure : [deploiement.md](docs/runbooks/deploiement.md#mise-en-ligne-de-la-mvp-2-customer-service-et-banking-service).
+3. Suivis hors 0.2.0 : BF-008-11 (purge des clés d'idempotence) et BF-009-10 (limite de débit des virements par utilisateur, en plus de la limite par IP).
+4. La CI ne se lance pas sur les PR vers `release/*` : il faut la lancer à la main (`gh workflow run ci.yml --ref <branche>`) avant de fusionner.

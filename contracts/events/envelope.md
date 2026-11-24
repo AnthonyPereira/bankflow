@@ -21,7 +21,10 @@ Chaque message Kafka de BankFlow est un document JSON qui respecte cette envelop
   "occurredAt": "2026-11-18T10:15:30Z",
   "producer": "auth-service",
   "payload": {
-    "userId": "6f1c2d84-7a51-4e0b-9a36-0a7d5c1e9f22"
+    "userId": "6f1c2d84-7a51-4e0b-9a36-0a7d5c1e9f22",
+    "email": "alice@bankflow.test",
+    "demo": false,
+    "role": "ROLE_CLIENT"
   }
 }
 ```

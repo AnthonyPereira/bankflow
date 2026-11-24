@@ -1,6 +1,6 @@
 package com.bankflow.auth.infrastructure.kafka;
 
-import com.bankflow.auth.domain.user.UserRegistered;
+import com.bankflow.auth.domain.user.event.UserRegistered;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -65,6 +65,7 @@ class UserRegisteredPublisher {
         payload.put("userId", event.userId());
         payload.put("email", event.email());
         payload.put("demo", event.demo());
+        payload.put("role", event.role().name());
 
         var envelope = new LinkedHashMap<String, Object>();
         envelope.put("eventId", UUID.randomUUID());

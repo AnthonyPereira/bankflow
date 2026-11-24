@@ -1,7 +1,7 @@
 package com.bankflow.auth.infrastructure.kafka;
 
-import com.bankflow.auth.domain.user.UserRegistered;
 import com.bankflow.auth.domain.user.UserRepository;
+import com.bankflow.auth.domain.user.event.UserRegistered;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,6 +118,7 @@ class UserRegisteredReplayer {
                                             user.getId(),
                                             user.getEmail(),
                                             user.isDemo(),
+                                            user.getRole(),
                                             user.getCreatedAt()))
                             .getContent();
             return new EventsPage(events, slice.hasNext());

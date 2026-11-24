@@ -1,17 +1,18 @@
 package com.bankflow.banking.api.transfer;
 
+import com.bankflow.banking.api.operation.IdempotentResponses;
 import com.bankflow.banking.api.security.JwtActors;
+import com.bankflow.banking.api.transfer.dto.TransferRequest;
+import com.bankflow.banking.api.transfer.dto.TransferResponse;
 import com.bankflow.banking.application.idempotency.IdempotencyExecutor;
 import com.bankflow.banking.application.idempotency.IdempotencyKeys;
-import com.bankflow.banking.application.idempotency.IdempotencyResult;
 import com.bankflow.banking.application.idempotency.RequestFingerprint;
-import com.bankflow.banking.application.idempotency.StoredResponse;
+import com.bankflow.banking.application.idempotency.model.StoredResponse;
 import com.bankflow.banking.application.transfer.TransferService;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,15 +23,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import tools.jackson.databind.json.JsonMapper;
 
 /** Virements entre comptes, au nom du titulaire ou d'un conseiller. */
 @RestController
 @RequestMapping("/transfers")
 class TransferController {
-
-    private static final String REPLAYED_HEADER = "Idempotent-Replayed";
 
     private final TransferService transferService;
     private final IdempotencyExecutor idempotency;
@@ -75,30 +73,12 @@ class TransferController {
                                     HttpStatus.CREATED.value(),
                                     json.writeValueAsString(TransferResponse.createFrom(view)));
                         });
-        return createResponse(result);
+        return IdempotentResponses.createResponse(result, json, "/transfers/{id}");
     }
 
     @GetMapping("/{id}")
     TransferResponse getTransfer(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         return TransferResponse.createFrom(
                 transferService.getTransfer(JwtActors.createFrom(jwt), id));
-    }
-
-    private ResponseEntity<String> createResponse(IdempotencyResult result) {
-        var stored = result.response();
-        var builder =
-                ResponseEntity.status(stored.status()).contentType(MediaType.APPLICATION_JSON);
-        if (stored.status() == HttpStatus.CREATED.value()) {
-            var transferId = json.readTree(stored.body()).get("id").asString();
-            builder.location(
-                    ServletUriComponentsBuilder.fromCurrentContextPath()
-                            .path("/transfers/{id}")
-                            .buildAndExpand(transferId)
-                            .toUri());
-        }
-        if (result.replayed()) {
-            builder.header(REPLAYED_HEADER, "true");
-        }
-        return builder.body(stored.body());
     }
 }

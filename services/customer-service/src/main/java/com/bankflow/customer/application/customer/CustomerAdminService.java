@@ -1,9 +1,10 @@
 package com.bankflow.customer.application.customer;
 
+import com.bankflow.customer.application.customer.exception.CustomerNotFoundException;
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerRepository;
 import com.bankflow.customer.domain.customer.CustomerStatus;
-import com.bankflow.customer.domain.customer.CustomerUpdated;
+import com.bankflow.customer.domain.customer.event.CustomerUpdated;
 import jakarta.persistence.criteria.Predicate;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -38,21 +39,27 @@ public class CustomerAdminService {
      */
     @Transactional(readOnly = true)
     public Page<Customer> searchCustomers(
-            int page, int size, CustomerStatus status, String searchText) {
+            int page, int size, CustomerStatus status, String searchText, boolean demoOnly) {
         var sort = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by("id"));
         return customers.findAll(
-                createSearchSpecification(status, searchText), PageRequest.of(page, size, sort));
+                createSearchSpecification(status, searchText, demoOnly),
+                PageRequest.of(page, size, sort));
     }
 
     /**
      * Change le statut. {@code CustomerUpdated} n'est publié que si le statut change réellement.
      *
-     * @throws com.bankflow.customer.domain.customer.DemoCustomerCannotBeSuspendedException pour un
-     *     client de démonstration
+     * @throws
+     *     com.bankflow.customer.domain.customer.exception.DemoCustomerCannotBeSuspendedException
+     *     pour un client de démonstration
      */
     @Transactional
-    public Customer changeStatus(UUID customerId, CustomerStatus newStatus) {
-        var customer = customers.findById(customerId).orElseThrow(CustomerNotFoundException::new);
+    public Customer changeStatus(UUID customerId, CustomerStatus newStatus, boolean demoOnly) {
+        var customer =
+                customers
+                        .findById(customerId)
+                        .filter(found -> !demoOnly || found.isDemo())
+                        .orElseThrow(CustomerNotFoundException::new);
         var previousStatus = customer.getStatus();
         var now = clock.instant();
         if (newStatus == CustomerStatus.SUSPENDED) {
@@ -67,9 +74,12 @@ public class CustomerAdminService {
     }
 
     private static Specification<Customer> createSearchSpecification(
-            CustomerStatus status, String searchText) {
+            CustomerStatus status, String searchText, boolean demoOnly) {
         return (root, query, builder) -> {
             var predicates = new ArrayList<Predicate>();
+            if (demoOnly) {
+                predicates.add(builder.isTrue(root.get("demo")));
+            }
             if (status != null) {
                 predicates.add(builder.equal(root.get("status"), status));
             }

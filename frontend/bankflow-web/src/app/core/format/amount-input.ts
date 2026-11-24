@@ -31,8 +31,8 @@ export function parseAmount(input: string): AmountParse {
     return { error: AMOUNT_POSITIVE_MESSAGE };
   }
   const units = rawUnits.replace(/\D/g, '');
-  // Des zéros en fin de partie décimale ne comptent pas (« 10,500 » reste valide).
-  const decimals = rawDecimals.replace(/0+$/, '');
+  // Comme l'API, plus de 2 chiffres après le séparateur sont refusés, zéros compris (« 10,500 »).
+  const decimals = rawDecimals;
   if (decimals.length > 2) {
     return { error: AMOUNT_DECIMALS_MESSAGE };
   }

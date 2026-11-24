@@ -1,10 +1,13 @@
 package com.bankflow.banking.application.transaction;
 
-import com.bankflow.banking.application.account.AccountNotFoundException;
-import com.bankflow.banking.application.operation.OperationGuard;
+import com.bankflow.banking.application.account.AccountAccess;
+import com.bankflow.banking.application.account.exception.AccountNotFoundException;
+import com.bankflow.banking.application.transaction.exception.InvalidPeriodException;
+import com.bankflow.banking.application.transaction.exception.TransactionNotFoundException;
+import com.bankflow.banking.application.transaction.model.TransactionQuery;
+import com.bankflow.banking.application.transaction.model.TransactionView;
 import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountRepository;
-import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.transaction.Actor;
 import com.bankflow.banking.domain.transaction.Transaction;
 import com.bankflow.banking.domain.transaction.TransactionRepository;
@@ -31,7 +34,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Historique des opérations : un client ne voit que ses comptes, un admin voit tout. */
+/** Historique des opérations, limité aux comptes visibles (règle de {@link AccountAccess}). */
 @Service
 public class TransactionService {
 
@@ -41,20 +44,17 @@ public class TransactionService {
 
     private final TransactionRepository transactions;
     private final AccountRepository accounts;
-    private final CustomerRefRepository customerRefs;
-    private final OperationGuard guard;
+    private final AccountAccess access;
     private final TransferRepository transfers;
 
     TransactionService(
             TransactionRepository transactions,
             AccountRepository accounts,
-            CustomerRefRepository customerRefs,
-            OperationGuard guard,
+            AccountAccess access,
             TransferRepository transfers) {
         this.transactions = transactions;
         this.accounts = accounts;
-        this.customerRefs = customerRefs;
-        this.guard = guard;
+        this.access = access;
         this.transfers = transfers;
     }
 
@@ -65,17 +65,13 @@ public class TransactionService {
         }
         var pageable = PageRequest.of(query.page(), query.size(), NEWEST_FIRST);
         if (query.accountId() != null) {
-            guard.requireVisible(actor, findAccount(query.accountId()));
+            access.requireVisible(actor, findAccount(query.accountId()));
         }
-        UUID ownerCustomerId = query.customerId();
-        if (!actor.isAdmin()) {
-            var customer = customerRefs.findByUserId(actor.userId());
-            if (customer.isEmpty()) {
-                return Page.empty(pageable);
-            }
-            ownerCustomerId = customer.get().getCustomerId();
+        var scope = access.createScope(actor, query.customerId());
+        if (scope.empty()) {
+            return Page.empty(pageable);
         }
-        var page = transactions.findAll(createFilter(query, ownerCustomerId), pageable);
+        var page = transactions.findAll(createFilter(query, scope), pageable);
         return new PageImpl<>(createViews(page.getContent()), pageable, page.getTotalElements());
     }
 
@@ -156,7 +152,7 @@ public class TransactionService {
             throw new TransactionNotFoundException();
         }
         try {
-            guard.requireVisible(actor, account.get());
+            access.requireVisible(actor, account.get());
         } catch (AccountNotFoundException exception) {
             throw new TransactionNotFoundException();
         }
@@ -168,18 +164,18 @@ public class TransactionService {
     }
 
     private static Specification<Transaction> createFilter(
-            TransactionQuery query, UUID ownerCustomerId) {
+            TransactionQuery query, AccountAccess.Scope scope) {
         return (root, criteria, builder) -> {
             var predicates = new ArrayList<Predicate>();
             if (query.accountId() != null) {
                 predicates.add(builder.equal(root.get("accountId"), query.accountId()));
             }
-            if (ownerCustomerId != null) {
-                var owned = criteria.subquery(UUID.class);
-                var account = owned.from(Account.class);
-                owned.select(account.get("id"))
-                        .where(builder.equal(account.get("customerId"), ownerCustomerId));
-                predicates.add(root.get("accountId").in(owned));
+            if (scope.hasFilter()) {
+                var visible = criteria.subquery(UUID.class);
+                var account = visible.from(Account.class);
+                visible.select(account.get("id"))
+                        .where(scope.createPredicate(builder, visible, account.get("customerId")));
+                predicates.add(root.get("accountId").in(visible));
             }
             if (query.type() != null) {
                 predicates.add(builder.equal(root.get("type"), query.type()));

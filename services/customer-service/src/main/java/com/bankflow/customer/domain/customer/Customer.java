@@ -1,5 +1,6 @@
 package com.bankflow.customer.domain.customer;
 
+import com.bankflow.customer.domain.customer.exception.DemoCustomerCannotBeSuspendedException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

@@ -3,6 +3,7 @@ package com.bankflow.banking.domain.money;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bankflow.banking.domain.money.exception.CurrencyMismatchException;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 

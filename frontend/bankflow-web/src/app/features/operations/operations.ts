@@ -16,7 +16,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../core/auth/auth.service';
 import { AmountPipe } from '../../core/format/amount.pipe';
 import { DateFrPipe } from '../../core/format/date-fr.pipe';
-import { getRangeLabel } from '../../core/format/page-range';
+import { getOperationsTitle } from '../../core/layout/navigation-labels';
+import { Pager } from '../../core/pagination/pager';
 import { AccountsService } from '../accounts/accounts.service';
 import {
   Account,
@@ -26,7 +27,6 @@ import {
 } from '../accounts/accounts.models';
 import {
   getAmountSign,
-  getOperationsTitle,
   getTransactionLabel,
   Transaction,
   TRANSACTION_TYPES,
@@ -49,6 +49,7 @@ const ID_PREFIX_LENGTH = 8;
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    Pager,
     ReactiveFormsModule,
     RouterLink,
   ],
@@ -69,7 +70,6 @@ export class Operations {
   protected readonly getTransactionLabel = getTransactionLabel;
   protected readonly defaultLabel = DEFAULT_ACCOUNT_LABEL;
   protected readonly periodMessage = INVALID_PERIOD_MESSAGE;
-  protected readonly getRangeLabel = getRangeLabel;
 
   protected readonly form = inject(NonNullableFormBuilder).group({
     accountId: [''],
@@ -84,7 +84,7 @@ export class Operations {
   /** Le client choisit parmi ses comptes ; l'administrateur voit toutes les opérations sans filtre de compte. */
   protected readonly accounts = rxResource({
     params: () => (this.isAdmin() ? undefined : {}),
-    stream: () => this.accountsService.listAccounts(0, MAX_ACCOUNT_CHOICES),
+    stream: () => this.accountsService.listAccounts(0, MAX_ACCOUNT_CHOICES, true),
   });
   protected readonly accountLabels = computed(() => {
     const labels = new Map<string, string>();
@@ -99,7 +99,7 @@ export class Operations {
   protected readonly transactions = rxResource({
     params: () => ({ filters: this.filters(), page: this.pageIndex() }),
     stream: ({ params }) =>
-      this.service.listTransactions(params.filters, params.page, TRANSACTIONS_PAGE_SIZE),
+      this.service.listTransactions(params.filters, params.page, TRANSACTIONS_PAGE_SIZE, true),
   });
 
   /** Dernière page reçue : elle reste affichée pendant le chargement de la suivante. */

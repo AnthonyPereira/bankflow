@@ -61,3 +61,9 @@ Le Customer Service ne retire jamais l'indicateur `demo` : un `UserRegistered` s
 - Une suspension n'est effective côté Banking Service qu'après propagation de `CustomerUpdated`.
 - Chaque démarrage de l'Auth Service provoque un rejeu proportionnel au nombre d'utilisateurs.
 - Tous les consommateurs doivent rester idempotents sur la clé métier.
+
+## 7. Mise à jour du 2026-11-23
+
+- **Indicateur `demo`** : `CustomerCreated` v1 et `CustomerUpdated` v1 gagnent un champ facultatif `demo` (booléen), toujours renseigné par le Customer Service. Le Banking Service le range dans `customer_refs.demo` (migration `V4__customer_refs_demo.sql`, `FALSE` par défaut). Le synchroniseur l'applique quand le champ est présent et garde la valeur connue quand il est absent. Il sert à restreindre `demo.admin` aux clients de démonstration (ADR-005 et ADR-007).
+- **Administrateur** : `UserRegistered` v1 gagne un champ facultatif `role`. Un `ROLE_ADMIN` ne crée aucune fiche client ni référence côté Banking Service.
+- Les champs ajoutés sont facultatifs : un consommateur qui ne les connaît pas continue de fonctionner.

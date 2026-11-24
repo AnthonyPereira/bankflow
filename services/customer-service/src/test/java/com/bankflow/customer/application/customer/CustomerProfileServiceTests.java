@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.bankflow.customer.application.customer.exception.CustomerNotFoundException;
+import com.bankflow.customer.application.customer.model.ContactDetails;
+import com.bankflow.customer.application.customer.model.CurrentUser;
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerRepository;
 import java.time.Clock;
@@ -30,7 +33,9 @@ class CustomerProfileServiceTests {
     void leProprietaireVoitSonProfil() {
         when(customers.findById(customer.getId())).thenReturn(Optional.of(customer));
 
-        assertThat(service.getCustomer(customer.getId(), new CurrentUser(ownerUserId, false)))
+        assertThat(
+                        service.getCustomer(
+                                customer.getId(), new CurrentUser(ownerUserId, false, false)))
                 .isSameAs(customer);
     }
 
@@ -38,7 +43,9 @@ class CustomerProfileServiceTests {
     void unAdministrateurVoitLeProfilDUnAutre() {
         when(customers.findById(customer.getId())).thenReturn(Optional.of(customer));
 
-        assertThat(service.getCustomer(customer.getId(), new CurrentUser(UUID.randomUUID(), true)))
+        assertThat(
+                        service.getCustomer(
+                                customer.getId(), new CurrentUser(UUID.randomUUID(), true, false)))
                 .isSameAs(customer);
     }
 
@@ -48,7 +55,7 @@ class CustomerProfileServiceTests {
 
         assertThatThrownBy(() ->
                         service.getCustomer(
-                                customer.getId(), new CurrentUser(UUID.randomUUID(), false)))
+                                customer.getId(), new CurrentUser(UUID.randomUUID(), false, false)))
                 .isInstanceOf(CustomerNotFoundException.class);
     }
 
@@ -57,7 +64,8 @@ class CustomerProfileServiceTests {
         var unknown = UUID.randomUUID();
         when(customers.findById(unknown)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getCustomer(unknown, new CurrentUser(ownerUserId, true)))
+        assertThatThrownBy(() ->
+                        service.getCustomer(unknown, new CurrentUser(ownerUserId, true, false)))
                 .isInstanceOf(CustomerNotFoundException.class);
     }
 

@@ -1,5 +1,8 @@
 package com.bankflow.customer.application.customer;
 
+import com.bankflow.customer.application.customer.exception.CustomerNotFoundException;
+import com.bankflow.customer.application.customer.model.ContactDetails;
+import com.bankflow.customer.application.customer.model.CurrentUser;
 import com.bankflow.customer.domain.customer.Customer;
 import com.bankflow.customer.domain.customer.CustomerRepository;
 import java.time.Clock;
@@ -40,7 +43,11 @@ public class CustomerProfileService {
     @Transactional(readOnly = true)
     public Customer getCustomer(UUID customerId, CurrentUser user) {
         var customer = customers.findById(customerId).orElseThrow(CustomerNotFoundException::new);
-        if (!user.admin() && !customer.getUserId().equals(user.userId())) {
+        var visible =
+                user.admin()
+                        ? !user.isRestrictedToDemo() || customer.isDemo()
+                        : customer.getUserId().equals(user.userId());
+        if (!visible) {
             throw new CustomerNotFoundException();
         }
         return customer;

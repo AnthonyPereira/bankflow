@@ -95,8 +95,3 @@ export function getBalanceTotals(accounts: readonly Account[]): CurrencyTotal[] 
       };
     });
 }
-
-/** Un administrateur voit les comptes de tous les clients : le titre le dit, partout où il apparaît. */
-export function getAccountsTitle(isAdmin: boolean): string {
-  return isAdmin ? 'Tous les comptes' : 'Mes comptes';
-}

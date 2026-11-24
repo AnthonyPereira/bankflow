@@ -2,7 +2,7 @@
 
 Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.2.0] — 2026-11-23
 
 ### Ajouté
 
@@ -25,6 +25,9 @@ Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](h
 - **Frontend, MVP 2** : détail d'un compte (dépôt, retrait, clôture, annulation par l'administrateur), « Mes opérations », virement en trois étapes, tableaux de bord du client et de l'administrateur, écran « Clients » de l'administrateur. #69 #70 #73
 - **Frontend** : écrans « Mon profil » (avec nouvel essai si la fiche est encore en cours de création) et « Mes comptes », pipes de montants et de dates en français. #60
 - **Contrats** : `CustomerCreated` v1, `CustomerUpdated` v1, et champ facultatif `demo` dans `UserRegistered`. #58
+- **Administrateur sans fiche client** : un administrateur n'a jamais de fiche client. `UserRegistered` porte le champ facultatif `role` et le Customer Service ignore `ROLE_ADMIN` ([ADR-005](docs/adr/ADR-005-role-administrateur.md)).
+- **`demo.admin` limité aux clients de démonstration** : le jeton porte le claim `demo`, et les clients réels (et leurs comptes) sont invisibles pour lui. `CustomerCreated` et `CustomerUpdated` portent le champ facultatif `demo` ([ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)).
+- **Gateway** : les ouvertures de compte, dépôts, retraits, clôtures et compensations sont limités à 60 par minute et par IP (`RATE_LIMIT_OPERATIONS_PER_MINUTE`).
 
 ### Corrigé
 
@@ -111,6 +114,6 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 - Seuls le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka sont déployés : les routes des quatre autres services répondent 503.
 - Le Customer Service, le Banking Service, le Notification Service et l'Analytics & Fraud Service ne sont que des squelettes sécurisés, sans fonctionnalité métier.
 
-[Non publié]: https://github.com/AnthonyPereira/bankflow/compare/v0.1.1...develop
+[0.2.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.0

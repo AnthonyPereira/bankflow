@@ -9,8 +9,8 @@ import static org.mockito.Mockito.when;
 
 import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
-import com.bankflow.auth.domain.user.UserRegistered;
 import com.bankflow.auth.domain.user.UserRepository;
+import com.bankflow.auth.domain.user.event.UserRegistered;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -91,7 +91,12 @@ class UserRegisteredReplayerTests {
 
         assertThat(captor.getValue())
                 .isEqualTo(
-                        new UserRegistered(demo.getId(), "demo@bankflow.local", true, CREATED_AT));
+                        new UserRegistered(
+                                demo.getId(),
+                                "demo@bankflow.local",
+                                true,
+                                Role.ROLE_CLIENT,
+                                CREATED_AT));
     }
 
     private UserRegisteredReplayer createReplayer(boolean enabled) {

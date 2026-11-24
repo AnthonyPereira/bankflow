@@ -3,8 +3,8 @@ package com.bankflow.customer.api.customer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bankflow.customer.CustomerApiTestSupport;
-import com.bankflow.customer.application.customer.ContactDetails;
 import com.bankflow.customer.application.customer.CustomerProfileService;
+import com.bankflow.customer.application.customer.model.ContactDetails;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -303,7 +303,8 @@ class CustomerApiIntegrationTests extends CustomerApiTestSupport {
         assertThat(payload.get("userId").asString()).isEqualTo(customer.getUserId().toString());
         assertThat(payload.get("email").asString()).isEqualTo(customer.getEmail());
         assertThat(payload.get("status").asString()).isEqualTo("SUSPENDED");
-        assertThat(payload.properties()).hasSize(4);
+        assertThat(payload.get("demo").asBoolean()).isFalse();
+        assertThat(payload.properties()).hasSize(5);
 
         // Même statut redemandé : rien n'est republié
         assertThat(put(url, adminToken, "{\"status\":\"SUSPENDED\"}").statusCode()).isEqualTo(200);
@@ -317,6 +318,56 @@ class CustomerApiIntegrationTests extends CustomerApiTestSupport {
                                 "CustomerUpdated",
                                 Duration.ofSeconds(2)))
                 .hasSize(2);
+    }
+
+    @Test
+    void unAdministrateurDeDemonstrationNeListeQueLesClientsDeDemonstration() throws Exception {
+        var tag = "restreint" + UUID.randomUUID().toString().replace("-", "");
+        var demo = createCustomer(tag + "-demo@bankflow.test", true);
+        createCustomer(tag + "-reel@bankflow.test", false);
+        var restricted = createToken(UUID.randomUUID(), ROLE_ADMIN, true);
+        var fullAdmin = createToken(UUID.randomUUID(), ROLE_ADMIN, false);
+
+        var restrictedList = parseJson(get("/customers?q=" + tag, restricted));
+        var fullList = parseJson(get("/customers?q=" + tag, fullAdmin));
+
+        assertThat(restrictedList.get("totalElements").asLong()).isEqualTo(1);
+        assertThat(restrictedList.get("content").get(0).get("id").asString())
+                .isEqualTo(demo.getId().toString());
+        assertThat(fullList.get("totalElements").asLong()).isEqualTo(2);
+    }
+
+    @Test
+    void unAdministrateurDeDemonstrationRecoit404SurUnClientNonDemonstration() throws Exception {
+        var real = createCustomer(generateUniqueEmail(), false);
+        var demo = createCustomer(generateUniqueEmail(), true);
+        var restricted = createToken(UUID.randomUUID(), ROLE_ADMIN, true);
+        var fullAdmin = createToken(UUID.randomUUID(), ROLE_ADMIN, false);
+
+        var hidden = get("/customers/" + real.getId(), restricted);
+        var hiddenStatus =
+                put(
+                        "/customers/" + real.getId() + "/status",
+                        restricted,
+                        "{\"status\":\"SUSPENDED\"}");
+
+        assertThat(hidden.statusCode()).isEqualTo(404);
+        assertThat(parseJson(hidden).get("code").asString()).isEqualTo("CUSTOMER_NOT_FOUND");
+        assertThat(hiddenStatus.statusCode()).isEqualTo(404);
+        assertThat(parseJson(hiddenStatus).get("code").asString()).isEqualTo("CUSTOMER_NOT_FOUND");
+        assertThat(get("/customers/" + demo.getId(), restricted).statusCode()).isEqualTo(200);
+        assertThat(get("/customers/" + real.getId(), fullAdmin).statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void unTelephoneSansAssezDeChiffresDonne400() throws Exception {
+        var customer = createCustomer(generateUniqueEmail(), false);
+        var token = createToken(customer.getUserId(), ROLE_CLIENT);
+
+        var response = put("/customers/me", token, "{\"phone\":\"------\"}");
+
+        assertThat(response.statusCode()).isEqualTo(400);
+        assertThat(parseJson(response).get("errors").has("phone")).isTrue();
     }
 
     @Test

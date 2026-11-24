@@ -3,6 +3,7 @@ package com.bankflow.customer.domain.customer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bankflow.customer.domain.customer.exception.DemoCustomerCannotBeSuspendedException;
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;

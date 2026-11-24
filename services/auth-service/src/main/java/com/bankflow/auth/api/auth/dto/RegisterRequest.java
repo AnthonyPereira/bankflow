@@ -1,5 +1,7 @@
 package com.bankflow.auth.api.auth.dto;
 
+import com.bankflow.auth.api.auth.validation.MaxUtf8Bytes;
+import com.bankflow.auth.api.auth.validation.NormalizedEmailSize;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

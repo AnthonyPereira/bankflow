@@ -1,9 +1,15 @@
 package com.bankflow.banking.api.account;
 
+import com.bankflow.banking.api.account.dto.AccountResponse;
+import com.bankflow.banking.api.account.dto.AccountSummaryResponse;
+import com.bankflow.banking.api.account.dto.BalanceResponse;
+import com.bankflow.banking.api.account.dto.CreateAccountRequest;
+import com.bankflow.banking.api.error.FieldValidationException;
 import com.bankflow.banking.api.page.PageResponse;
 import com.bankflow.banking.api.security.JwtActors;
 import com.bankflow.banking.application.account.AccountService;
 import com.bankflow.banking.domain.account.Account;
+import com.bankflow.banking.domain.transaction.Actor;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -36,7 +42,7 @@ class AccountController {
     @PostMapping
     ResponseEntity<AccountResponse> createAccount(
             @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateAccountRequest request) {
-        var account = openAccount(jwt, request);
+        var account = openAccount(JwtActors.createFrom(jwt), request);
         var location =
                 ServletUriComponentsBuilder.fromCurrentContextPath()
                         .path("/accounts/{id}")
@@ -45,19 +51,19 @@ class AccountController {
         return ResponseEntity.created(location).body(AccountResponse.createFrom(account));
     }
 
-    private Account openAccount(Jwt jwt, CreateAccountRequest request) {
-        if (!isAdmin(jwt)) {
+    private Account openAccount(Actor actor, CreateAccountRequest request) {
+        if (!actor.isAdmin()) {
             if (request.customerId() != null) {
                 throw new FieldValidationException(
                         "customerId", "Ce champ est réservé aux conseillers.");
             }
-            return accountService.openAccount(readUserId(jwt), request.currency(), request.label());
+            return accountService.openAccount(actor.userId(), request.currency(), request.label());
         }
         if (request.customerId() == null) {
             throw new FieldValidationException("customerId", "Choisissez le client.");
         }
         return accountService.openAccountForCustomer(
-                request.customerId(), request.currency(), request.label());
+                actor, request.customerId(), request.currency(), request.label());
     }
 
     @GetMapping
@@ -66,6 +72,7 @@ class AccountController {
             @RequestParam(required = false) UUID customerId,
             @RequestParam(defaultValue = "0")
                     @Min(value = 0, message = "La page doit être positive.")
+                    @Max(value = 10000, message = "La page doit être inférieure à 10 000.")
                     int page,
             @RequestParam(defaultValue = "20")
                     @Min(value = 1, message = "La taille doit être comprise entre 1 et 100.")
@@ -73,7 +80,7 @@ class AccountController {
                     int size) {
         // Le filtre est réservé aux administrateurs : un client ne voit que ses comptes
         var accounts =
-                accountService.listAccounts(readUserId(jwt), isAdmin(jwt), customerId, page, size);
+                accountService.listAccounts(JwtActors.createFrom(jwt), customerId, page, size);
         return PageResponse.createFrom(accounts, AccountResponse::createFrom);
     }
 
@@ -85,27 +92,18 @@ class AccountController {
 
     @GetMapping("/{id}")
     AccountResponse getAccount(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        return AccountResponse.createFrom(
-                accountService.getAccount(readUserId(jwt), isAdmin(jwt), id));
+        return AccountResponse.createFrom(accountService.getAccount(JwtActors.createFrom(jwt), id));
     }
 
     @GetMapping("/{id}/balance")
     BalanceResponse getBalance(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        var account = accountService.getAccount(readUserId(jwt), isAdmin(jwt), id);
+        var account = accountService.getAccount(JwtActors.createFrom(jwt), id);
         return BalanceResponse.createFrom(account, clock.instant());
     }
 
     @PostMapping("/{id}/close")
     AccountResponse closeAccount(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         return AccountResponse.createFrom(
-                accountService.closeAccount(readUserId(jwt), isAdmin(jwt), id));
-    }
-
-    private static UUID readUserId(Jwt jwt) {
-        return JwtActors.createFrom(jwt).userId();
-    }
-
-    private static boolean isAdmin(Jwt jwt) {
-        return JwtActors.createFrom(jwt).isAdmin();
+                accountService.closeAccount(JwtActors.createFrom(jwt), id));
     }
 }

@@ -12,6 +12,8 @@ Microservice BankFlow, projet Spring Boot **indépendant** (aucun code partagé 
 
 `TRUSTED_PROXIES` : regex des proxys dont les en-têtes `X-Forwarded-*` sont transmis aux services (plages privées par défaut).
 
+`RATE_LIMIT_OPERATIONS_PER_MINUTE` : opérations bancaires (ouverture, dépôt, retrait, clôture, compensation) par minute et par IP, 60 par défaut.
+
 ## Commandes
 
 ```bash

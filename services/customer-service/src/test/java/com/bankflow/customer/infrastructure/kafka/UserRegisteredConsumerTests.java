@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.bankflow.customer.application.customer.CustomerRegistrationService;
 import java.util.UUID;
@@ -45,6 +46,44 @@ class UserRegisteredConsumerTests {
 
         verify(registrationService, times(2))
                 .registerUser(eq(userId), eq("a@bankflow.test"), eq(false));
+    }
+
+    @Test
+    void unUserRegisteredAdministrateurEstIgnore() {
+        var userId = UUID.randomUUID();
+
+        consumer.consume(
+                new ConsumerRecord<>(
+                        "bank.users",
+                        0,
+                        0L,
+                        userId.toString(),
+                        """
+                        {"eventType":"UserRegistered","eventVersion":1,
+                         "payload":{"userId":"%s","email":"admin@bankflow.test","role":"ROLE_ADMIN"}}\
+                        """
+                                .formatted(userId)));
+
+        verifyNoInteractions(registrationService);
+    }
+
+    @Test
+    void unRoleClientCreeLeDossier() {
+        var userId = UUID.randomUUID();
+
+        consumer.consume(
+                new ConsumerRecord<>(
+                        "bank.users",
+                        0,
+                        0L,
+                        userId.toString(),
+                        """
+                        {"eventType":"UserRegistered","eventVersion":1,
+                         "payload":{"userId":"%s","email":"a@bankflow.test","role":"ROLE_CLIENT"}}\
+                        """
+                                .formatted(userId)));
+
+        verify(registrationService).registerUser(userId, "a@bankflow.test", false);
     }
 
     @Test

@@ -73,6 +73,43 @@ class CustomerEventsIntegrationTests extends BankingApiTestSupport {
     }
 
     @Test
+    void leChampDemoEstAppliqueQuandIlEstPresentEtGardeQuandIlEstAbsent() throws Exception {
+        var customerId = UUID.randomUUID();
+        var userId = UUID.randomUUID();
+        publishWithDemo(customerId, "CustomerCreated", userId, "n@bankflow.test", true, T1);
+        awaitTrue(() -> countRefs(customerId) == 1);
+        assertThat(customerRefs.findById(customerId).orElseThrow().isDemo()).isTrue();
+
+        publish(customerId, "CustomerUpdated", 1, userId, "n@bankflow.test", "SUSPENDED", T2);
+        awaitTrue(() ->
+                customerRefs
+                        .findById(customerId)
+                        .map(ref -> ref.getStatus() == CustomerStatus.SUSPENDED)
+                        .orElse(false));
+        assertThat(customerRefs.findById(customerId).orElseThrow().isDemo()).isTrue();
+
+        publishWithDemo(customerId, "CustomerUpdated", userId, "n@bankflow.test", false, T3);
+        awaitTrue(() -> !customerRefs.findById(customerId).orElseThrow().isDemo());
+    }
+
+    @Test
+    void unClientSansChampDemoNEstPasUnClientDemo() throws Exception {
+        var customerId = UUID.randomUUID();
+
+        publish(
+                customerId,
+                "CustomerCreated",
+                1,
+                UUID.randomUUID(),
+                "o@bankflow.test",
+                "ACTIVE",
+                T1);
+
+        awaitTrue(() -> countRefs(customerId) == 1);
+        assertThat(customerRefs.findById(customerId).orElseThrow().isDemo()).isFalse();
+    }
+
+    @Test
     void unAncienCustomerCreatedNeReactivePasUnClientSuspendu() throws Exception {
         var customerId = UUID.randomUUID();
         var userId = UUID.randomUUID();
@@ -188,6 +225,30 @@ class CustomerEventsIntegrationTests extends BankingApiTestSupport {
                                 email,
                                 status);
         publishRaw(envelope);
+    }
+
+    private void publishWithDemo(
+            UUID customerId,
+            String eventType,
+            UUID userId,
+            String email,
+            boolean demo,
+            Instant occurredAt)
+            throws Exception {
+        publishRaw(
+                """
+                {"eventId":"%s","eventType":"%s","eventVersion":1,"occurredAt":"%s",\
+                "producer":"customer-service","payload":{"customerId":"%s","userId":"%s",\
+                "email":"%s","status":"ACTIVE","demo":%s}}\
+                """
+                        .formatted(
+                                UUID.randomUUID(),
+                                eventType,
+                                occurredAt,
+                                customerId,
+                                userId,
+                                email,
+                                demo));
     }
 
     /** Toujours la même clé : un seul topic partitionné par clé garde l'ordre d'envoi. */

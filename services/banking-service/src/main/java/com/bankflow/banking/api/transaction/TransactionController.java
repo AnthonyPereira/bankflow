@@ -2,9 +2,11 @@ package com.bankflow.banking.api.transaction;
 
 import com.bankflow.banking.api.page.PageResponse;
 import com.bankflow.banking.api.security.JwtActors;
+import com.bankflow.banking.api.transaction.dto.CompensationRequest;
+import com.bankflow.banking.api.transaction.dto.TransactionResponse;
 import com.bankflow.banking.application.transaction.CompensationService;
-import com.bankflow.banking.application.transaction.TransactionQuery;
 import com.bankflow.banking.application.transaction.TransactionService;
+import com.bankflow.banking.application.transaction.model.TransactionQuery;
 import com.bankflow.banking.domain.transaction.TransactionType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -49,6 +51,7 @@ class TransactionController {
             @RequestParam(required = false) UUID customerId,
             @RequestParam(defaultValue = "0")
                     @Min(value = 0, message = "La page doit être positive.")
+                    @Max(value = 10000, message = "La page doit être inférieure à 10 000.")
                     int page,
             @RequestParam(defaultValue = "20")
                     @Min(value = 1, message = "La taille doit être comprise entre 1 et 100.")

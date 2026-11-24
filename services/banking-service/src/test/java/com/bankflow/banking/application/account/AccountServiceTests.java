@@ -9,6 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.bankflow.banking.IbanTestSupport;
+import com.bankflow.banking.application.account.exception.AccountLimitReachedException;
+import com.bankflow.banking.application.account.exception.AccountNotFoundException;
+import com.bankflow.banking.application.account.exception.AccountNumberUnavailableException;
+import com.bankflow.banking.application.account.exception.CustomerNotReadyException;
+import com.bankflow.banking.application.account.exception.CustomerSuspendedException;
 import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountNumberGenerator;
 import com.bankflow.banking.domain.account.AccountRepository;
@@ -17,6 +22,7 @@ import com.bankflow.banking.domain.customer.CustomerRef;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.customer.CustomerStatus;
 import com.bankflow.banking.domain.money.Currency;
+import com.bankflow.banking.domain.transaction.Actor;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
@@ -41,6 +47,7 @@ class AccountServiceTests {
                 new AccountService(
                         accounts,
                         customerRefs,
+                        new AccountAccess(customerRefs),
                         new AccountNumberGenerator(new SecureRandom()),
                         Clock.fixed(NOW, ZoneOffset.UTC));
         when(accounts.insertIfNumberFree(any(Account.class))).thenReturn(true);
@@ -126,10 +133,13 @@ class AccountServiceTests {
         when(accounts.findById(foreign.getId())).thenReturn(Optional.of(foreign));
         when(accounts.findByIdForUpdate(foreign.getId())).thenReturn(Optional.of(foreign));
 
-        assertThatThrownBy(() -> service.getAccount(userId, false, foreign.getId()))
+        assertThatThrownBy(
+                        () -> service.getAccount(Actor.createFrom(userId, false), foreign.getId()))
                 .isInstanceOf(AccountNotFoundException.class);
-        assertThatThrownBy(() -> service.closeAccount(userId, false, foreign.getId()))
+        assertThatThrownBy(() ->
+                        service.closeAccount(Actor.createFrom(userId, false), foreign.getId()))
                 .isInstanceOf(AccountNotFoundException.class);
-        assertThat(service.getAccount(userId, true, foreign.getId())).isSameAs(foreign);
+        assertThat(service.getAccount(Actor.createFrom(userId, true), foreign.getId()))
+                .isSameAs(foreign);
     }
 }
