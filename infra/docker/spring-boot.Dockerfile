@@ -2,7 +2,7 @@
 # Image générique des services Spring Boot (BF-002-07).
 # Le contexte de build est le dossier du service : services/<service>.
 
-FROM eclipse-temurin:27-jdk@sha256:5e6d9093c7a8e95adfaa8828253c58f2c6820116d07a062440a778358807578a AS build
+FROM eclipse-temurin:27-jdk@sha256:f67511a7888677dbc4fb64ee6f17f9237c24d2b110f65a61716a3b516b6b3fa8 AS build
 WORKDIR /build
 # Sans unzip, le wrapper Maven télécharge le .tar.gz au lieu du .zip, dont l'empreinte SHA-256 est
 # vérifiée (distributionSha256Sum) : unzip garde la même archive qu'en CI et sous Windows
@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.m2 sh ./mvnw -B -ntp package -Dmaven.test.s
     && cp target/*.jar app.jar \
     && java -Djarmode=tools -jar app.jar extract --layers --destination /extracted
 
-FROM eclipse-temurin:27-jre@sha256:acfb350b50e707addf3dcbb47f7052d1882d1e5f1670ce838a9c7838d82d4fe5
+FROM eclipse-temurin:27-jre@sha256:8f8cfda6393f63a029dbe83ceda4c19a31d268184662e96d9641f57afdaf870b
 RUN groupadd --system --gid 10001 bankflow \
     && useradd --system --uid 10001 --gid bankflow --no-create-home bankflow
 WORKDIR /app
