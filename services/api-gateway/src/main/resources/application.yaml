@@ -65,6 +65,8 @@ bankflow:
     register-per-minute: ${RATE_LIMIT_REGISTER_PER_MINUTE:5}
     transfers-per-minute: ${RATE_LIMIT_TRANSFERS_PER_MINUTE:30}
     operations-per-minute: ${RATE_LIMIT_OPERATIONS_PER_MINUTE:60}
+    # Virements par utilisateur authentifié, en plus de la limite par IP
+    transfers-per-user-per-minute: ${RATE_LIMIT_TRANSFERS_PER_USER_PER_MINUTE:10}
 
 server:
   port: 8080
