@@ -68,3 +68,8 @@ bankflow:
   demo:
     # Comptes et historique du client de démonstration (même variable que l'Auth Service)
     enabled: ${DEMO_ACCOUNTS_ENABLED:true}
+  idempotency:
+    # Durée pendant laquelle une même clé renvoie la même réponse (ADR-006)
+    retention: ${IDEMPOTENCY_RETENTION:24h}
+    # Purge des clés plus anciennes, toutes les heures
+    purge-cron: "0 15 * * * *"

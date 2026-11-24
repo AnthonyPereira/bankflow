@@ -8,6 +8,9 @@ logging:
     com.bankflow: INFO
 
 bankflow:
+  idempotency:
+    # Purge planifiée désactivée : les tests appellent la purge eux-mêmes
+    purge-cron: "-"
   kafka:
     retry:
       # Attentes raccourcies : les tests ne patientent pas 2 minutes sur un message en erreur
