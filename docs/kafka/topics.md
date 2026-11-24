@@ -1,5 +1,7 @@
 # Topics Kafka
 
+Le schéma des flux est dans [flux-evenements.md](flux-evenements.md).
+
 Les topics sont créés par le conteneur `kafka-init`, qui exécute [`infra/kafka/create-topics.sh`](../../infra/kafka/create-topics.sh). La création automatique est désactivée sur le broker : un topic absent de ce script n'existe pas.
 
 ## Configuration
