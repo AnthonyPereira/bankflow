@@ -1,6 +1,6 @@
 package com.bankflow.auth.infrastructure.kafka;
 
-import com.bankflow.auth.domain.user.UserRegistered;
+import com.bankflow.auth.domain.user.event.UserRegistered;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;

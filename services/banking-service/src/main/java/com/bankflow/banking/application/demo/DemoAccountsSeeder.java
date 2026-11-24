@@ -1,14 +1,15 @@
 package com.bankflow.banking.application.demo;
 
 import com.bankflow.banking.application.account.AccountService;
+import com.bankflow.banking.application.demo.config.DemoAccountsProperties;
 import com.bankflow.banking.application.operation.OperationService;
 import com.bankflow.banking.application.transfer.TransferService;
 import com.bankflow.banking.domain.account.AccountRepository;
 import com.bankflow.banking.domain.account.AccountStatus;
 import com.bankflow.banking.domain.customer.CustomerRef;
-import com.bankflow.banking.domain.customer.CustomerRefCreated;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.customer.CustomerStatus;
+import com.bankflow.banking.domain.customer.event.CustomerRefCreated;
 import com.bankflow.banking.domain.money.Currency;
 import com.bankflow.banking.domain.transaction.Actor;
 import java.math.BigDecimal;

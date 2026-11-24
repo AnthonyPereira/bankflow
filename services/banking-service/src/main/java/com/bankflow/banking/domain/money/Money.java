@@ -1,5 +1,6 @@
 package com.bankflow.banking.domain.money;
 
+import com.bankflow.banking.domain.money.exception.CurrencyMismatchException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Objects;

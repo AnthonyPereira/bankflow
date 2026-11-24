@@ -1,9 +1,9 @@
 package com.bankflow.customer.application.customer;
 
 import com.bankflow.customer.domain.customer.Customer;
-import com.bankflow.customer.domain.customer.CustomerCreated;
 import com.bankflow.customer.domain.customer.CustomerRepository;
-import com.bankflow.customer.domain.customer.CustomerUpdated;
+import com.bankflow.customer.domain.customer.event.CustomerCreated;
+import com.bankflow.customer.domain.customer.event.CustomerUpdated;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;

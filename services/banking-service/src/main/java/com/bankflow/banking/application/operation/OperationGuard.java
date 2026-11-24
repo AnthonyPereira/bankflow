@@ -1,11 +1,11 @@
 package com.bankflow.banking.application.operation;
 
 import com.bankflow.banking.application.account.AccountAccess;
-import com.bankflow.banking.application.account.AccountNotFoundException;
-import com.bankflow.banking.application.account.CustomerSuspendedException;
+import com.bankflow.banking.application.account.exception.AccountNotFoundException;
+import com.bankflow.banking.application.account.exception.CustomerSuspendedException;
 import com.bankflow.banking.domain.account.Account;
-import com.bankflow.banking.domain.account.AccountClosedException;
 import com.bankflow.banking.domain.account.AccountRepository;
+import com.bankflow.banking.domain.account.exception.AccountClosedException;
 import com.bankflow.banking.domain.customer.CustomerRef;
 import com.bankflow.banking.domain.customer.CustomerRefRepository;
 import com.bankflow.banking.domain.transaction.Actor;

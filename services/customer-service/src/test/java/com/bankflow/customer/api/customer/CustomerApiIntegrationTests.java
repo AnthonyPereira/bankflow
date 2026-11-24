@@ -3,8 +3,8 @@ package com.bankflow.customer.api.customer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bankflow.customer.CustomerApiTestSupport;
-import com.bankflow.customer.application.customer.ContactDetails;
 import com.bankflow.customer.application.customer.CustomerProfileService;
+import com.bankflow.customer.application.customer.model.ContactDetails;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

@@ -2,10 +2,12 @@ package com.bankflow.banking.api.transfer;
 
 import com.bankflow.banking.api.operation.IdempotentResponses;
 import com.bankflow.banking.api.security.JwtActors;
+import com.bankflow.banking.api.transfer.dto.TransferRequest;
+import com.bankflow.banking.api.transfer.dto.TransferResponse;
 import com.bankflow.banking.application.idempotency.IdempotencyExecutor;
 import com.bankflow.banking.application.idempotency.IdempotencyKeys;
 import com.bankflow.banking.application.idempotency.RequestFingerprint;
-import com.bankflow.banking.application.idempotency.StoredResponse;
+import com.bankflow.banking.application.idempotency.model.StoredResponse;
 import com.bankflow.banking.application.transfer.TransferService;
 import jakarta.validation.Valid;
 import java.util.HashMap;

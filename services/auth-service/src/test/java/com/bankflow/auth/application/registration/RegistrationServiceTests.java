@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.bankflow.auth.application.demo.DemoAccounts;
+import com.bankflow.auth.application.registration.exception.EmailAlreadyUsedException;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;
 import java.sql.SQLException;

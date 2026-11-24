@@ -9,6 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.bankflow.banking.IbanTestSupport;
+import com.bankflow.banking.application.account.exception.AccountLimitReachedException;
+import com.bankflow.banking.application.account.exception.AccountNotFoundException;
+import com.bankflow.banking.application.account.exception.AccountNumberUnavailableException;
+import com.bankflow.banking.application.account.exception.CustomerNotReadyException;
+import com.bankflow.banking.application.account.exception.CustomerSuspendedException;
 import com.bankflow.banking.domain.account.Account;
 import com.bankflow.banking.domain.account.AccountNumberGenerator;
 import com.bankflow.banking.domain.account.AccountRepository;

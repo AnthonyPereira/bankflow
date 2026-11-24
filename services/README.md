@@ -21,22 +21,38 @@ com.bankflow.<service>/
 └── infrastructure/  JPA, Kafka, clients REST, configuration
 ```
 
-Dans chaque couche, les classes sont rangées par fonctionnalité dès qu'il y en a plusieurs, sur un seul niveau : un sous-package regroupe le cas d'usage, ses exceptions et ses DTO. Exemple avec l'Auth Service :
+Dans chaque couche, les classes sont rangées par fonctionnalité (`login`, `account`, `transfer`…). À la racine d'une fonctionnalité ne restent que les classes qui portent la logique : contrôleurs, services, entités, dépôts, énumérations et value objects. Le reste va dans un sous-package selon sa nature :
+
+| Sous-package | Contenu | Couche |
+|---|---|---|
+| `dto/` | records de requête et de réponse HTTP | `api` |
+| `validation/` | annotations de validation et leurs validateurs | `api` |
+| `error/` | `ApiExceptionHandler` et exceptions propres à l'API, au niveau de la couche (`api/error/`) | `api` |
+| `model/` | records d'entrée ou de sortie des cas d'usage (vues, requêtes, résultats) | `application` |
+| `config/` | records `@ConfigurationProperties` | `application` |
+| `exception/` | exceptions métier ou de cas d'usage | `application`, `domain` |
+| `event/` | événements du domaine publiés sur Kafka | `domain` |
+
+Exemple avec l'Auth Service :
 
 ```
 com.bankflow.auth/
 ├── api/
-│   ├── auth/            AuthController, cookies, erreurs HTTP, dto/
+│   ├── auth/            AuthController, RefreshCookies, UserMapper, dto/, validation/
+│   ├── demo/            DemoAccountsController
+│   ├── error/           ApiExceptionHandler
 │   └── jwks/            JwksController
 ├── application/
-│   ├── registration/    inscription
-│   ├── login/           connexion
-│   └── token/           access token et refresh token
+│   ├── demo/            DemoAccounts, model/
+│   ├── login/           LoginService, exception/
+│   ├── registration/    RegistrationService, exception/
+│   ├── token/           AccessTokenService, RefreshTokenService, model/, exception/
+│   └── user/            CurrentUserService, exception/
 ├── domain/
-│   ├── user/            User, Role, UserRegistered
-│   └── token/           RefreshToken
+│   ├── user/            User, Role, UserRepository, event/, exception/
+│   └── token/           RefreshToken, RefreshTokenRepository, RevocationReason
 └── infrastructure/
-    ├── bootstrap/       compte administrateur initial
+    ├── bootstrap/       compte administrateur et comptes de démonstration
     ├── config/          beans transverses (Clock, PasswordEncoder)
     ├── kafka/           publication des événements
     ├── openapi/         Swagger

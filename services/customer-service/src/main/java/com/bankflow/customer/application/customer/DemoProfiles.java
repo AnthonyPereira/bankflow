@@ -1,5 +1,6 @@
 package com.bankflow.customer.application.customer;
 
+import com.bankflow.customer.application.customer.model.ContactDetails;
 import java.util.Map;
 import java.util.Optional;
 

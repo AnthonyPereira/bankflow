@@ -1,5 +1,6 @@
 package com.bankflow.banking.application.idempotency;
 
+import com.bankflow.banking.application.idempotency.exception.InvalidIdempotencyKeyException;
 import java.util.regex.Pattern;
 
 /** Règles de l'en-tête {@code Idempotency-Key}. */

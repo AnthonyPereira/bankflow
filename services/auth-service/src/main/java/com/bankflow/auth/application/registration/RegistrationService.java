@@ -1,10 +1,11 @@
 package com.bankflow.auth.application.registration;
 
 import com.bankflow.auth.application.demo.DemoAccounts;
+import com.bankflow.auth.application.registration.exception.EmailAlreadyUsedException;
 import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
-import com.bankflow.auth.domain.user.UserRegistered;
 import com.bankflow.auth.domain.user.UserRepository;
+import com.bankflow.auth.domain.user.event.UserRegistered;
 import java.time.Clock;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.context.ApplicationEventPublisher;

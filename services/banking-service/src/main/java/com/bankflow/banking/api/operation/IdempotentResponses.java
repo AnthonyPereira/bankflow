@@ -1,6 +1,6 @@
 package com.bankflow.banking.api.operation;
 
-import com.bankflow.banking.application.idempotency.IdempotencyResult;
+import com.bankflow.banking.application.idempotency.model.IdempotencyResult;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;

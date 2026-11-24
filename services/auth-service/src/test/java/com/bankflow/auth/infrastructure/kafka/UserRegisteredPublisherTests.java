@@ -7,7 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.bankflow.auth.domain.user.Role;
-import com.bankflow.auth.domain.user.UserRegistered;
+import com.bankflow.auth.domain.user.event.UserRegistered;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
