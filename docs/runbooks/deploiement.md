@@ -95,7 +95,7 @@ Variables à connaître (toutes ont une valeur par défaut, rien à ajouter au `
 | Vérification | Résultat attendu |
 |---|---|
 | `cd ~/apps/bankflow && docker compose -p bankflow ps` | `customer-service` et `banking-service` `healthy`, `kafka-init` terminé |
-| `docker compose -p bankflow logs auth-service` | Le rattrapage des profils s'est terminé sans erreur |
+| `docker compose -p bankflow logs auth-service \| grep UserRegistered` | `UserRegistered republié pour N utilisateurs`, jamais `Rejeu de UserRegistered interrompu` |
 | Connexion avec un compte de démonstration | Tableau de bord |
 | `GET /api/customers/me` avec le jeton de la session | 200 avec le profil du client |
 | `GET /api/accounts` avec le même jeton | 200 avec la liste des comptes |
@@ -139,6 +139,7 @@ docker compose -p bankflow exec -T postgres pg_dump -U bankflow_admin auth_db > 
 | Job `sonarqube` en erreur ou en délai dépassé sans Quality Gate | Panne de SonarCloud : consulter la page de statut de SonarCloud, puis relancer le job depuis le run de CI (Re-run failed jobs). Une fois la CI verte, relancer aussi `Déploiement` (Re-run ou lancement manuel) : son job `CI verte sur main` a déjà échoué et ne repart pas seul |
 | `La CI de <sha> a échoué` | Le commit de `main` n'a pas de CI verte (job `sonarqube` compris) : la rendre verte, puis relancer `Déploiement` |
 | `La CI de <sha> n'est pas terminée après 40 minutes` | CI bloquée ou très lente : vérifier le run de CI, puis relancer `Déploiement` une fois qu'elle est verte |
+| `CUSTOMER_NOT_FOUND` pour tous les clients, liste des comptes vide | Le rejeu de `UserRegistered` s'est arrêté (`Rejeu de UserRegistered interrompu` dans les logs de l'Auth Service) : vérifier Kafka, puis redémarrer l'Auth Service (`docker compose -p bankflow restart auth-service`) |
 | Adresse en 404 | Le conteneur `frontend` n'est pas sur le réseau `web` |
 | Connexion refusée en 403 | `APP_HOST` différent de l'adresse publique |
 
