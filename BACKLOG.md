@@ -299,7 +299,7 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
 - [x] BF-009-07 — Ajouter Swagger pour l'ensemble du Banking Service
 - [x] BF-009-08 — Données de démonstration : au démarrage, ouvrir un ou deux comptes pour `demo.client` avec quelques dépôts, retraits et virements, pour que la vitrine ne soit pas vide. Les données (un « Compte courant » avec historique et un « Livret épargne ») sont recréées au démarrage du Banking Service si `demo.client` n'a plus aucun compte actif, et jamais sinon. Elles passent par les mêmes règles métier que les autres opérations, et rien n'est créé avec `DEMO_ACCOUNTS_ENABLED=false` → voir [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)
 - [x] BF-009-09 — Rédiger l'[ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md) (garde-fous de la vitrine)
-- [ ] BF-009-10 — Limiter le débit de `POST /transfers` **par utilisateur**, en plus de la limite par IP de la Gateway, qui existe déjà : un visiteur peut sinon sonder des IBAN (`DESTINATION_ACCOUNT_NOT_FOUND` ou `CURRENCY_MISMATCH` révèle l'existence et la devise d'un compte)
+- [x] BF-009-10 — Limiter le débit de `POST /transfers` **par utilisateur**, en plus de la limite par IP de la Gateway, qui existe déjà : un visiteur peut sinon sonder des IBAN (`DESTINATION_ACCOUNT_NOT_FOUND` ou `CURRENCY_MISMATCH` révèle l'existence et la devise d'un compte) → filtre `UserRateLimitFilter` après Spring Security, 10 virements par minute et par utilisateur (`RATE_LIMIT_TRANSFERS_PER_USER_PER_MINUTE`)
 - [x] BF-009-11 — Gateway : limiter à 60 par minute et par IP (`RATE_LIMIT_OPERATIONS_PER_MINUTE`) les ouvertures de compte, dépôts, retraits, clôtures et compensations
 
 ### Tests

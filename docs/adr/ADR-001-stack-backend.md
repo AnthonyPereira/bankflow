@@ -65,7 +65,7 @@ Il tient compte de quatre contraintes :
 | Élément | Choix | Justification |
 |---|---|---|
 | Gateway | **Spring Cloud Gateway Server Web MVC** | On garde le même modèle (servlet et threads virtuels) que les autres services, donc un seul paradigme à apprendre. Les fonctions nécessaires (routage, filtres, CORS) sont disponibles. |
-| Rate limiting | **Bucket4j** (filtre de rate limit de Gateway MVC), en mémoire | Une instance unique en V1 suffit. On passera à un stockage distribué (Redis) seulement si on déploie plusieurs instances de Gateway. Ajouter Redis aujourd'hui ne répondrait à aucun besoin réel. |
+| Rate limiting | **Bucket4j** (filtre de rate limit de Gateway MVC), en mémoire | Limite par IP sur les routes sensibles, et par utilisateur (sujet du JWT) sur les virements. Une instance unique en V1 suffit. On passera à un stockage distribué (Redis) seulement si on déploie plusieurs instances de Gateway. Ajouter Redis aujourd'hui ne répondrait à aucun besoin réel. |
 
 ### 2.4 Persistance
 

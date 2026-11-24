@@ -46,3 +46,5 @@ Le mot de passe de `demo.admin` est public : n'importe quel visiteur peut s'y co
 **Garde-fou** : `demo.admin` est un administrateur **restreint aux clients de démonstration** (voir ADR-005, section 5). Le jeton porte `demo = true` ; le Customer Service et le Banking Service ne lui montrent que les clients marqués `demo`, et répondent 404 pour tout le reste. Le vrai administrateur, dont le mot de passe reste secret, n'est pas limité.
 
 **Limites** : `demo.admin` voit les clients de démonstration en entier, ce qui est voulu. Le résumé global de la banque ne contient que des totaux. La limitation de débit de la Gateway s'applique aussi aux opérations (dépôt, retrait, ouverture, clôture, compensation) : 60 par minute et par IP.
+
+**Virements de `demo.client`** (BF-009-10) : les virements sont limités à 10 par minute et par utilisateur. Tous les visiteurs connectés en `demo.client` partagent donc ce quota, et un seul visiteur peut le consommer pour les autres pendant une minute. Ce compromis est assumé : exempter les comptes de démonstration, dont le mot de passe est public, rouvrirait le sondage d'IBAN que cette limite doit empêcher.

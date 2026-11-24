@@ -19,7 +19,7 @@ sequenceDiagram
     F->>F: clé d'idempotence = crypto.randomUUID()
     U->>F: confirme
     F->>G: POST /api/transfers + Idempotency-Key
-    G->>G: vérifie le JWT, limite à 30/min par IP
+    G->>G: vérifie le JWT, limite à 30/min par IP et 10/min par utilisateur
     G->>C: POST /transfers + X-User-Id, X-User-Role
     C->>C: valide le corps, la clé, calcule l'empreinte
 
@@ -134,4 +134,3 @@ La base refuse aussi les incohérences par elle-même, grâce aux contraintes de
 
 - **Aucun événement Kafka** : `bank.transfers` reste vide.
 - **Pas de saga** : un virement est `COMPLETED` dès sa création. Les statuts `PENDING` et `REJECTED` sont prévus pour une étape asynchrone, comme un contrôle de fraude.
-- **Débit limité par IP seulement** : la limite par utilisateur est prévue dans BF-009-10.
