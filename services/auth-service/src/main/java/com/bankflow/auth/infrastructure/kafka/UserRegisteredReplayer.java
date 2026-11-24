@@ -2,6 +2,7 @@ package com.bankflow.auth.infrastructure.kafka;
 
 import com.bankflow.auth.domain.user.UserRepository;
 import com.bankflow.auth.domain.user.event.UserRegistered;
+import java.time.Duration;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,14 +26,20 @@ import org.springframework.transaction.support.TransactionTemplate;
  *
  * <p>Il démarre sur {@link ApplicationReadyEvent}, donc après les seeders (leurs comptes sont
  * inclus), et dans un thread virtuel dédié : un Kafka lent ou absent ne retarde ni la disponibilité
- * de l'application ni son healthcheck. Il s'arrête au premier échec d'envoi (Kafka indisponible)
- * avec un seul avertissement ; le prochain démarrage recommencera. Il se désactive avec {@code
- * bankflow.events.replay-on-startup=false}.
+ * de l'application ni son healthcheck. Un envoi en échec est retenté avec une attente croissante
+ * (environ deux minutes au total) : au démarrage, la première lecture des métadonnées de Kafka peut
+ * dépasser {@code max.block.ms} sur une machine lente. Si Kafka reste indisponible, le rejeu
+ * s'arrête avec un seul avertissement ; le prochain démarrage recommencera. Il se désactive avec
+ * {@code bankflow.events.replay-on-startup=false}.
  */
 @Component
 class UserRegisteredReplayer {
 
     static final int DEFAULT_PAGE_SIZE = 100;
+
+    /** Attentes entre deux essais d'un même envoi : environ deux minutes au total. */
+    static final List<Duration> DEFAULT_RETRY_DELAYS =
+            List.of(1, 2, 4, 8, 15, 30, 30, 30).stream().map(Duration::ofSeconds).toList();
 
     private static final Logger log = LoggerFactory.getLogger(UserRegisteredReplayer.class);
     private static final Sort ORDER_BY_CREATION = Sort.by("createdAt", "id");
@@ -42,6 +49,8 @@ class UserRegisteredReplayer {
     private final TransactionTemplate readOnlyTransaction;
     private final boolean enabled;
     private final int pageSize;
+    private final List<Duration> retryDelays;
+    private final Sleeper sleeper;
 
     @Autowired
     UserRegisteredReplayer(
@@ -49,7 +58,14 @@ class UserRegisteredReplayer {
             UserRegisteredPublisher publisher,
             PlatformTransactionManager transactionManager,
             @Value("${bankflow.events.replay-on-startup:true}") boolean enabled) {
-        this(users, publisher, transactionManager, enabled, DEFAULT_PAGE_SIZE);
+        this(
+                users,
+                publisher,
+                transactionManager,
+                enabled,
+                DEFAULT_PAGE_SIZE,
+                DEFAULT_RETRY_DELAYS,
+                Thread::sleep);
     }
 
     UserRegisteredReplayer(
@@ -57,13 +73,17 @@ class UserRegisteredReplayer {
             UserRegisteredPublisher publisher,
             PlatformTransactionManager transactionManager,
             boolean enabled,
-            int pageSize) {
+            int pageSize,
+            List<Duration> retryDelays,
+            Sleeper sleeper) {
         this.users = users;
         this.publisher = publisher;
         this.readOnlyTransaction = new TransactionTemplate(transactionManager);
         this.readOnlyTransaction.setReadOnly(true);
         this.enabled = enabled;
         this.pageSize = pageSize;
+        this.retryDelays = List.copyOf(retryDelays);
+        this.sleeper = sleeper;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -85,7 +105,8 @@ class UserRegisteredReplayer {
     }
 
     /**
-     * Republie les utilisateurs page par page jusqu'au premier échec, et renvoie le nombre envoyé.
+     * Republie les utilisateurs page par page jusqu'au premier envoi définitivement en échec, et
+     * renvoie le nombre envoyé.
      */
     int replayAll() {
         var sent = 0;
@@ -94,7 +115,7 @@ class UserRegisteredReplayer {
         do {
             var page = readPage(pageNumber++);
             for (var event : page.events()) {
-                if (!publisher.send(event)) {
+                if (!sendWithRetry(event)) {
                     log.warn(
                             "Rejeu de UserRegistered interrompu après {} utilisateurs : Kafka"
                                     + " indisponible",
@@ -107,6 +128,26 @@ class UserRegisteredReplayer {
         } while (hasNext);
         log.info("UserRegistered republié pour {} utilisateurs", sent);
         return sent;
+    }
+
+    /** Envoie l'événement, en le retentant après chaque attente prévue tant que l'envoi échoue. */
+    private boolean sendWithRetry(UserRegistered event) {
+        if (publisher.send(event)) {
+            return true;
+        }
+        for (var delay : retryDelays) {
+            log.info("Kafka indisponible, nouvel essai du rejeu de UserRegistered dans {}", delay);
+            try {
+                sleeper.sleep(delay);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+            if (publisher.send(event)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private EventsPage readPage(int pageNumber) {
@@ -123,6 +164,12 @@ class UserRegisteredReplayer {
                             .getContent();
             return new EventsPage(events, slice.hasNext());
         });
+    }
+
+    /** Attente entre deux essais, remplaçable dans les tests. */
+    @FunctionalInterface
+    interface Sleeper {
+        void sleep(Duration duration) throws InterruptedException;
     }
 
     private record EventsPage(List<UserRegistered> events, boolean hasNext) {}

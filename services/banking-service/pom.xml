@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.bankflow</groupId>
     <artifactId>banking-service</artifactId>
-    <version>0.2.0</version>
+    <version>0.2.1</version>
     <name>banking-service</name>
     <description>BankFlow - Banking Service</description>
     <properties>
