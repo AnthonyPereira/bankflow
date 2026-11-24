@@ -135,4 +135,3 @@ La base refuse aussi les incohérences par elle-même, grâce aux contraintes de
 - **Aucun événement Kafka** : `bank.transfers` reste vide.
 - **Pas de saga** : un virement est `COMPLETED` dès sa création. Les statuts `PENDING` et `REJECTED` sont prévus pour une étape asynchrone, comme un contrôle de fraude.
 - **Débit limité par IP seulement** : la limite par utilisateur est prévue dans BF-009-10.
-- **Les clés d'idempotence ne sont jamais purgées** (BF-008-11).
