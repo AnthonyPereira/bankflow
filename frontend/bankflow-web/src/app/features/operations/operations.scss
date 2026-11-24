@@ -108,16 +108,24 @@ mat-form-field {
 }
 
 .filters {
-  display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 8px 16px;
   max-width: none;
 }
 
 .filters mat-form-field {
+  flex: 1 1 180px;
   width: auto;
-  min-width: 180px;
+  min-width: 0;
+}
+
+/* Aligne les boutons (48 px) sur le champ outline (56 px), sans la zone d'aide en dessous. */
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 4px;
 }
 
 .advisor {
