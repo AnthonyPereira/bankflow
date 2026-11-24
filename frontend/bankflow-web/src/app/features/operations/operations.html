@@ -44,10 +44,12 @@
       <input matInput type="date" formControlName="to" />
     </mat-form-field>
 
-    <button matButton="filled" class="submit" type="submit">Filtrer</button>
-    <button matButton="outlined" class="submit" type="button" (click)="resetFilters()">
-      Réinitialiser
-    </button>
+    <div class="filter-actions">
+      <button matButton="filled" class="submit" type="submit">Filtrer</button>
+      <button matButton="outlined" class="submit" type="button" (click)="resetFilters()">
+        Réinitialiser
+      </button>
+    </div>
   </form>
   <div aria-live="polite">
     @if (isPeriodInvalid()) {
