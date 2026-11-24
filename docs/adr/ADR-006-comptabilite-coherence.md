@@ -41,6 +41,7 @@ L'en-tête `Idempotency-Key` (`^[A-Za-z0-9_-]{1,64}$`) est facultatif pour un d�
 - Dans **la même transaction** que l'opération : `INSERT … ON CONFLICT DO NOTHING`. Une requête concurrente avec la même clé attend le commit de la première.
 - Même clé et même empreinte : la même réponse est renvoyée (en-tête `Idempotent-Replayed: true`), sans refaire l'opération. Même clé et empreinte différente : 422 `IDEMPOTENCY_KEY_REUSED`.
 - Une erreur métier annule la transaction : la clé n'est pas conservée et peut être réessayée.
+- Une clé est gardée 24 h (`bankflow.idempotency.retention`, variable `IDEMPOTENCY_RETENTION`). Une tâche planifiée supprime toutes les heures les clés plus anciennes : passé ce délai, la même clé exécute de nouveau l'opération. Une opération en cours n'est jamais concernée, car sa clé n'est pas encore commitée.
 
 ### Invariants
 
