@@ -2,6 +2,13 @@
 
 Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+
+### Ajouté
+
+- **Purge des clés d'idempotence** (BF-008-11) : une tâche planifiée supprime toutes les heures les clés de plus de 24 h (`IDEMPOTENCY_RETENTION`). Une clé purgée pendant un rejeu est réservée de nouveau, au lieu de renvoyer une erreur 500.
+- **Limite des virements par utilisateur** (BF-009-10) : la Gateway accepte au plus 10 virements par minute et par utilisateur (`RATE_LIMIT_TRANSFERS_PER_USER_PER_MINUTE`), en plus de la limite de 30 par IP. Changer d'adresse IP ne permet plus de sonder des IBAN.
+
 ## [0.2.1] — 2026-11-24
 
 ### Corrigé
