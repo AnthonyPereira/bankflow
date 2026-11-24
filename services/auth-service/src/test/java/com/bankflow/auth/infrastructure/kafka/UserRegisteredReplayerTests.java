@@ -11,6 +11,7 @@ import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;
 import com.bankflow.auth.domain.user.event.UserRegistered;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,7 @@ class UserRegisteredReplayerTests {
 
     private final UserRepository users = mock(UserRepository.class);
     private final UserRegisteredPublisher publisher = mock(UserRegisteredPublisher.class);
+    private final List<Duration> sleeps = new ArrayList<>();
 
     @ParameterizedTest
     @ValueSource(ints = {0, 2, 3, 5})
@@ -46,14 +48,61 @@ class UserRegisteredReplayerTests {
     }
 
     @Test
-    void unEchecDEnvoiArreteLeRejeuSansException() {
+    void unEchecDEnvoiDurableArreteLeRejeuApresLesNouveauxEssais() {
         stubPages(createUsers(5));
-        var sent = recordSends(2); // le 3e envoi échoue
+        var sent = recordSends(2); // à partir du 3e, tous les envois échouent
 
         var count = createReplayer(true).replayAll();
 
         assertThat(count).isEqualTo(2);
-        assertThat(sent).hasSize(3);
+        assertThat(sent).hasSize(5); // 2 réussis, puis le 3e essayé une fois et retenté deux fois
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(1), Duration.ofSeconds(2));
+    }
+
+    @Test
+    void unEchecPassagerEstRetenteSansPerdreDUtilisateur() {
+        var all = createUsers(5);
+        stubPages(all);
+        var sent = new ArrayList<UserRegistered>();
+        var calls = new int[] {0};
+        when(publisher.send(any()))
+                .thenAnswer(invocation -> {
+                    if (++calls[0] == 1) {
+                        return false; // premier envoi : métadonnées de Kafka pas encore lues
+                    }
+                    sent.add(invocation.getArgument(0));
+                    return true;
+                });
+
+        var count = createReplayer(true).replayAll();
+
+        assertThat(count).isEqualTo(5);
+        assertThat(sent)
+                .extracting(UserRegistered::email)
+                .containsExactlyElementsOf(all.stream().map(User::getEmail).toList());
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
+    }
+
+    @Test
+    void uneInterruptionPendantLAttenteArreteLeRejeu() throws InterruptedException {
+        stubPages(createUsers(2));
+        when(publisher.send(any())).thenReturn(false);
+        UserRegisteredReplayer.Sleeper interrupted =
+                duration -> {
+                    throw new InterruptedException();
+                };
+        var replayer =
+                new UserRegisteredReplayer(
+                        users,
+                        publisher,
+                        mock(PlatformTransactionManager.class),
+                        true,
+                        2,
+                        List.of(Duration.ofSeconds(1)),
+                        interrupted);
+
+        assertThat(replayer.replayAll()).isZero();
+        assertThat(Thread.interrupted()).isTrue();
     }
 
     @Test
@@ -101,7 +150,13 @@ class UserRegisteredReplayerTests {
 
     private UserRegisteredReplayer createReplayer(boolean enabled) {
         return new UserRegisteredReplayer(
-                users, publisher, mock(PlatformTransactionManager.class), enabled, 2);
+                users,
+                publisher,
+                mock(PlatformTransactionManager.class),
+                enabled,
+                2,
+                List.of(Duration.ofSeconds(1), Duration.ofSeconds(2)),
+                sleeps::add);
     }
 
     private static List<User> createUsers(int count) {

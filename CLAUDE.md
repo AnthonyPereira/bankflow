@@ -65,24 +65,19 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 
 ## État d'avancement (2026-11-24)
 
-**MVP 1 en ligne en `0.1.1`** sur `https://bankflow.anthonypereira.dpdns.org`, avec les comptes de démonstration (voir [CHANGELOG](CHANGELOG.md)) : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005, BF-016 et BF-023-16 sont terminés.
+**MVP 2 en ligne en `0.2.1`** sur `https://bankflow.anthonypereira.dpdns.org` depuis le 2026-11-24 (voir [CHANGELOG](CHANGELOG.md)) : clients, comptes, dépôts, retraits et virements, en plus de la MVP 1. Le jalon MVP 2 du [BACKLOG](BACKLOG.md) est terminé, BF-023-17 compris.
 - `0.1.0` (tag `v0.1.0`, #39) : contenu de la MVP 1, après trois revues de code complètes. Elle n'a jamais été mise en ligne, car le build des images Spring échouait.
 - `0.1.1` (tag `v0.1.1`, hotfix #51) : `unzip` installé dans l'image de build, pour que le wrapper Maven vérifie la bonne archive.
+- `0.2.0` (tag `v0.2.0`, #77) : MVP 2, avec les [ADR-005 à 007](docs/adr/). En ligne, aucun client n'avait de fiche : sur le serveur, la première lecture des métadonnées de Kafka dépassait `max.block.ms` (3 s) et le rejeu de `UserRegistered` s'arrêtait après 0 utilisateur.
+- `0.2.1` (tag `v0.2.1`, hotfix #102) : le rejeu retente un envoi en échec pendant environ deux minutes. `max.block.ms` reste à 3 s pour ne pas bloquer une inscription.
+- Décisions clés de la MVP 2 : l'administrateur agit en **conseiller au nom des clients** sans jamais avoir de compte à son nom ni de fiche client ; plafond de 10 000,00 par opération et au plus 5 comptes actifs par client ; `demo.client` reçoit des comptes et un historique recréés s'ils disparaissent ; `demo.admin` est restreint aux clients de démonstration par le claim `demo` ; la Gateway limite les opérations à 60 par minute et par IP, et les virements à 30.
 - Comptes de démonstration (BF-016-15) : créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire compris, `demo.admin` est un vrai administrateur), mais ne peuvent jamais être désactivés définitivement. `DEMO_ACCOUNTS_ENABLED=false` masque le tableau et ne les crée plus, sans les désactiver. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_EMAIL` / `ADMIN_PASSWORD`, dans `~/apps/bankflow/.env` sur le serveur) reste secret.
 - Déploiement : `deploy-platform` cherche lui-même les nouvelles versions (cron toutes les 5 min, `actions/github-script`, sans `gh`). L'état est gardé dans `~/apps/bankflow/.version` et `.derniere`. Seul `GHCR_PULL_TOKEN` (deploy-platform) est nécessaire.
 - Protection de `main` : `require_last_push_approval` est désactivé (dépôt à une seule personne).
 
 ### Prochaines étapes
 
-**MVP 2 (`0.2.0`)** : prête sur `release/0.2.0` (PR #77 vers `main`, non fusionnée). Le code vient de `develop` (PR #57 à #76), corrigé après la revue globale de la release (PR #78 à #82, fusionnées dans `release/0.2.0`), avec les [ADR-005 à 007](docs/adr/). Vérification finale faite : tous les tests verts, pile Docker locale, parcours API et navigateur. Décisions clés :
-- l'administrateur agit en **conseiller au nom des clients** (ouverture, dépôt, retrait, virement, clôture) sans jamais avoir de compte à son nom, et seul lui fait une écriture compensatrice ;
-- plafond de 10 000,00 par opération, au plus 5 comptes actifs par client ;
-- `demo.client` reçoit des comptes et un historique de démonstration, recréés s'ils disparaissent ;
-- un administrateur n'a jamais de fiche client, et `demo.admin` (mot de passe public) est restreint aux clients de démonstration par le claim `demo`, pour protéger les données des vrais inscrits ;
-- la Gateway limite les opérations (dépôt, retrait, ouverture, clôture, annulation) à 60 par minute et par IP, et les virements à 30.
-
-Reste à faire :
-1. Tour de l'utilisateur en local.
-2. **Sur son feu vert seulement** : fusion de la PR #77 dans `main`, tag `v0.2.0`, attente de la CI de `main` (images publiées sur GHCR), **puis** fusion de la PR `deploy-platform` #4, report de la release dans `develop`, vérification du site en ligne et BF-023-17 coché. Procédure : [deploiement.md](docs/runbooks/deploiement.md#mise-en-ligne-de-la-mvp-2-customer-service-et-banking-service).
-3. Suivis hors 0.2.0 : BF-008-11 (purge des clés d'idempotence) et BF-009-10 (limite de débit des virements par utilisateur, en plus de la limite par IP).
-4. La CI ne se lance pas sur les PR vers `release/*` : il faut la lancer à la main (`gh workflow run ci.yml --ref <branche>`) avant de fusionner.
+1. Suivis : BF-008-11 (purge des clés d'idempotence) et BF-009-10 (limite de débit des virements par utilisateur, en plus de la limite par IP).
+2. MVP 3 : à cadrer avec l'utilisateur (voir le [BACKLOG](BACKLOG.md)).
+3. La CI ne se lance pas sur les PR vers `release/*` : il faut la lancer à la main (`gh workflow run ci.yml --ref <branche>`) avant de fusionner.
+4. Le run planifié de `deploy-platform` peut échouer sur une panne réseau du runner (téléchargement de `actions/checkout`) : relancer `Déploiement` à la main.

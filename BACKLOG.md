@@ -643,7 +643,7 @@ Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (don
   - sur le serveur : retirer la règle sudo temporaire créée pour l'opération, puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
   - documenter le déploiement et le retour arrière dans `docs/runbooks/`.
 
-- [ ] BF-023-17 — Mettre en ligne les services de la MVP 2 :
+- [x] BF-023-17 — Mettre en ligne les services de la MVP 2 (en ligne en `0.2.1`, le 2026-11-24) :
   - ajouter `customer-service` et `banking-service` à la matrice de `.github/workflows/deploy.yml` ;
   - les ajouter au `docker-compose.yml` de `deploy-platform` (`apps/bankflow/`), avec healthcheck, rotation des logs, `no-new-privileges`, limite mémoire de la JVM et réseau `interne` uniquement ;
   - brancher les services sur `customer_db` et `banking_db`, déjà créées au premier démarrage avec `CUSTOMER_DB_PASSWORD` et `BANKING_DB_PASSWORD` de `~/apps/bankflow/.env` : aucun nouveau secret, sauf si un service en demande un autre (à ajouter par l'utilisateur, jamais dans Git) ;

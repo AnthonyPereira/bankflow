@@ -29,7 +29,7 @@ Les payloads sont minimaux (`customerId`, `userId`, `email`, `status`). Le nom, 
 
 Un événement peut manquer : compte seedé (admin et démo), compte inscrit avant la MVP 2, événement perdu pendant une panne de Kafka. Le mécanisme de rattrapage est le suivant.
 
-- L'Auth Service republie `UserRegistered` pour **tous** les utilisateurs à chaque démarrage.
+- L'Auth Service republie `UserRegistered` pour **tous** les utilisateurs à chaque démarrage. Un envoi en échec est retenté avec une attente croissante, pendant environ deux minutes : sur une machine lente, la première lecture des métadonnées de Kafka peut dépasser le délai d'envoi de 3 s (0.2.1). Au-delà, le rejeu s'arrête et le prochain démarrage recommencera.
 - Le Customer Service est idempotent sur `userId` : il crée le client s'il n'existe pas, et republie `CustomerCreated` pour un client existant. Cela rattrape aussi un `CustomerCreated` perdu.
 - Le Banking Service fait un upsert de `customer_refs` : rejouer un événement est sans effet.
 
