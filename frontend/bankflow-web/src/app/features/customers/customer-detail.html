@@ -1,0 +1,208 @@
+<a class="back" routerLink="/administration/clients">Retour à la liste des clients</a>
+
+@if (customer(); as current) {
+  <h1>{{ getName(current) ?? unnamed }}</h1>
+  <p class="intro">
+    {{ current.email }}
+    @if (current.demo) {
+      <span class="badge demo">Démo</span>
+    }
+  </p>
+
+  <section class="panel" aria-labelledby="identity-title">
+    <h2 id="identity-title">Identité et coordonnées</h2>
+    <dl>
+      <div>
+        <dt>Prénom</dt>
+        <dd>{{ current.firstName || notProvided }}</dd>
+      </div>
+      <div>
+        <dt>Nom</dt>
+        <dd>{{ current.lastName || notProvided }}</dd>
+      </div>
+      <div>
+        <dt>Adresse email</dt>
+        <dd>{{ current.email }}</dd>
+      </div>
+      <div>
+        <dt>Téléphone</dt>
+        <dd>{{ current.phone || notProvided }}</dd>
+      </div>
+      <div>
+        <dt>Adresse postale</dt>
+        <dd>{{ current.address || notProvided }}</dd>
+      </div>
+      <div>
+        <dt>Client depuis le</dt>
+        <dd>{{ current.createdAt | dateFr: 'date' }}</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="panel" aria-labelledby="status-title">
+    <h2 id="status-title">Statut</h2>
+    <p>
+      <span class="badge" [class.suspended]="current.status === 'SUSPENDED'">{{
+        statusLabels[current.status]
+      }}</span>
+    </p>
+    <div aria-live="polite">
+      @if (statusMessage(); as message) {
+        <p class="form-info">{{ message }}</p>
+      }
+      @if (statusError(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+    </div>
+    @if (current.demo) {
+      <p class="hint">{{ demoNotice }}</p>
+    } @else if (current.status === 'ACTIVE') {
+      @if (isConfirmingSuspension()) {
+        <div class="confirm" role="group" aria-labelledby="confirm-title">
+          <p id="confirm-title">
+            Suspendre ce client ? Il ne pourra plus ouvrir de compte ni effectuer d'opération.
+          </p>
+          <div class="actions">
+            <button
+              #confirmButton
+              matButton="filled"
+              type="button"
+              [disabled]="isChangingStatus()"
+              (click)="suspend()"
+            >
+              {{ isChangingStatus() ? 'Suspension…' : 'Confirmer la suspension' }}
+            </button>
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="isChangingStatus()"
+              (click)="cancelSuspension()"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      } @else {
+        <button #statusButton matButton="outlined" type="button" (click)="requestSuspension()">
+          Suspendre
+        </button>
+      }
+    } @else {
+      <button
+        #statusButton
+        matButton="filled"
+        type="button"
+        [disabled]="isChangingStatus()"
+        (click)="reactivate()"
+      >
+        {{ isChangingStatus() ? 'Réactivation…' : 'Réactiver' }}
+      </button>
+    }
+  </section>
+
+  <section class="panel" aria-labelledby="accounts-title">
+    <h2 id="accounts-title">Comptes du client</h2>
+    @if (accounts.error()) {
+      <p role="alert">Les comptes n'ont pas pu être chargés.</p>
+      <button matButton="outlined" type="button" (click)="accounts.reload()">Réessayer</button>
+    } @else if (accounts.hasValue()) {
+      @if (accounts.value().content.length === 0) {
+        <p>Ce client n'a pas encore de compte.</p>
+      } @else {
+        <div class="table-wrapper">
+          <table [attr.aria-busy]="accounts.isLoading()">
+            <thead>
+              <tr>
+                <th scope="col">Compte</th>
+                <th scope="col">IBAN</th>
+                <th scope="col">Devise</th>
+                <th scope="col" class="numeric">Solde</th>
+                <th scope="col">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (account of accounts.value().content; track account.id) {
+                <tr>
+                  <th scope="row">
+                    <a [routerLink]="['/comptes', account.id]">{{
+                      account.label || defaultLabel
+                    }}</a>
+                  </th>
+                  <td class="iban">{{ formatIban(account.accountNumber) }}</td>
+                  <td>{{ account.currency }}</td>
+                  <td class="numeric">{{ account.balance | amount: account.currency }}</td>
+                  <td>
+                    @if (account.status === 'CLOSED') {
+                      <span class="badge closed">Clôturé</span>
+                    } @else {
+                      <span class="badge">Actif</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    } @else {
+      <mat-spinner diameter="32" aria-label="Chargement des comptes" />
+    }
+  </section>
+
+  <section class="panel" aria-labelledby="open-title">
+    <h2 id="open-title">Ouvrir un compte pour ce client</h2>
+    @if (isSuspended()) {
+      <p class="hint">Ce client est suspendu : réactivez-le pour lui ouvrir un compte.</p>
+    }
+    <form [formGroup]="form" (ngSubmit)="submitAccount()" novalidate>
+      <div aria-live="polite">
+        @if (successMessage(); as message) {
+          <p class="form-info">{{ message }}</p>
+        }
+      </div>
+      @if (errorMessage(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Devise</mat-label>
+        <select matNativeControl formControlName="currency">
+          @for (currency of currencies; track currency) {
+            <option [value]="currency">{{ currency }}</option>
+          }
+        </select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Libellé (facultatif)</mat-label>
+        <input matInput formControlName="label" />
+        @if (form.controls.label.hasError('maxlength')) {
+          <mat-error>Le libellé ne peut pas dépasser 50 caractères.</mat-error>
+        }
+      </mat-form-field>
+
+      <button
+        matButton="filled"
+        class="submit"
+        type="submit"
+        [disabled]="isSubmitting() || isSuspended()"
+      >
+        {{ isSubmitting() ? 'Ouverture…' : 'Ouvrir le compte' }}
+      </button>
+    </form>
+  </section>
+} @else if (isNotFound()) {
+  <h1>Fiche client</h1>
+  <section class="panel">
+    <p role="alert">Client introuvable.</p>
+  </section>
+} @else if (hasLoadError()) {
+  <h1>Fiche client</h1>
+  <section class="panel">
+    <p role="alert">La fiche du client n'a pas pu être chargée.</p>
+    <button matButton="outlined" type="button" (click)="reloadCustomer()">Réessayer</button>
+  </section>
+} @else {
+  <h1>Fiche client</h1>
+  <mat-spinner diameter="32" aria-label="Chargement de la fiche du client" />
+}

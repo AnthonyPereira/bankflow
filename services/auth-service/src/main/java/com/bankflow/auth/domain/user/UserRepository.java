@@ -3,6 +3,8 @@ package com.bankflow.auth.domain.user;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +16,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    /** Parcourt les utilisateurs page par page, sans le {@code COUNT(*)} d'une {@code Page}. */
+    Slice<User> findAllBy(Pageable pageable);
 
     /**
      * Réserve une tentative de connexion en la comptant d'avance comme un échec, dans une

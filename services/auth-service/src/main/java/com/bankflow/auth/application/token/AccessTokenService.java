@@ -1,5 +1,6 @@
 package com.bankflow.auth.application.token;
 
+import com.bankflow.auth.application.token.model.AccessToken;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.infrastructure.security.jwt.JwtProperties;
 import java.time.Clock;
@@ -35,6 +36,7 @@ public class AccessTokenService {
                         .audience(List.of(properties.audience()))
                         .subject(user.getId().toString())
                         .claim("role", user.getRole().name())
+                        .claim("demo", user.isDemo())
                         .issuedAt(now)
                         .expiresAt(now.plus(properties.accessTokenTtl()))
                         .build();

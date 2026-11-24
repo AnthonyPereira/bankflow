@@ -21,7 +21,7 @@ Banque fictive pédagogique en microservices : 6 services Spring Boot indépenda
 - `docs/` : ADR, architecture, runbooks (`deploiement.md`, `sonarqube.md`).
 - `contracts/` : contrats d'événements Kafka.
 
-**Packages Java** : quatre couches (`api`, `application`, `domain`, `infrastructure`). Dans chaque couche, un seul niveau de sous-packages par fonctionnalité, par exemple `application/login`, `domain/user` ou `infrastructure/security/jwt`. La Gateway se range en `filter/`, `error/` et `security/`. Le détail est dans [services/README.md](services/README.md).
+**Packages Java** : quatre couches (`api`, `application`, `domain`, `infrastructure`). Dans chaque couche, un sous-package par fonctionnalité (`application/login`, `domain/user`, `infrastructure/security/jwt`). Dans une fonctionnalité, seuls les contrôleurs, services, entités et dépôts restent à la racine : les records et exceptions vont dans `dto/`, `validation/`, `model/`, `config/`, `event/` ou `exception/`, et les `ApiExceptionHandler` dans `api/error/`. La Gateway se range en `filter/`, `error/` et `security/`. Le détail est dans [services/README.md](services/README.md).
 
 ## Commandes
 
@@ -63,18 +63,26 @@ Profils Spring : `dev` (défaut), `prod-sim` (serveur maison) et `test` (tests a
 - **Runner** : il ne doit **jamais** être enregistré sur `bankflow`, car le dépôt est public.
 - **Procédure** : [docs/runbooks/deploiement.md](docs/runbooks/deploiement.md).
 
-## État d'avancement (2026-11-20)
+## État d'avancement (2026-11-24)
 
-**MVP 1 publiée en `0.1.0`** (tag `v0.1.0`, fusionnée dans `main` le 2026-11-20, voir [CHANGELOG](CHANGELOG.md)) : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005 et BF-016 sont terminés.
-
-Les dernières étapes, toutes fusionnées dans `develop` avec une CI verte :
-- **#35** : Spring Boot 4.2.0 et Spring Cloud 2026.0.0 en GA (BF-001-01 terminé).
-- **#36** : packages rangés par fonctionnalité dans chaque couche.
-- **#37** : comptes de démonstration sur la page de connexion (BF-016-15). Ils sont créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire compris, `demo.admin` est un vrai administrateur), mais ne peuvent jamais être désactivés définitivement. `DEMO_ACCOUNTS_ENABLED=false` masque le tableau et ne les crée plus, sans les désactiver. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_PASSWORD`) reste secret.
-
-Seul `GHCR_PULL_TOKEN` (deploy-platform) est nécessaire, et le runner est en ligne.
+**MVP 1 en ligne en `0.1.1`** sur `https://bankflow.anthonypereira.dpdns.org`, avec les comptes de démonstration (voir [CHANGELOG](CHANGELOG.md)) : inscription, connexion et tableau de bord. Les lots BF-002 à BF-005, BF-016 et BF-023-16 sont terminés.
+- `0.1.0` (tag `v0.1.0`, #39) : contenu de la MVP 1, après trois revues de code complètes. Elle n'a jamais été mise en ligne, car le build des images Spring échouait.
+- `0.1.1` (tag `v0.1.1`, hotfix #51) : `unzip` installé dans l'image de build, pour que le wrapper Maven vérifie la bonne archive.
+- Comptes de démonstration (BF-016-15) : créés au démarrage de l'Auth Service, servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire compris, `demo.admin` est un vrai administrateur), mais ne peuvent jamais être désactivés définitivement. `DEMO_ACCOUNTS_ENABLED=false` masque le tableau et ne les crée plus, sans les désactiver. Les mots de passe sont publics : `demo.client@bankflow.local` / `demo-client-bankflow` et `demo.admin@bankflow.local` / `demo-admin-bankflow`. Le vrai compte admin (`ADMIN_EMAIL` / `ADMIN_PASSWORD`, dans `~/apps/bankflow/.env` sur le serveur) reste secret.
+- Déploiement : `deploy-platform` cherche lui-même les nouvelles versions (cron toutes les 5 min, `actions/github-script`, sans `gh`). L'état est gardé dans `~/apps/bankflow/.version` et `.derniere`. Seul `GHCR_PULL_TOKEN` (deploy-platform) est nécessaire.
+- Protection de `main` : `require_last_push_approval` est désactivé (dépôt à une seule personne).
 
 ### Prochaines étapes
 
-1. **Après la release `0.1.0`** : vérifier en ligne que seuls le front et `/api` répondent, puis cocher BF-023-16.
-2. **MVP 2 (`0.2.0`)** : BF-006 (Customer Service), puis BF-007 à BF-009 (comptes, dépôts et retraits, virements), puis BF-017 (écrans Angular).
+**MVP 2 (`0.2.0`)** : prête sur `release/0.2.0` (PR #77 vers `main`, non fusionnée). Le code vient de `develop` (PR #57 à #76), corrigé après la revue globale de la release (PR #78 à #82, fusionnées dans `release/0.2.0`), avec les [ADR-005 à 007](docs/adr/). Vérification finale faite : tous les tests verts, pile Docker locale, parcours API et navigateur. Décisions clés :
+- l'administrateur agit en **conseiller au nom des clients** (ouverture, dépôt, retrait, virement, clôture) sans jamais avoir de compte à son nom, et seul lui fait une écriture compensatrice ;
+- plafond de 10 000,00 par opération, au plus 5 comptes actifs par client ;
+- `demo.client` reçoit des comptes et un historique de démonstration, recréés s'ils disparaissent ;
+- un administrateur n'a jamais de fiche client, et `demo.admin` (mot de passe public) est restreint aux clients de démonstration par le claim `demo`, pour protéger les données des vrais inscrits ;
+- la Gateway limite les opérations (dépôt, retrait, ouverture, clôture, annulation) à 60 par minute et par IP, et les virements à 30.
+
+Reste à faire :
+1. Tour de l'utilisateur en local.
+2. **Sur son feu vert seulement** : fusion de la PR #77 dans `main`, tag `v0.2.0`, attente de la CI de `main` (images publiées sur GHCR), **puis** fusion de la PR `deploy-platform` #4, report de la release dans `develop`, vérification du site en ligne et BF-023-17 coché. Procédure : [deploiement.md](docs/runbooks/deploiement.md#mise-en-ligne-de-la-mvp-2-customer-service-et-banking-service).
+3. Suivis hors 0.2.0 : BF-008-11 (purge des clés d'idempotence) et BF-009-10 (limite de débit des virements par utilisateur, en plus de la limite par IP).
+4. La CI ne se lance pas sur les PR vers `release/*` : il faut la lancer à la main (`gh workflow run ci.yml --ref <branche>`) avant de fusionner.

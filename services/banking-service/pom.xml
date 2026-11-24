@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.bankflow</groupId>
     <artifactId>banking-service</artifactId>
-    <version>0.1.1</version>
+    <version>0.2.0</version>
     <name>banking-service</name>
     <description>BankFlow - Banking Service</description>
     <properties>
@@ -18,6 +18,7 @@
         <spotless-maven-plugin.version>3.11.0</spotless-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.16</jacoco-maven-plugin.version>
         <google-java-format.version>2.0.0</google-java-format.version>
+        <springdoc.version>3.2.0</springdoc.version>
     </properties>
     <dependencies>
         <dependency>
@@ -55,6 +56,11 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
 
         <dependency>

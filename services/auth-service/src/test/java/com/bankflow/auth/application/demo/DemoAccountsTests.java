@@ -2,6 +2,7 @@ package com.bankflow.auth.application.demo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.bankflow.auth.application.demo.model.DemoAccount;
 import org.junit.jupiter.api.Test;
 
 class DemoAccountsTests {

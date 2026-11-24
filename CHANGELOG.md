@@ -2,6 +2,37 @@
 
 Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent [SemVer](https://semver.org/lang/fr/).
 
+## [0.2.0] — 2026-11-23
+
+### Ajouté
+
+- **Customer Service** : la fiche client est créée à l'inscription, à partir de l'événement `UserRegistered`. Le client consulte et modifie son profil (`/customers/me`). L'administrateur liste, recherche et suspend les clients, mais jamais un compte de démonstration. Les événements `CustomerCreated` et `CustomerUpdated` sont publiés sur `bank.customers`. #62
+- **Rattrapage des fiches client** : à chaque démarrage, l'Auth Service republie `UserRegistered` pour tous les comptes. Les comptes de démonstration, le compte admin, les inscrits d'avant la 0.2.0 et les événements perdus pendant une panne de Kafka reçoivent ainsi leur fiche. Ce rejeu tourne en arrière-plan et ne retarde pas le démarrage. #59
+- **Banking Service, comptes** :
+  - ouverture de comptes en EUR ou en USD, avec un numéro IBAN fictif valide, et au plus 5 comptes ouverts par client ;
+  - consultation, solde et clôture d'un compte, uniquement si son solde est nul ;
+  - les montants sont des décimaux exacts, sans aucun nombre à virgule flottante ;
+  - le Banking Service garde une copie locale des clients, alimentée par Kafka ([ADR-004](docs/adr/ADR-004-reference-client-banking.md)). Un événement plus ancien que l'état connu est ignoré. #61 #58
+- **Banking Service, opérations** (BF-008) :
+  - dépôts et retraits, au plus 10 000,00 par opération et 2 décimales, sans découvert ;
+  - comptabilité en partie double avec un compte technique de caisse, écritures rendues immuables par la base (triggers) ;
+  - protection contre le double envoi (`Idempotency-Key`), rattachée à la personne qui agit ;
+  - historique paginé et filtrable (`GET /transactions`), avec le sens de chaque opération et le compte d'en face pour un virement ;
+  - écriture compensatrice, réservée à l'administrateur, avec un motif ([ADR-006](docs/adr/ADR-006-comptabilite-coherence.md)). #71
+- **Banking Service, virements** (BF-009) : virement vers tout compte actif de la banque par son IBAN, dans une seule transaction, comptes verrouillés dans un ordre fixe pour éviter les blocages mutuels. #72
+- **Administrateur conseiller** ([ADR-005](docs/adr/ADR-005-role-administrateur.md)) : il ouvre un compte pour un client, y dépose, y retire, fait un virement ou le clôture. Il n'a jamais de compte à son nom. Chaque opération indique qui l'a faite. Vue de la banque (`GET /accounts/summary`). #68 #71 #72
+- **Vitrine** ([ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)) : `demo.client` (Camille Martin) a un compte courant avec un historique et un livret d'épargne, recréés au démarrage s'ils ont disparu. Rien n'est créé avec `DEMO_ACCOUNTS_ENABLED=false`. #75
+- **Frontend, MVP 2** : détail d'un compte (dépôt, retrait, clôture, annulation par l'administrateur), « Mes opérations », virement en trois étapes, tableaux de bord du client et de l'administrateur, écran « Clients » de l'administrateur. #69 #70 #73
+- **Frontend** : écrans « Mon profil » (avec nouvel essai si la fiche est encore en cours de création) et « Mes comptes », pipes de montants et de dates en français. #60
+- **Contrats** : `CustomerCreated` v1, `CustomerUpdated` v1, et champ facultatif `demo` dans `UserRegistered`. #58
+- **Administrateur sans fiche client** : un administrateur n'a jamais de fiche client. `UserRegistered` porte le champ facultatif `role` et le Customer Service ignore `ROLE_ADMIN` ([ADR-005](docs/adr/ADR-005-role-administrateur.md)).
+- **`demo.admin` limité aux clients de démonstration** : le jeton porte le claim `demo`, et les clients réels (et leurs comptes) sont invisibles pour lui. `CustomerCreated` et `CustomerUpdated` portent le champ facultatif `demo` ([ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)).
+- **Gateway** : les ouvertures de compte, dépôts, retraits, clôtures et compensations sont limités à 60 par minute et par IP (`RATE_LIMIT_OPERATIONS_PER_MINUTE`).
+
+### Corrigé
+
+- **Gateway** : elle transmet les en-têtes `X-Forwarded-*` des proxys de confiance (`TRUSTED_PROXIES`). L'adresse renvoyée après une création est donc l'adresse publique. #66
+
 ## [0.1.1] — 2026-11-23
 
 ### Corrigé
@@ -83,5 +114,6 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 - Seuls le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka sont déployés : les routes des quatre autres services répondent 503.
 - Le Customer Service, le Banking Service, le Notification Service et l'Analytics & Fraud Service ne sont que des squelettes sécurisés, sans fonctionnalité métier.
 
+[0.2.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.0

@@ -30,6 +30,9 @@ spring:
         max.block.ms: 3000
 
 bankflow:
+  events:
+    # Republie UserRegistered pour tous les utilisateurs à chaque démarrage (rattrapage)
+    replay-on-startup: ${EVENTS_REPLAY_ON_STARTUP:true}
   # Comptes de démonstration au mot de passe public, affichés sur la page de connexion
   demo:
     enabled: ${DEMO_ACCOUNTS_ENABLED:true}

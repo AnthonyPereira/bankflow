@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -38,11 +39,17 @@ class SecurityConfig {
                             request,
                             response,
                             HttpStatus.UNAUTHORIZED,
+                            "UNAUTHENTICATED",
                             "Authentification requise ou jeton invalide.");
                 };
         AccessDeniedHandler forbidden =
                 (request, response, exception) ->
-                        writeProblem(request, response, HttpStatus.FORBIDDEN, "Accès refusé.");
+                        writeProblem(
+                                request,
+                                response,
+                                HttpStatus.FORBIDDEN,
+                                "ACCESS_DENIED",
+                                "Accès refusé.");
 
         // Sûr : cette API sans cookie n'accepte que des JWT envoyés dans l'en-tête Authorization.
         return http.csrf(AbstractHttpConfigurer::disable) // NOSONAR
@@ -53,6 +60,16 @@ class SecurityConfig {
                                 .permitAll()
                                 .requestMatchers("/actuator/health/**", "/actuator/info")
                                 .permitAll()
+                                // Désactivés en prod-sim (springdoc), ouverts sans JWT ailleurs
+                                .requestMatchers(
+                                        "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                                .permitAll()
+                                // Contrôle d'accès avant la validation : un client reçoit 403, pas
+                                // 400
+                                .requestMatchers(HttpMethod.GET, "/customers")
+                                .hasAuthority("ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/customers/*/status")
+                                .hasAuthority("ROLE_ADMIN")
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 ->
@@ -80,6 +97,7 @@ class SecurityConfig {
             HttpServletRequest request,
             HttpServletResponse response,
             HttpStatus status,
+            String code,
             String detail)
             throws IOException {
         var body = new LinkedHashMap<String, Object>();
@@ -87,6 +105,7 @@ class SecurityConfig {
         body.put("title", status.getReasonPhrase());
         body.put("status", status.value());
         body.put("detail", detail);
+        body.put("code", code);
         body.put("instance", request.getRequestURI());
         response.setStatus(status.value());
         response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

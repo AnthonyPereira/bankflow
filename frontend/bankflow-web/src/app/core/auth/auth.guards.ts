@@ -34,6 +34,20 @@ export const adminGuard: CanActivateFn = (_route, state) => {
   );
 };
 
+/** Les pages propres à un client (profil) n'existent pas pour un administrateur : il n'a pas de fiche client. */
+export const clientGuard: CanActivateFn = (_route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.waitForPendingRefresh().pipe(
+    map(() => {
+      if (!auth.isAuthenticated()) {
+        return router.createUrlTree(['/connexion'], { queryParams: { returnUrl: state.url } });
+      }
+      return auth.isAdmin() ? router.createUrlTree(['/tableau-de-bord']) : true;
+    }),
+  );
+};
+
 /** Évite d'afficher la connexion ou l'inscription à un utilisateur déjà connecté. */
 export const guestGuard: CanActivateFn = () => {
   const auth = inject(AuthService);

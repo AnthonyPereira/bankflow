@@ -45,9 +45,11 @@ L'application sera mise en ligne sur le serveur maison (portable Ubuntu avec Doc
 | Jalon | Release | Lots nécessaires | Ce qui est visible en ligne |
 |---|---|---|---|
 | **MVP 1 : socle** (cible de la première mise en ligne) | `0.1.0` | BF-002, BF-003, BF-004, BF-005, BF-016 | Inscription, connexion et dashboard Angular |
-| **MVP 2 : bancaire** | `0.2.0` | MVP 1 + BF-006 à BF-009, BF-017 | Clients, comptes, dépôts, retraits et virements |
+| **MVP 2 : bancaire** | `0.2.0` | MVP 1 + BF-006 à BF-009, BF-017 (dont BF-017-08, l'écran « Clients » de l'administrateur), le reste de BF-016 (10b, 11, 12b), BF-023-17 et les ADR-005 à ADR-007 | Clients, comptes, dépôts, retraits et virements |
 
 Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images Docker, publication GHCR et déploiement). Ensuite, chaque release fusionnée dans `main` est déployée automatiquement : avec Gitflow, un lot terminé arrive d'abord sur `develop` et n'est mis en ligne qu'avec sa release (voir les jalons de `CONTRIBUTING.md`).
+
+Au jalon MVP 2, il faut aussi BF-006-11 (rattrapage des profils), BF-009-08 (données de démonstration), BF-017-08 (écran « Clients » de l'administrateur, avancé depuis BF-018), BF-023-17 (mise en ligne des nouveaux services) et les [ADR-005](docs/adr/ADR-005-role-administrateur.md) (rôle de l'administrateur), [ADR-006](docs/adr/ADR-006-comptabilite-coherence.md) (comptabilité et cohérence) et [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md) (garde-fous de la vitrine), puis une revue de code complète de `release/0.2.0` avant la fusion dans `main`, comme pour la `0.1.0`.
 
 ---
 
@@ -198,24 +200,28 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** premier consommateur métier et référence inter-services sans relation SQL.
 
 ### Tâches
-- [ ] BF-006-01 — Migration Flyway : table `customers` (`id`, `user_id` unique, `first_name`, `last_name`, `email`, `phone`, `address`, `status`, timestamps)
-- [ ] BF-006-02 — Consumer `UserRegistered` qui crée le profil client (idempotent sur `user_id`)
-- [ ] BF-006-03 — `GET /customers/me`
-- [ ] BF-006-04 — `PUT /customers/me` : modification des coordonnées avec validation
-- [ ] BF-006-05 — `GET /customers/{id}` : réservé au propriétaire ou à un administrateur
-- [ ] BF-006-06 — `GET /customers` : liste paginée et filtrable, réservée à `ROLE_ADMIN`
-- [ ] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…). La suspension doit refuser les comptes de démonstration (`User.disable` de l'Auth Service lève `DemoAccountCannotBeDisabledException`)
-- [ ] BF-006-08 — Publier `CustomerCreated` et `CustomerUpdated` sur `bank.customers` (payload minimal)
-- [ ] BF-006-09 — Documenter les contrats d'événements
-- [ ] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
+- [x] BF-006-01 — Migration Flyway : table `customers` (`id`, `user_id` unique, `first_name`, `last_name`, `email`, `phone`, `address`, `status`, timestamps). L'inscription ne demande que l'email et le mot de passe : `first_name`, `last_name`, `phone` et `address` sont donc facultatifs, et le client les complète depuis son profil (BF-006-04, BF-016-11)
+- [x] BF-006-02 — Consumer `UserRegistered` qui crée le profil client (idempotent sur `user_id`)
+- [x] BF-006-03 — `GET /customers/me`
+- [x] BF-006-04 — `PUT /customers/me` : modification des coordonnées avec validation
+- [x] BF-006-05 — `GET /customers/{id}` : réservé au propriétaire ou à un administrateur
+- [x] BF-006-06 — `GET /customers` : liste paginée et filtrable, réservée à `ROLE_ADMIN`
+- [x] BF-006-07 — Gérer l'état du profil (`status` : ACTIVE, SUSPENDED…). La suspension doit refuser les comptes de démonstration (`User.disable` de l'Auth Service lève `DemoAccountCannotBeDisabledException`)
+- [x] BF-006-08 — Publier `CustomerCreated` et `CustomerUpdated` sur `bank.customers` (payload minimal)
+- [x] BF-006-09 — Documenter les contrats d'événements
+- [x] BF-006-10 — Ajouter Swagger et l'ajout au Docker Compose
+- [x] BF-006-11 — Rattraper les profils manquants. Seule l'inscription publie `UserRegistered` : le compte administrateur initial, les comptes de démonstration et les comptes créés avant la MVP 2 n'ont pas de profil, et une panne de Kafka à l'inscription en fait perdre un jusqu'à l'Outbox (BF-011). Mécanisme à décider (création du profil au premier `GET /customers/me` à partir du JWT, ou publication de `UserRegistered` au démarrage de l'Auth Service pour les comptes sans profil), avec un test pour chaque cas
+- [x] BF-006-12 — Un administrateur n'a jamais de fiche client : `UserRegistered` porte le `role`, le Customer Service ignore `ROLE_ADMIN`, le profil fictif de `demo.admin` est supprimé ([ADR-005](docs/adr/ADR-005-role-administrateur.md))
+- [x] BF-006-13 — Administrateur restreint (`demo.admin`) : le Customer Service ne lui liste et ne lui montre que les clients de démonstration (404 sinon), et publie `demo` dans `CustomerCreated` et `CustomerUpdated` ([ADR-004](docs/adr/ADR-004-reference-client-banking.md))
 
 ### Tests
-- [ ] Tests unitaires : droits d'accès et validations
-- [ ] Test d'intégration : `UserRegistered` crée un `Customer`, et le même événement reçu deux fois ne crée pas de doublon
+- [x] Tests unitaires : droits d'accès et validations
+- [x] Test d'intégration : `UserRegistered` crée un `Customer`, et le même événement reçu deux fois ne crée pas de doublon
 
 ### Critères de validation
-- [ ] Une inscription crée automatiquement un profil client
-- [ ] Un client ne peut pas consulter le profil d'un autre client
+- [x] Une inscription crée automatiquement un profil client
+- [x] Les comptes de démonstration et les comptes inscrits avant la MVP 2 ont aussi un profil
+- [x] Un client ne peut pas consulter le profil d'un autre client
 
 ---
 
@@ -225,24 +231,27 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** modélisation financière (BigDecimal, DECIMAL(19,4)) et contrôle d'appartenance.
 
 ### Tâches
-- [ ] BF-007-01 — Migrations Flyway : `accounts`, `transfers`, `transactions`, `ledger_entries`, `idempotency_keys`
-- [ ] BF-007-02 — Entité `Account` (`customer_id`, `account_number` unique, `currency`, `balance DECIMAL(19,4)`, `status`, `version` pour le verrouillage optimiste)
-- [ ] BF-007-03 — Générer un numéro de compte unique (format IBAN fictif)
-- [ ] BF-007-04 — Résoudre `customerId` depuis le JWT (`userId` vers `customerId` : appel REST au Customer Service ou projection locale, à décider dans un ADR)
-- [ ] BF-007-05 — `POST /accounts` : création avec devise, solde initial à 0 et statut ACTIVE
-- [ ] BF-007-06 — `GET /accounts` : seulement les comptes du client, ou tous pour un administrateur
-- [ ] BF-007-07 — `GET /accounts/{id}` et `GET /accounts/{id}/balance` avec contrôle d'appartenance
-- [ ] BF-007-08 — Clôturer un compte (endpoint ou action dédiée) : interdite si le solde est différent de 0
-- [ ] BF-007-09 — Ajouter un value object `Money` (BigDecimal et devise), en interdisant `double` et `float`
-- [ ] BF-007-10 — Ajouter un gestionnaire d'erreurs métier (`AccountNotFound`, `AccountClosed`…) au format `ProblemDetail`
+- [x] BF-007-01 — Migrations Flyway : `accounts`, `transfers`, `transactions`, `ledger_entries`, `idempotency_keys`
+- [x] BF-007-02 — Entité `Account` (`customer_id`, `account_number` unique, `currency`, `balance DECIMAL(19,4)`, `status`, `version` pour le verrouillage optimiste)
+- [x] BF-007-03 — Générer un numéro de compte unique (format IBAN fictif)
+- [x] BF-007-04 — Résoudre `customerId` depuis le JWT (`userId` vers `customerId` : appel REST au Customer Service ou projection locale alimentée par `CustomerCreated`, à décider dans l'ADR-004)
+- [x] BF-007-05 — `POST /accounts` : création avec devise, solde initial à 0 et statut ACTIVE. Ouverture par le client pour lui-même (`customerId` interdit), ou par l'administrateur au nom d'un client (`customerId` obligatoire, client non suspendu), dans la limite de 5 comptes actifs par client → voir [ADR-005](docs/adr/ADR-005-role-administrateur.md) et [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)
+- [x] BF-007-06 — `GET /accounts` : seulement les comptes du client, ou tous pour un administrateur
+- [x] BF-007-11 — Outils de l'administrateur sur les comptes : `GET /accounts?customerId=` (filtre réservé à l'administrateur) et `GET /accounts/summary` (vue de la banque : clients, comptes ouverts et clos, totaux par devise ; réservé à l'administrateur) ; suppression de la règle `POST /accounts` réservée à `ROLE_CLIENT` (PR #65) → voir [ADR-005](docs/adr/ADR-005-role-administrateur.md)
+- [x] BF-007-12 — Rédiger l'[ADR-005](docs/adr/ADR-005-role-administrateur.md) (rôle de l'administrateur)
+- [x] BF-007-07 — `GET /accounts/{id}` et `GET /accounts/{id}/balance` avec contrôle d'appartenance
+- [x] BF-007-08 — Clôturer un compte (endpoint ou action dédiée) : interdite si le solde est différent de 0
+- [x] BF-007-09 — Ajouter un value object `Money` (BigDecimal et devise), en interdisant `double` et `float`
+- [x] BF-007-10 — Ajouter un gestionnaire d'erreurs métier (`AccountNotFound`, `AccountClosed`…) au format `ProblemDetail`
+- [x] BF-007-13 — Administrateur restreint (`demo.admin`, claim `demo`) : le Banking Service ne lui montre que les comptes, opérations et virements des clients de démonstration (`customer_refs.demo`, 404 sinon), avec une seule règle de visibilité ([ADR-005](docs/adr/ADR-005-role-administrateur.md), [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md))
 
 ### Tests
-- [ ] Tests unitaires : création, clôture, règles de statut, `Money`
-- [ ] Test d'intégration : isolation des comptes entre deux clients
+- [x] Tests unitaires : création, clôture, règles de statut, `Money`
+- [x] Test d'intégration : isolation des comptes entre deux clients
 
 ### Critères de validation
-- [ ] Création et consultation des comptes fonctionnelles
-- [ ] Accès interdit au compte d'un autre client (403 ou 404)
+- [x] Création et consultation des comptes fonctionnelles
+- [x] Accès interdit au compte d'un autre client (403 ou 404)
 
 ---
 
@@ -252,23 +261,26 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** écritures comptables immuables, idempotence des commandes et transactions PostgreSQL.
 
 ### Tâches
-- [ ] BF-008-01 — `POST /accounts/{id}/deposits` : montant strictement positif et compte actif
-- [ ] BF-008-02 — `POST /accounts/{id}/withdrawals` : vérification du solde, sans découvert en V1
-- [ ] BF-008-03 — Créer une `Transaction` (`type`, `amount`, `balance_after`) et une `LedgerEntry` (DEBIT ou CREDIT) dans la même transaction
-- [ ] BF-008-04 — Rendre les écritures immuables (aucun UPDATE ni DELETE, contrainte applicative et éventuellement un trigger SQL)
-- [ ] BF-008-05 — Gérer la clé d'idempotence (en-tête `Idempotency-Key`) : stocker la clé, l'empreinte de la requête et la réponse, puis rejouer la réponse identique si la même clé revient
-- [ ] BF-008-06 — Verrouiller le compte (`SELECT … FOR UPDATE` ou verrou optimiste) lors de la modification du solde
-- [ ] BF-008-07 — `GET /transactions` : historique paginé et filtrable (compte, période, type), limité au propriétaire
-- [ ] BF-008-08 — Définir le mécanisme d'écriture compensatrice pour les corrections
+- [x] BF-008-01 — `POST /accounts/{id}/deposits` : montant strictement positif (au plus 2 décimales, au plus 10 000,00) et compte actif, par le titulaire ou par l'administrateur au nom du titulaire (client non suspendu)
+- [x] BF-008-02 — `POST /accounts/{id}/withdrawals` : vérification du solde, sans découvert en V1, mêmes règles d'accès et de plafond que le dépôt
+- [x] BF-008-09 — Traçabilité : migration `V3__operations_traceability.sql` (`performed_by_user_id` et `performed_by_role` sur `transactions` et `transfers`, index unique de compensation, nouvelle table `idempotency_keys`), exposée en `performedBy` (`CLIENT` ou `ADMIN`) → voir [ADR-005](docs/adr/ADR-005-role-administrateur.md)
+- [x] BF-008-10 — Rédiger l'[ADR-006](docs/adr/ADR-006-comptabilite-coherence.md) (comptabilité et cohérence)
+- [ ] BF-008-11 — Purger les clés d'idempotence anciennes (rétention de 24 h par exemple), car la table `idempotency_keys` grossit sans limite
+- [x] BF-008-03 — Créer une `Transaction` (`type`, `amount`, `balance_after`) et une `LedgerEntry` (DEBIT ou CREDIT) dans la même transaction
+- [x] BF-008-04 — Rendre les écritures immuables : triggers PostgreSQL qui refusent UPDATE, DELETE et TRUNCATE sur `transactions` et `ledger_entries` (migration V3) → voir [ADR-006](docs/adr/ADR-006-comptabilite-coherence.md)
+- [x] BF-008-05 — Gérer la clé d'idempotence (en-tête `Idempotency-Key`) : stocker la clé, l'empreinte de la requête et la réponse, puis rejouer la réponse identique si la même clé revient. La clé est rattachée à la personne qui agit (client ou administrateur), l'empreinte est un SHA-256, et le mécanisme vit dans un composant réutilisable pour les virements → voir [ADR-006](docs/adr/ADR-006-comptabilite-coherence.md)
+- [x] BF-008-06 — Verrouiller le compte (`SELECT … FOR UPDATE`) lors de la modification du solde ; un dépôt ou un retrait a pour contrepartie le compte technique `CASH` (partie double)
+- [x] BF-008-07 — `GET /transactions` et `GET /transactions/{id}` : historique paginé et filtrable (compte, période, type), limité au propriétaire ; l'administrateur voit tout et peut filtrer par `customerId`
+- [x] BF-008-08 — Écriture compensatrice (`POST /transactions/{id}/compensations`) : réservée à l'administrateur, motif de 10 à 200 caractères, uniquement sur un dépôt ou un retrait, une seule fois par opération
 
 ### Tests
-- [ ] Tests unitaires : montant nul ou négatif, solde insuffisant, compte clôturé, calcul de `balance_after`
-- [ ] Test d'intégration : la même clé d'idempotence envoyée deux fois produit une seule opération
-- [ ] Test de concurrence : des retraits simultanés ne produisent jamais de solde négatif
+- [x] Tests unitaires : montant nul ou négatif, solde insuffisant, compte clôturé, calcul de `balance_after`
+- [x] Test d'intégration : la même clé d'idempotence envoyée deux fois produit une seule opération
+- [x] Test de concurrence : des retraits simultanés ne produisent jamais de solde négatif
 
 ### Critères de validation
-- [ ] Dépôts et retraits fonctionnels, avec un historique cohérent
-- [ ] Le solde du compte est égal à la somme des écritures
+- [x] Dépôts et retraits fonctionnels, avec un historique cohérent
+- [x] Le solde du compte est égal à la somme des écritures
 
 ---
 
@@ -278,23 +290,27 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif pédagogique :** atomicité, verrouillage concurrent et prévention des deadlocks.
 
 ### Tâches
-- [ ] BF-009-01 — `POST /transfers` avec `Idempotency-Key` obligatoire
-- [ ] BF-009-02 — Appliquer les règles : comptes existants et actifs, source appartenant au client, montant supérieur à 0, source différente de la destination, même devise, solde suffisant
-- [ ] BF-009-03 — Exécuter le débit et le crédit dans une transaction PostgreSQL unique : `Transfer`, 2 `Transaction` et 2 `LedgerEntry` (débit et crédit de même montant)
-- [ ] BF-009-04 — Verrouiller les deux comptes dans un ordre déterministe (par exemple tri par UUID) pour éviter les deadlocks
-- [ ] BF-009-05 — Gérer les statuts de `Transfer` (PENDING, COMPLETED, REJECTED)
-- [ ] BF-009-06 — `GET /transfers/{id}` avec contrôle d'appartenance (source ou destination)
-- [ ] BF-009-07 — Ajouter Swagger pour l'ensemble du Banking Service
+- [x] BF-009-01 — `POST /transfers` avec `Idempotency-Key` obligatoire, par le titulaire du compte source ou par l'administrateur depuis le compte d'un client
+- [x] BF-009-02 — Appliquer les règles : comptes existants et actifs, source appartenant au client (ou agissant pour lui, s'il est administrateur), destination désignée par son IBAN (tout compte actif de la banque), client non suspendu, montant supérieur à 0 (au plus 2 décimales et 10 000,00), source différente de la destination, même devise, solde suffisant
+- [x] BF-009-03 — Exécuter le débit et le crédit dans une transaction PostgreSQL unique : `Transfer`, 2 `Transaction` et 2 `LedgerEntry` (débit et crédit de même montant)
+- [x] BF-009-04 — Verrouiller les deux comptes dans un ordre déterministe (par exemple tri par UUID) pour éviter les deadlocks
+- [x] BF-009-05 — Gérer les statuts de `Transfer` (PENDING, COMPLETED, REJECTED), avec la traçabilité `performed_by_user_id` et `performed_by_role` → voir [ADR-005](docs/adr/ADR-005-role-administrateur.md)
+- [x] BF-009-06 — `GET /transfers/{id}` avec contrôle d'appartenance (source ou destination)
+- [x] BF-009-07 — Ajouter Swagger pour l'ensemble du Banking Service
+- [x] BF-009-08 — Données de démonstration : au démarrage, ouvrir un ou deux comptes pour `demo.client` avec quelques dépôts, retraits et virements, pour que la vitrine ne soit pas vide. Les données (un « Compte courant » avec historique et un « Livret épargne ») sont recréées au démarrage du Banking Service si `demo.client` n'a plus aucun compte actif, et jamais sinon. Elles passent par les mêmes règles métier que les autres opérations, et rien n'est créé avec `DEMO_ACCOUNTS_ENABLED=false` → voir [ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md)
+- [x] BF-009-09 — Rédiger l'[ADR-007](docs/adr/ADR-007-garde-fous-vitrine.md) (garde-fous de la vitrine)
+- [ ] BF-009-10 — Limiter le débit de `POST /transfers` **par utilisateur**, en plus de la limite par IP de la Gateway, qui existe déjà : un visiteur peut sinon sonder des IBAN (`DESTINATION_ACCOUNT_NOT_FOUND` ou `CURRENCY_MISMATCH` révèle l'existence et la devise d'un compte)
+- [x] BF-009-11 — Gateway : limiter à 60 par minute et par IP (`RATE_LIMIT_OPERATIONS_PER_MINUTE`) les ouvertures de compte, dépôts, retraits, clôtures et compensations
 
 ### Tests
-- [ ] Tests unitaires de chaque règle métier
-- [ ] Test d'intégration : virement de 500 EUR qui produit un débit de 500 et un crédit de 500, avec des écritures équilibrées
-- [ ] Test de concurrence : N virements simultanés sans double débit, sans solde négatif ni deadlock
-- [ ] Test : un échec au milieu de la transaction ne laisse aucun effet partiel (rollback)
+- [x] Tests unitaires de chaque règle métier
+- [x] Test d'intégration : virement de 500 EUR qui produit un débit de 500 et un crédit de 500, avec des écritures équilibrées
+- [x] Test de concurrence : N virements simultanés sans double débit, sans solde négatif ni deadlock
+- [x] Test : un échec au milieu de la transaction ne laisse aucun effet partiel (rollback)
 
 ### Critères de validation
-- [ ] La somme des débits est égale à la somme des crédits sur l'ensemble du ledger
-- [ ] Le rejeu d'une clé d'idempotence ne produit pas de second virement
+- [x] La somme des débits est égale à la somme des crédits sur l'ensemble du ledger
+- [x] Le rejeu d'une clé d'idempotence ne produit pas de second virement
 
 ---
 
@@ -461,10 +477,10 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [x] BF-016-08 — Écrans de connexion et d'inscription (formulaires réactifs et validations)
 - [x] BF-016-09 — Layout (menu client et admin, en-tête, déconnexion)
 - [x] BF-016-10 — Dashboard réduit pour la MVP 1 : informations du compte (`/auth/me`) et sections « bientôt disponible », sans donnée fictive
-- [ ] BF-016-10b — Dashboard complet (MVP 2) : synthèse des comptes, dernières opérations et notifications récentes
-- [ ] BF-016-11 — Écran de profil (`/customers/me`) (reporté à la MVP 2, avec BF-006)
+- [x] BF-016-10b — Dashboard complet (MVP 2). Client : ses comptes, ses 5 dernières opérations et un raccourci vers le virement. Administrateur : vue de la banque (`GET /accounts/summary`). Les notifications récentes viennent avec BF-018
+- [x] BF-016-11 — Écran de profil (`/customers/me`) (reporté à la MVP 2, avec BF-006)
 - [x] BF-016-12 — `shared/models` (interfaces TypeScript)
-- [ ] BF-016-12b — `shared/pipes` (montant ou devise, date) (reporté à la MVP 2, avec les premiers montants affichés)
+- [x] BF-016-12b — Pipes `amount` et `dateFr`, rangés dans `core/format/` (et non `shared/`, interdit par les conventions)
 - [x] BF-016-13 — Configurer les environnements (URL de la Gateway)
 - [x] BF-016-14 — Écrire le Dockerfile (build et Nginx) et l'ajouter au Docker Compose
 - [x] BF-016-15 — Afficher sur la page de connexion un tableau des comptes de démonstration (client et administrateur, mots de passe publics). Ils sont créés au démarrage de l'Auth Service et servis par `GET /auth/demo-accounts`. Ils suivent les mêmes règles que les autres comptes (verrouillage temporaire après 5 échecs compris, `demo.admin` est un vrai `ROLE_ADMIN`), sauf qu'ils ne peuvent jamais être désactivés définitivement (colonne `users.demo`). `DEMO_ACCOUNTS_ENABLED=false` masque la liste et ne crée plus les comptes absents, sans désactiver ceux qui existent déjà. Le compte administrateur initial (`ADMIN_PASSWORD`) reste secret
@@ -474,7 +490,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 
 ### Critères de validation
 - [x] Parcours complet inscription → connexion → dashboard → déconnexion
-- [ ] Routes admin inaccessibles à un client (et refusées aussi côté backend)
+- [x] Routes admin inaccessibles à un client (et refusées aussi côté backend)
 
 ---
 
@@ -483,19 +499,20 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 **Objectif fonctionnel :** gérer ses comptes et effectuer des virements depuis l'interface.
 
 ### Tâches
-- [ ] BF-017-01 — Écran « Mes comptes » : liste, solde et création d'un compte
-- [ ] BF-017-02 — Écran « Détail compte » : solde, historique paginé, dépôt, retrait et clôture
-- [ ] BF-017-03 — Écran « Nouveau virement » : formulaire (source, destination, montant, description), validations et confirmation
-- [ ] BF-017-04 — Générer une `Idempotency-Key` (UUID) par soumission et empêcher le double clic
-- [ ] BF-017-05 — Écran « Mes transactions » : historique filtrable (compte, période, type)
-- [ ] BF-017-06 — Afficher les erreurs métier (solde insuffisant, devise différente, compte clôturé)
-- [ ] BF-017-07 — Pipe de formatage des montants sans erreur d'arrondi (montants transmis en chaîne ou décimal)
+- [x] BF-017-01 — Écran « Mes comptes » : liste, solde et création d'un compte
+- [x] BF-017-02 — Écran « Détail compte » (`/comptes/:id`) : solde, historique paginé, dépôt, retrait et clôture ; l'administrateur y agit au nom du titulaire et peut compenser une opération
+- [x] BF-017-03 — Écran « Nouveau virement » : formulaire (source, destination par IBAN, montant, description), validations et confirmation ; l'administrateur le fait au nom du client
+- [x] BF-017-04 — Générer une `Idempotency-Key` (UUID) par soumission et empêcher le double clic
+- [x] BF-017-05 — Écran « Mes opérations » (« Toutes les opérations » pour l'administrateur) : historique filtrable (compte, période, type), avec « Effectuée par un conseiller » quand `performedBy` vaut `ADMIN`
+- [x] BF-017-06 — Afficher les erreurs métier (solde insuffisant, devise différente, compte clôturé)
+- [x] BF-017-07 — Pipe de formatage des montants sans erreur d'arrondi (montants transmis en chaîne ou décimal)
+- [x] BF-017-08 — Écran « Clients » de l'administrateur (avancé depuis BF-018-03) : liste paginée avec recherche (`administration/clients`), fiche d'un client avec ses comptes (`administration/clients/:id`), ouverture d'un compte pour le client, suspension et réactivation (sauf comptes de démo) → voir [ADR-005](docs/adr/ADR-005-role-administrateur.md)
 
 ### Tests
-- [ ] Tests Vitest : services comptes et virements, formulaire de virement, gestion des erreurs
+- [x] Tests Vitest : services comptes et virements, formulaire de virement, gestion des erreurs
 
 ### Critères de validation
-- [ ] Création de compte, dépôt, retrait, virement et consultation de l'historique de bout en bout
+- [x] Création de compte, dépôt, retrait, virement et consultation de l'historique de bout en bout
 
 ---
 
@@ -504,7 +521,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 ### Tâches
 - [ ] BF-018-01 — Écran « Notifications » : historique paginé
 - [ ] BF-018-02 — Écran « Statistiques » : graphiques des dépenses et revenus par période et par compte, et répartition (Chart.js / ng2-charts)
-- [ ] BF-018-03 — Écran admin « Clients » : liste paginée et filtrable, détail d'un client et de ses comptes
+- [ ] BF-018-03 — Écran admin « Clients » : liste paginée et filtrable, détail d'un client et de ses comptes → avancé en MVP 2, voir BF-017-08 (le reste, par exemple le filtre sur les alertes de fraude, reste ici)
 - [ ] BF-018-04 — Écran admin « Alertes de fraude » : liste, filtres, changement de statut
 - [ ] BF-018-05 — Écran admin « Indicateurs globaux » : volume de transactions, nombre de clients, alertes
 - [ ] BF-018-06 — Écran admin « Transactions » : surveillance des transactions
@@ -617,14 +634,22 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] BF-023-15 — (Étude) Avro et Schema Registry
 
 ### Tâches — Déploiement sur le serveur maison (à avancer au jalon MVP 1)
-- [ ] BF-023-16 — Déployer `main` sur le serveur maison (`https://bankflow.anthonypereira.dpdns.org`) :
+- [x] BF-023-16 — Déployer `main` sur le serveur maison (`https://bankflow.anthonypereira.dpdns.org`) :
   - garder ce dépôt **public** et porter le runner auto-hébergé dans le dépôt privé `deploy-platform`, qui peut déployer plusieurs applications ;
   - écrire un `docker-compose.yml` de déploiement : seuls le front (port 80) et l'api-gateway (`/api`) sont routés par Traefik (réseau `web`) ; services, PostgreSQL et Kafka restent sur un réseau interne ; Kafka UI, Mailpit, Prometheus et Grafana ne sont jamais exposés ;
   - limiter la mémoire de chaque JVM (ex. `-Xmx256m`) et ne déployer que les services développés (le serveur a 8 Go de RAM) ;
   - écrire `.github/workflows/deploy.yml` : build et publication des images GHCR sur `ubuntu-latest` (matrice front et services), que `deploy-platform` repère en interrogeant l'API toutes les 5 minutes avant de lancer `deploy-app` sur le runner `[self-hosted, serveur-maison]`, déclenché uniquement sur `push` vers `main` et à la main (jamais sur `pull_request`) ;
   - configurer le profil `prod-sim` (BF-002-08) ; les secrets vivent dans `~/apps/bankflow/.env` sur le serveur, jamais dans Git ;
-  - sur le serveur : retirer le sudo temporaire (`/etc/sudoers.d/claude-temp`), puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
+  - sur le serveur : retirer la règle sudo temporaire créée pour l'opération, puis `ajouter-runner AnthonyPereira/deploy-platform <jeton>` ;
   - documenter le déploiement et le retour arrière dans `docs/runbooks/`.
+
+- [ ] BF-023-17 — Mettre en ligne les services de la MVP 2 :
+  - ajouter `customer-service` et `banking-service` à la matrice de `.github/workflows/deploy.yml` ;
+  - les ajouter au `docker-compose.yml` de `deploy-platform` (`apps/bankflow/`), avec healthcheck, rotation des logs, `no-new-privileges`, limite mémoire de la JVM et réseau `interne` uniquement ;
+  - brancher les services sur `customer_db` et `banking_db`, déjà créées au premier démarrage avec `CUSTOMER_DB_PASSWORD` et `BANKING_DB_PASSWORD` de `~/apps/bankflow/.env` : aucun nouveau secret, sauf si un service en demande un autre (à ajouter par l'utilisateur, jamais dans Git) ;
+  - mettre à jour le runbook de déploiement (services ajoutés, vérifications après mise en ligne).
+
+- [x] BF-023-18 — Gateway : déclarer `trusted-proxies` (adresses privées : `10.x`, `172.16-31.x`, `192.168.x`, `127.x`, `::1`, `fc..:`) pour que les en-têtes `X-Forwarded-*` envoyés par le front soient suivis. Critère : `POST /api/accounts` derrière le front renvoie un en-tête `Location` public (`http://localhost:8088/api/accounts/{id}` en local), avec un test d'intégration de la Gateway si possible
 
 ### Critères de validation — Déploiement
 - [ ] Un `git push` sur `main` met l'application à jour en ligne en moins de 5 minutes
@@ -640,7 +665,7 @@ Au jalon MVP 1, on avance les tâches BF-023-05, BF-023-06 et BF-023-16 (images 
 - [ ] Aucun secret dans Git, et aucun token ni donnée bancaire dans les logs
 - [ ] Contrôle d'appartenance côté backend sur toutes les ressources client
 - [ ] Validation des entrées (Spring Validation) et erreurs au format `ProblemDetail`
-- [ ] Migrations Flyway pour tout changement de schéma
+- [ ] Migrations Flyway pour tout changement de schéma, en `VARCHAR(n)` et jamais `CHAR(n)` (règle Sonar) ; une migration déjà fusionnée ne se modifie jamais
 - [ ] Tests unitaires des règles métier et Swagger à jour
 - [ ] Kafka utilisé uniquement pour des événements métier pertinents (les consultations restent en REST)
 
@@ -693,8 +718,11 @@ Connexion à de vraies banques ou paiements SEPA réels · cartes bancaires et c
 ## Décisions à prendre (ADR)
 1. ~~Versions et stack backend et frontend (BF-001)~~ → ADR-001 et ADR-002 (acceptés le 2026-11-16)
 2. ~~Refresh token retenu ou non, et stratégie de stockage du token côté frontend (BF-005, BF-016)~~ → ADR-003 (accepté le 2026-11-18)
-3. Résolution `userId` → `customerId` dans le Banking Service (BF-007)
+3. ~~Résolution `userId` → `customerId` dans le Banking Service (BF-007)~~ → ADR-004 (accepté le 2026-11-23)
 4. Mapping événement → topic pour `DepositCompleted` et `WithdrawalCompleted` (BF-010)
 5. Source de l'email du destinataire dans le Notification Service (BF-012)
 6. Retry bloquant ou non bloquant (`@RetryableTopic`) (BF-013)
 7. Saga : chorégraphie ou orchestration (BF-021)
+8. ~~Rôle de l'administrateur : un conseiller qui agit au nom des clients (BF-007 à BF-009, BF-017)~~ → ADR-005 (accepté le 2026-11-23)
+9. ~~Comptabilité en partie double et cohérence des écritures (BF-008, BF-009)~~ → ADR-006 (accepté le 2026-11-23)
+10. ~~Garde-fous de la vitrine publique (BF-007 à BF-009)~~ → ADR-007 (accepté le 2026-11-23)

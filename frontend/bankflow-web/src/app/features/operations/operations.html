@@ -1,0 +1,140 @@
+<h1>{{ title() }}</h1>
+<p class="intro">
+  {{
+    isAdmin()
+      ? 'Consultez les opérations de tous les clients.'
+      : 'Consultez l’historique des opérations de vos comptes.'
+  }}
+</p>
+
+<section class="panel" aria-labelledby="filters-title">
+  <h2 id="filters-title">Filtrer</h2>
+  <form class="filters" [formGroup]="form" (ngSubmit)="applyFilters()" novalidate>
+    @if (!isAdmin()) {
+      <mat-form-field appearance="outline">
+        <mat-label>Compte</mat-label>
+        <select matNativeControl formControlName="accountId">
+          <option value="">Tous les comptes</option>
+          @if (accounts.hasValue()) {
+            @for (account of accounts.value().content; track account.id) {
+              <option [value]="account.id">{{ getAccountLabel(account) }}</option>
+            }
+          }
+        </select>
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline">
+      <mat-label>Type</mat-label>
+      <select matNativeControl formControlName="type">
+        <option value="">Tous les types</option>
+        @for (type of types; track type) {
+          <option [value]="type">{{ typeLabels[type] }}</option>
+        }
+      </select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Du</mat-label>
+      <input matInput type="date" formControlName="from" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Au</mat-label>
+      <input matInput type="date" formControlName="to" />
+    </mat-form-field>
+
+    <div class="filter-actions">
+      <button matButton="filled" class="submit" type="submit">Filtrer</button>
+      <button matButton="outlined" class="submit" type="button" (click)="resetFilters()">
+        Réinitialiser
+      </button>
+    </div>
+  </form>
+  <div aria-live="polite">
+    @if (isPeriodInvalid()) {
+      <p class="form-error" role="alert">{{ periodMessage }}</p>
+    }
+  </div>
+</section>
+
+<section class="panel" aria-labelledby="list-title">
+  <h2 id="list-title">{{ isAdmin() ? 'Opérations des clients' : 'Vos opérations' }}</h2>
+
+  @if (transactions.error()) {
+    <p role="alert">Les opérations n'ont pas pu être chargées.</p>
+    <button matButton="outlined" type="button" (click)="transactions.reload()">Réessayer</button>
+  } @else if (page(); as current) {
+    <p class="result-count" aria-live="polite">
+      {{ current.totalElements }}
+      {{ current.totalElements > 1 ? 'opérations trouvées' : 'opération trouvée' }}
+    </p>
+    @if (current.content.length === 0) {
+      <p>Aucune opération ne correspond à votre recherche.</p>
+    } @else {
+      <div class="table-wrapper">
+        <table [attr.aria-busy]="transactions.isLoading()">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Compte</th>
+              <th scope="col">Type</th>
+              <th scope="col">Description</th>
+              <th scope="col" class="numeric">Montant</th>
+              <th scope="col" class="numeric">Solde après</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (transaction of current.content; track transaction.id) {
+              <tr>
+                <td>{{ transaction.createdAt | dateFr }}</td>
+                <td>
+                  @if (isAdmin()) {
+                    <a [routerLink]="['/comptes', transaction.accountId]">{{
+                      getTransactionAccount(transaction)
+                    }}</a>
+                  } @else {
+                    {{ getTransactionAccount(transaction) }}
+                  }
+                </td>
+                <th scope="row">
+                  {{ getTransactionLabel(transaction) }}
+                  @if (transaction.compensatedByTransactionId) {
+                    <span class="badge closed">Annulée</span>
+                  }
+                </th>
+                <td>
+                  {{ transaction.description }}
+                  @if (transaction.performedBy === 'ADMIN') {
+                    <span class="advisor">Effectuée par un conseiller</span>
+                  }
+                </td>
+                <td
+                  class="numeric"
+                  [class.credit]="transaction.direction === 'CREDIT'"
+                  [class.debit]="transaction.direction === 'DEBIT'"
+                >
+                  {{ getAmountSign(transaction)
+                  }}{{ transaction.amount | amount: transaction.currency }}
+                </td>
+                <td class="numeric">
+                  {{ transaction.balanceAfter | amount: transaction.currency }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-pager
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize"
+        [totalElements]="current.totalElements"
+        [totalPages]="current.totalPages"
+        label="Pagination des opérations"
+        (pageChange)="changePage($event)"
+      />
+    }
+  } @else {
+    <mat-spinner diameter="32" aria-label="Chargement des opérations" />
+  }
+</section>

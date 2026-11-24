@@ -47,17 +47,63 @@
         <mat-icon matListItemIcon aria-hidden="true" svgIcon="dashboard" />
         <span matListItemTitle>Tableau de bord</span>
       </a>
+      <a
+        mat-list-item
+        routerLink="/comptes"
+        routerLinkActive
+        #accountsLink="routerLinkActive"
+        [activated]="accountsLink.isActive"
+        (click)="closeMenu()"
+      >
+        <mat-icon matListItemIcon aria-hidden="true" svgIcon="account_balance_wallet" />
+        <span matListItemTitle>{{ accountsTitle() }}</span>
+      </a>
+      <a
+        mat-list-item
+        routerLink="/operations"
+        routerLinkActive
+        #operationsLink="routerLinkActive"
+        [activated]="operationsLink.isActive"
+        (click)="closeMenu()"
+      >
+        <mat-icon matListItemIcon aria-hidden="true" svgIcon="receipt_long" />
+        <span matListItemTitle>{{ operationsTitle() }}</span>
+      </a>
+      @if (!isAdmin()) {
+        <a
+          mat-list-item
+          routerLink="/virement"
+          routerLinkActive
+          #transferLink="routerLinkActive"
+          [activated]="transferLink.isActive"
+          (click)="closeMenu()"
+        >
+          <mat-icon matListItemIcon aria-hidden="true" svgIcon="swap_horiz" />
+          <span matListItemTitle>Faire un virement</span>
+        </a>
+        <a
+          mat-list-item
+          routerLink="/profil"
+          routerLinkActive
+          #profileLink="routerLinkActive"
+          [activated]="profileLink.isActive"
+          (click)="closeMenu()"
+        >
+          <mat-icon matListItemIcon aria-hidden="true" svgIcon="person" />
+          <span matListItemTitle>Mon profil</span>
+        </a>
+      }
       @if (isAdmin()) {
         <a
           mat-list-item
-          routerLink="/administration"
+          routerLink="/administration/clients"
           routerLinkActive
-          #adminLink="routerLinkActive"
-          [activated]="adminLink.isActive"
+          #customersLink="routerLinkActive"
+          [activated]="customersLink.isActive"
           (click)="closeMenu()"
         >
           <mat-icon matListItemIcon aria-hidden="true" svgIcon="admin_panel_settings" />
-          <span matListItemTitle>Administration</span>
+          <span matListItemTitle>Clients</span>
         </a>
       }
     </mat-nav-list>

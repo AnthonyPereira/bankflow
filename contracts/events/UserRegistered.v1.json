@@ -2,12 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bankflow.local/contracts/events/UserRegistered.v1.json",
   "title": "UserRegistered v1",
-  "description": "Payload publié sur bank.users par auth-service, avec userId comme clé de message. L'email sert à créer le profil client. Ce contrat ne contient jamais de mot de passe ni de jeton.",
+  "description": "Payload publié sur bank.users par auth-service, avec userId comme clé de message. L'email sert à créer le profil client. L'événement est aussi republié pour tous les utilisateurs à chaque démarrage de l'Auth Service : les consommateurs doivent être idempotents sur userId. Ce contrat ne contient jamais de mot de passe ni de jeton.",
   "type": "object",
   "additionalProperties": false,
   "required": ["userId", "email"],
   "properties": {
     "userId": { "type": "string", "format": "uuid" },
-    "email": { "type": "string", "format": "email", "maxLength": 254 }
+    "email": { "type": "string", "format": "email", "maxLength": 254 },
+    "demo": { "type": "boolean", "description": "Vrai pour un compte de démonstration ; absent = faux. Un consommateur ne repasse jamais un compte de démonstration à faux." },
+    "role": { "type": "string", "enum": ["ROLE_CLIENT", "ROLE_ADMIN"], "description": "Rôle du compte, toujours renseigné par l'Auth Service. Absent = ROLE_CLIENT. Un compte ROLE_ADMIN n'a jamais de dossier client : le Customer Service l'ignore." }
   }
 }

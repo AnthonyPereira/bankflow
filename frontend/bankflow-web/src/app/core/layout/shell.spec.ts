@@ -31,7 +31,7 @@ describe('Shell', () => {
         importProvidersFrom(MatIconTestingModule),
         provideRouter([
           { path: 'tableau-de-bord', component: StubPage },
-          { path: 'administration', component: StubPage },
+          { path: 'administration/clients', component: StubPage },
         ]),
         { provide: AuthService, useValue: auth },
         { provide: NotificationUiService, useValue: notifications },
@@ -46,17 +46,64 @@ describe('Shell', () => {
     return screen.getByRole('main');
   }
 
-  it("n'affiche pas l'administration à un client", async () => {
+  it("n'affiche pas « Clients » à un client", async () => {
     await setup();
 
     expect(screen.getByRole('link', { name: 'Tableau de bord' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Clients' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Administration' })).toBeNull();
   });
 
-  it("affiche l'administration à un administrateur", async () => {
+  it('affiche « Clients » à un administrateur, vers la liste des clients', async () => {
     await setup({ isAdmin: true });
 
-    expect(screen.getByRole('link', { name: 'Administration' })).toBeTruthy();
+    const link = screen.getByRole('link', { name: 'Clients' });
+    expect(link.getAttribute('href')).toBe('/administration/clients');
+    expect(screen.queryByRole('link', { name: 'Administration' })).toBeNull();
+  });
+
+  it('nomme le menu des comptes selon le rôle', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Mes comptes' })).toBeTruthy();
+  });
+
+  it('nomme le menu « Tous les comptes » pour un administrateur', async () => {
+    await setup({ isAdmin: true });
+    expect(screen.getByRole('link', { name: 'Tous les comptes' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Mes comptes' })).toBeNull();
+  });
+
+  it('nomme le menu des opérations selon le rôle', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Mes opérations' })).toBeTruthy();
+  });
+
+  it('propose « Faire un virement » à un client, vers /virement', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Faire un virement' }).getAttribute('href')).toBe(
+      '/virement',
+    );
+  });
+
+  it("ne propose pas « Faire un virement » à l'administrateur", async () => {
+    await setup({ isAdmin: true });
+    expect(screen.queryByRole('link', { name: 'Faire un virement' })).toBeNull();
+  });
+
+  it('nomme le menu « Toutes les opérations » pour un administrateur', async () => {
+    await setup({ isAdmin: true });
+    expect(screen.getByRole('link', { name: 'Toutes les opérations' })).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Mes opérations' })).toBeNull();
+  });
+
+  it('propose « Mon profil » à un client', async () => {
+    await setup();
+    expect(screen.getByRole('link', { name: 'Mon profil' }).getAttribute('href')).toBe('/profil');
+  });
+
+  it("ne propose pas « Mon profil » à l'administrateur, qui n'a pas de fiche client", async () => {
+    await setup({ isAdmin: true });
+    expect(screen.queryByRole('link', { name: 'Mon profil' })).toBeNull();
   });
 
   it('déconnecte puis renvoie vers la connexion', async () => {
@@ -122,7 +169,7 @@ describe('Shell', () => {
     await router.navigateByUrl('/tableau-de-bord');
     expect(document.activeElement).not.toBe(main);
 
-    await router.navigateByUrl('/administration');
+    await router.navigateByUrl('/administration/clients');
     expect(document.activeElement).toBe(main);
   });
 });

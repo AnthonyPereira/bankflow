@@ -18,6 +18,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map, skip } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { NotificationUiService } from '../notifications/notification-ui.service';
+import { getAccountsTitle, getOperationsTitle } from './navigation-labels';
 
 const COMPACT_LAYOUT = '(max-width: 839.98px)';
 export const UNCONFIRMED_LOGOUT_MESSAGE =
@@ -46,6 +47,8 @@ export class Shell {
   private readonly main = viewChild.required<ElementRef<HTMLElement>>('main');
 
   protected readonly isAdmin = this.auth.isAdmin;
+  protected readonly accountsTitle = computed(() => getAccountsTitle(this.isAdmin()));
+  protected readonly operationsTitle = computed(() => getOperationsTitle(this.isAdmin()));
   protected readonly isCompact = toSignal(
     inject(BreakpointObserver)
       .observe(COMPACT_LAYOUT)

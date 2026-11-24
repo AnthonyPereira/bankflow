@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.bankflow.auth.application.user.exception.InvalidSessionException;
 import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
 import com.bankflow.auth.domain.user.UserRepository;

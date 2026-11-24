@@ -1,5 +1,6 @@
 package com.bankflow.auth.application.demo;
 
+import com.bankflow.auth.application.demo.model.DemoAccount;
 import com.bankflow.auth.domain.user.Role;
 import com.bankflow.auth.domain.user.User;
 import java.util.List;

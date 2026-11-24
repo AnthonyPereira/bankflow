@@ -1,0 +1,108 @@
+<h1>Mon profil</h1>
+<p class="intro">Vos informations personnelles, utilisées par votre conseiller BankFlow.</p>
+
+<div aria-live="polite">
+  @if (state() === 'creating') {
+    <p class="notice">Votre profil est en cours de création…</p>
+  }
+</div>
+
+@switch (state()) {
+  @case ('loading') {
+    <mat-spinner diameter="32" aria-label="Chargement de votre profil" />
+  }
+  @case ('failed') {
+    <section class="panel">
+      <p role="alert">Votre profil n'est toujours pas disponible.</p>
+      <button matButton="outlined" type="button" (click)="retry()">Réessayer</button>
+    </section>
+  }
+  @case ('error') {
+    <section class="panel">
+      <p role="alert">Votre profil n'a pas pu être chargé.</p>
+      <button matButton="outlined" type="button" (click)="retry()">Réessayer</button>
+    </section>
+  }
+  @case ('ready') {
+    @if (customer(); as current) {
+      <section class="panel" aria-labelledby="identity-title">
+        <h2 id="identity-title">Identité</h2>
+        <dl>
+          <div>
+            <dt>Adresse email</dt>
+            <dd>{{ current.email }}</dd>
+          </div>
+          <div>
+            <dt>Statut</dt>
+            <dd>
+              <span class="badge" [class.suspended]="current.status === 'SUSPENDED'">{{
+                statusLabels[current.status]
+              }}</span>
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel" aria-labelledby="details-title">
+        <h2 id="details-title">Coordonnées</h2>
+        <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+          <div aria-live="polite">
+            @if (savedMessage(); as message) {
+              <p class="form-info">{{ message }}</p>
+            }
+          </div>
+          @if (errorMessage(); as message) {
+            <p class="form-error" role="alert">{{ message }}</p>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Prénom</mat-label>
+            <input matInput formControlName="firstName" autocomplete="given-name" />
+            @if (form.controls.firstName.hasError('server')) {
+              <mat-error>{{ form.controls.firstName.getError('server') }}</mat-error>
+            } @else if (form.controls.firstName.hasError('maxlength')) {
+              <mat-error>Le prénom ne peut pas dépasser 100 caractères.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nom</mat-label>
+            <input matInput formControlName="lastName" autocomplete="family-name" />
+            @if (form.controls.lastName.hasError('server')) {
+              <mat-error>{{ form.controls.lastName.getError('server') }}</mat-error>
+            } @else if (form.controls.lastName.hasError('maxlength')) {
+              <mat-error>Le nom ne peut pas dépasser 100 caractères.</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Téléphone</mat-label>
+            <input matInput type="tel" formControlName="phone" autocomplete="tel" />
+            @if (form.controls.phone.hasError('server')) {
+              <mat-error>{{ form.controls.phone.getError('server') }}</mat-error>
+            } @else if (form.controls.phone.hasError('pattern')) {
+              <mat-error
+                >Le numéro doit contenir de 6 à 20 chiffres, espaces, points ou tirets (un + est
+                accepté au début).</mat-error
+              >
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Adresse postale</mat-label>
+            <input matInput formControlName="address" autocomplete="street-address" />
+            @if (form.controls.address.hasError('server')) {
+              <mat-error>{{ form.controls.address.getError('server') }}</mat-error>
+            } @else if (form.controls.address.hasError('maxlength')) {
+              <mat-error>L'adresse ne peut pas dépasser 255 caractères.</mat-error>
+            }
+          </mat-form-field>
+
+          <button matButton="filled" class="submit" type="submit" [disabled]="isSubmitting()">
+            {{ isSubmitting() ? 'Enregistrement…' : 'Enregistrer' }}
+          </button>
+        </form>
+      </section>
+    }
+  }
+}
