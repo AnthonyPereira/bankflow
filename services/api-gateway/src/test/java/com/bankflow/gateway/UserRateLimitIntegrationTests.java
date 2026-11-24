@@ -101,6 +101,24 @@ class UserRateLimitIntegrationTests {
     }
 
     @Test
+    void uneBarreFinaleNeContournePasLaLimite() throws Exception {
+        var token = createToken("user-f");
+        send("POST", "/api/transfers/", token, "203.0.113.40");
+        send("POST", "/api/transfers/", token, "203.0.113.41");
+
+        assertThat(send("POST", "/api/transfers", token, "203.0.113.42").statusCode())
+                .isEqualTo(429);
+    }
+
+    @Test
+    void uneDoubleBarreEstRejeteeAvantDAtteindreLeService() throws Exception {
+        // Le pare-feu de Spring Security refuse ce chemin avant ce filtre : rien n'est relayé
+        var response = send("POST", "/api//transfers", createToken("user-g"), "203.0.113.43");
+
+        assertThat(response.statusCode()).isEqualTo(400);
+    }
+
+    @Test
     void lesAutresRequetesNeSontPasCompteesParCeFiltre() throws Exception {
         var token = createToken("user-e");
         for (int attempt = 0; attempt < 4; attempt++) {

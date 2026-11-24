@@ -47,7 +47,8 @@ class UserRateLimitFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        // Sans jeton validé, la sécurité a déjà répondu 401 : il n'y a rien à compter
+        // Sans jeton validé, la sécurité a déjà répondu 401. Un jeton sans sujet passe sans être
+        // compté : la Gateway n'envoie alors pas X-User-Id et le Banking Service refuse la requête.
         var subject =
                 SecurityContextHolder.getContext().getAuthentication()
                                 instanceof JwtAuthenticationToken token

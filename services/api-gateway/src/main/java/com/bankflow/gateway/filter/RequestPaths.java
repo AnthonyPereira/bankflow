@@ -18,8 +18,9 @@ final class RequestPaths {
     /**
      * Ramène le chemin à la forme que comprendra le service en aval. Sans cela, {@code
      * /api/auth/%6Cogin} aurait son propre compteur alors que l'Auth Service le décode en {@code
-     * /auth/login}. Ces filtres passent avant le pare-feu de Spring Security ou sans lui : ils ne
-     * peuvent donc pas compter sur lui pour écarter les chemins non normalisés.
+     * /auth/login}. {@link RateLimitFilter} passe avant le pare-feu de Spring Security et ne peut
+     * donc pas compter sur lui pour écarter les chemins non normalisés. {@link UserRateLimitFilter}
+     * passe après, mais utilise la même forme pour que sa clé suive la route réellement servie.
      */
     static String normalizePath(HttpServletRequest request) {
         var uri = Objects.requireNonNullElse(request.getRequestURI(), "/");
