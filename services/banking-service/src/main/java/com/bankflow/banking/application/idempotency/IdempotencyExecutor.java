@@ -5,6 +5,7 @@ import com.bankflow.banking.application.idempotency.model.IdempotencyResult;
 import com.bankflow.banking.application.idempotency.model.StoredResponse;
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -40,7 +41,16 @@ public class IdempotencyExecutor {
             return new IdempotencyResult(operation.get(), false);
         }
         if (!reserve(actorUserId, key, requestHash)) {
-            return replay(actorUserId, key, requestHash);
+            var replayed = replay(actorUserId, key, requestHash);
+            if (replayed.isPresent()) {
+                return replayed.get();
+            }
+            // La purge a supprimé la clé entre la réservation et la lecture : elle est de nouveau
+            // libre. Si une requête concurrente vient de la reprendre, on la rejoue.
+            if (!reserve(actorUserId, key, requestHash)) {
+                return replay(actorUserId, key, requestHash)
+                        .orElseThrow(IdempotencyKeyReusedException::new);
+            }
         }
         var response = operation.get();
         jdbc.update(
@@ -67,7 +77,7 @@ public class IdempotencyExecutor {
         return inserted == 1;
     }
 
-    private IdempotencyResult replay(UUID actorUserId, String key, String requestHash) {
+    private Optional<IdempotencyResult> replay(UUID actorUserId, String key, String requestHash) {
         var rows =
                 jdbc.query(
                         "SELECT request_hash, response_status, response_body FROM idempotency_keys "
@@ -79,11 +89,15 @@ public class IdempotencyExecutor {
                                         resultSet.getString("response_body")),
                         actorUserId,
                         key);
+        if (rows.isEmpty()) {
+            return Optional.empty();
+        }
         var row = rows.getFirst();
         if (!row.requestHash().equals(requestHash) || row.status() == null) {
             throw new IdempotencyKeyReusedException();
         }
-        return new IdempotencyResult(new StoredResponse(row.status(), row.body()), true);
+        return Optional.of(
+                new IdempotencyResult(new StoredResponse(row.status(), row.body()), true));
     }
 
     private record StoredRow(String requestHash, Integer status, String body) {}
