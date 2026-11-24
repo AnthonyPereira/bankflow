@@ -2,6 +2,12 @@
 
 Toutes les évolutions notables de BankFlow. Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les versions suivent [SemVer](https://semver.org/lang/fr/).
 
+## [0.2.1] — 2026-11-24
+
+### Corrigé
+
+- **Rattrapage des fiches client** : un envoi de `UserRegistered` en échec est retenté avec une attente croissante (environ deux minutes au total), au lieu d'arrêter le rejeu. Sur le serveur, la première lecture des métadonnées de Kafka dépassait le délai de 3 s au démarrage : aucun événement n'était envoyé, et aucun client n'avait de fiche ni de comptes.
+
 ## [0.2.0] — 2026-11-23
 
 ### Ajouté
@@ -114,6 +120,7 @@ Première version publiée : **MVP 1, socle et première mise en ligne**. On peu
 - Seuls le frontend, la Gateway, l'Auth Service, PostgreSQL et Kafka sont déployés : les routes des quatre autres services répondent 503.
 - Le Customer Service, le Banking Service, le Notification Service et l'Analytics & Fraud Service ne sont que des squelettes sécurisés, sans fonctionnalité métier.
 
+[0.2.1]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.2.1
 [0.2.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.2.0
 [0.1.1]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.1
 [0.1.0]: https://github.com/AnthonyPereira/bankflow/releases/tag/v0.1.0
